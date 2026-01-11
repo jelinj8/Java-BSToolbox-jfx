@@ -1,0 +1,23 @@
+/* Applies only to your custom cells */
+.icon-text-cell {
+    -fx-graphic-text-gap: 8;
+    -fx-padding: 4 8 4 8;
+}
+
+/* Optional hover/selection styling */
+.icon-text-cell:selected {
+    -fx-background-color: -fx-accent;
+    -fx-text-fill: white;
+}
+
+.icon-text-cell:hover {
+    -fx-background-color: derive(-fx-control-inner-background, -5%);
+}
+
+.icon-overlay {
+    -fx-background-color: transparent;
+}
+
+.icon-overlay-path {
+    -fx-opacity: 0;
+}
