@@ -115,6 +115,11 @@
 			<version>11.2.3</version>
 		</dependency>
 
+		<dependency>
+			<groupId>com.github.blackears.svgSalamander</groupId>
+			<artifactId>svg-salamander</artifactId>
+			<version>1.1.5.3</version>
+		</dependency>
 	</dependencies>
 
 	<build>
