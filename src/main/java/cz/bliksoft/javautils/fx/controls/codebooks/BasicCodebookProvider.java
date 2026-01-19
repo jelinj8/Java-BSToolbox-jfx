@@ -1,9 +1,11 @@
 package cz.bliksoft.javautils.fx.controls.codebooks;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -14,10 +16,31 @@ import javafx.scene.image.Image;
 
 public abstract class BasicCodebookProvider<T> implements ICodebookProvider<T> {
 
-	private List<T> DATA;
+	private List<T> DATA = null;
 
-	private List<T> getData() {
+	protected List<T> getData() {
 		return DATA;
+	}
+
+	protected T rootItem = null;
+
+	protected T getRoot() {
+		return rootItem;
+	}
+
+	protected boolean showRoot;
+
+	public BasicCodebookProvider(T rootItem, Function<T, List<T>> childrenProvider, boolean showRoot) {
+		this.rootItem = rootItem;
+		this.showRoot = showRoot;
+		if (showRoot) {
+			DATA = new ArrayList<>(1);
+			DATA.add(rootItem);
+		} else {
+			DATA = childrenProvider.apply(rootItem);
+		}
+		this.childrenProvider = childrenProvider;
+		dataSource = this::getData;
 	}
 
 	public BasicCodebookProvider(List<T> items) {
@@ -33,6 +56,12 @@ public abstract class BasicCodebookProvider<T> implements ICodebookProvider<T> {
 
 	public BasicCodebookProvider(Supplier<List<T>> dataSource) {
 		this.dataSource = dataSource;
+	}
+
+	public Function<T, List<T>> childrenProvider = null;
+
+	public void setChildrenProvider(Function<T, List<T>> childrenProvider) {
+		this.childrenProvider = childrenProvider;
 	}
 
 	public BiPredicate<T, String> filter = (T value, String s) -> {
@@ -87,6 +116,12 @@ public abstract class BasicCodebookProvider<T> implements ICodebookProvider<T> {
 
 	public void setOverlayPathProvider(Function<T, String> overlayPathProvider) {
 		this.overlayPathProvider = overlayPathProvider;
+	}
+
+	public Predicate<T> additionalFilter = null;
+
+	public void setAdditionalFilter(Predicate<T> additionalFilter) {
+		this.additionalFilter = additionalFilter;
 	}
 
 	@Override

@@ -1,0 +1,414 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package cz.bliksoft.javautils.app;
+
+import java.io.File;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.WeakHashMap;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import cz.bliksoft.javautils.ClasspathUtils;
+import cz.bliksoft.javautils.EnvironmentUtils;
+import cz.bliksoft.javautils.StringUtils;
+import cz.bliksoft.javautils.app.events.ClosedEvent;
+import cz.bliksoft.javautils.app.events.ClosingEvent;
+import cz.bliksoft.javautils.app.exceptions.ViewableException;
+import cz.bliksoft.javautils.app.modules.Modules;
+import cz.bliksoft.javautils.app.properties.XmlProperties;
+import cz.bliksoft.javautils.app.rights.DefaultUnrestrictedSessionManager;
+import cz.bliksoft.javautils.app.rights.SessionManager;
+import cz.bliksoft.javautils.fx.controls.images.AnyImageLoader;
+import cz.bliksoft.javautils.images.ImageLoader;
+
+/**
+ * jádro frameworku
+ * 
+ * @author Jakub Jelínek
+ */
+//@VersionInfo(majorVersion = 1, minorVersion = 6, revisionVersion = 0)
+public class BSApp {
+
+	static Logger log = null;
+
+	public static final String CORE_CONFIG_FOLDER = "core";
+
+	public static final String PREF_LIBDIR = "libDir"; //$NON-NLS-1$
+	public static final String PREF_LIBDIR_DEFAULT = "lib"; //$NON-NLS-1$
+
+	/**
+	 * zjišťuje zapisovatelnost globálního konfiguračního souboru
+	 * 
+	 * @return
+	 */
+	public static boolean isGlobalPropertiesWritable() {
+		return getGlobalProperties().isWritable();
+	}
+
+	private static XmlProperties defaultGlobalProperties = null;
+
+	public static XmlProperties getGlobalProperties() {
+		if (defaultGlobalProperties == null) {
+			defaultGlobalProperties = new XmlProperties(
+					new File(BSApp.getUserAppDir(), Constants.DEFAULT_PROPERTIES_FILENAME));
+		}
+		return defaultGlobalProperties;
+	}
+
+	public static void reloadGlobal() {
+		defaultGlobalProperties = null;
+		getGlobalProperties();
+	}
+
+	private static XmlProperties defaultLocalProperties = null;
+
+	public static XmlProperties getLocalProperties() {
+		if (defaultLocalProperties == null) {
+			defaultLocalProperties = new XmlProperties(
+					new File(BSApp.getUserHomeDir(), Constants.DEFAULT_PROPERTIES_FILENAME));
+		}
+		return defaultLocalProperties;
+	}
+
+	public static void reloadLocal() {
+		defaultLocalProperties = null;
+		getLocalProperties();
+	}
+
+	private static final WeakHashMap<Object, HashMap<String, Object>> objectAttributes = new WeakHashMap<>();
+
+	public static Object getObjectProperty(Object obj, String propertyName) {
+		HashMap<String, Object> props = objectAttributes.get(obj);
+		if (props == null)
+			return null;
+		return props.get(propertyName);
+	}
+
+	public static void setObjectProperty(Object obj, String propertyName, Object value) {
+		HashMap<String, Object> props = objectAttributes.get(obj);
+		if (props == null) {
+			props = new HashMap<String, Object>();
+			objectAttributes.put(obj, props);
+		}
+		props.put(propertyName, value);
+	}
+
+	/**
+	 * načte hodnotu z properties, přednostně z lokálních, fallback na globální
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static Object getProperty(String key) {
+		return getLocalProperties().getOrDefault(key, getGlobalProperties().get(key));
+	}
+
+	/**
+	 * načte hodnotu z properties, přednostně z lokálních, fallback na globální,
+	 * potom na {@code defaultValue}
+	 * 
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
+	public static Object getProperty(String key, String defaultValue) {
+		return getLocalProperties().getOrDefault(key, getGlobalProperties().getOrDefault(key, defaultValue));
+	}
+
+	/**
+	 * nastavení hodnoty v local properties
+	 * 
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public static Object setLocalProperty(String key, String value) {
+		return getLocalProperties().put(key, value);
+	}
+
+	/**
+	 * odebrání hodnoty z local properties
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static Object removeLocalProperty(String key) {
+		return getLocalProperties().remove(key);
+	}
+
+	/**
+	 * nastavení hodnoty v global properties
+	 * 
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public static Object setGlobalProperty(String key, String value) {
+		return getGlobalProperties().put(key, value);
+	}
+
+	/**
+	 * odebrání hodnoty z global properties
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static Object removeGlobalProperty(String key) {
+		return getGlobalProperties().remove(key);
+	}
+
+	/**
+	 * nastavení hodnoty v local properties s klíčem doplněným o název
+	 * konfiguračního prostředí
+	 * 
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public static Object setLocalEnvironmentProperty(String key, String value) {
+		return getLocalProperties().put(getEnvironmentName() + "." + key, value); //$NON-NLS-1$
+	}
+
+	/**
+	 * odebrání hodnoty z local properties s klíčem doplněným o název konfiguračního
+	 * prostředí
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static Object removeLocalEnvironmentProperty(String key) {
+		return getLocalProperties().remove(getEnvironmentName() + "." + key); //$NON-NLS-1$
+	}
+
+	/**
+	 * nastavení hodnoty v globálních properties s klíčem doplněným o název
+	 * konfiguračního prostředí
+	 * 
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public static Object setGlobalEnvironmentProperty(String key, String value) {
+		return getGlobalProperties().put(getEnvironmentName() + "." + key, value); //$NON-NLS-1$
+	}
+
+	/**
+	 * odebere z globálních properties hodnotu s klíčem doplněným o název
+	 * konfiguračního prostředí
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static Object removeGlobalEnvironmentProperty(String key) {
+		return getGlobalProperties().remove(getEnvironmentName() + "." + key); //$NON-NLS-1$
+	}
+
+	/**
+	 * vrátí hodnotu property s klíčem doplněným o název prostředí - přednostně z
+	 * lokálního nastavení, fallback na globální, jinak null
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public static Object getEnvironmentProperty(String key) {
+		return getLocalProperties().getOrDefault(getEnvironmentName() + "." + key, //$NON-NLS-1$
+				getGlobalProperties().get(getEnvironmentName() + "." + key)); //$NON-NLS-1$
+	}
+
+	/**
+	 * vrátí hodnotu property s klíčem doplněným o název prostředí - přednostně z
+	 * lokálního nastavení, fallback na globální, jinak {@code defaultValue}
+	 * 
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
+	public static Object getEnvironmentProperty(String key, String defaultValue) {
+		return getLocalProperties().getOrDefault(getEnvironmentName() + "." + key, //$NON-NLS-1$
+				getGlobalProperties().getOrDefault(getEnvironmentName() + "." + key, defaultValue)); //$NON-NLS-1$
+	}
+
+	/**
+	 * uloží lokální properties do souboru
+	 * 
+	 * @throws ViewableException
+	 */
+	public static void saveLocalProperties() throws ViewableException {
+		getLocalProperties().save();
+	}
+
+	/**
+	 * pokud je soubor s globálním nastavením zapisovatelný, uloží ho, jinak oznámí
+	 * chybu
+	 * 
+	 * @throws ViewableException
+	 */
+	public static void saveGlobalProperties() throws ViewableException {
+		if (getGlobalProperties().isWritable())
+			getGlobalProperties().save();
+		else {
+			log.error("Can't write global properties to " + getGlobalProperties().getPath());
+//			throw new ViewableException();
+		}
+	}
+
+	/**
+	 * název konfiguračního prostředí
+	 */
+	private static String environmentName = "default"; //$NON-NLS-1$
+
+	/**
+	 * název konfiguračního prostředí
+	 * 
+	 * @return
+	 */
+	public static String getEnvironmentName() {
+		return environmentName;
+	}
+
+//	private static String appName = null;
+
+	public static void setAppName(String name) throws Exception {
+		EnvironmentUtils.setAppName(name);
+		System.setProperty("appName", name);
+	}
+
+	public static String getAppName() {
+		return EnvironmentUtils.getAppName();
+	}
+
+	private static File userAppdir = null;
+
+	public static File getUserAppDir() {
+		if (userAppdir == null)
+			userAppdir = new File(Constants.USER_APPDIR, "." + EnvironmentUtils.getAppName());
+		if (!userAppdir.exists()) {
+			try {
+				userAppdir.mkdirs();
+			} catch (Exception e) {
+				log.error("Failed to create app settings directory.", e);
+			}
+		}
+		return userAppdir;
+	}
+
+	private static File userHomedir = null;
+
+	public static File getUserHomeDir() {
+		if (userHomedir == null)
+			userHomedir = new File(Constants.USER_HOMEDIR, "." + EnvironmentUtils.getAppName());
+		if (!userHomedir.exists()) {
+			try {
+				userHomedir.mkdirs();
+			} catch (Exception e) {
+				log.error("Failed to create app home directory.", e);
+			}
+		}
+		return userHomedir;
+	}
+
+	/**
+	 * inicializace aplikačního frameworku
+	 * 
+	 * @throws Exception
+	 */
+	public static void init() {
+		//getAppName();
+		environmentName = getGlobalProperties().getProperty("app.configname", "default"); //$NON-NLS-1$ //$NON-NLS-2$
+
+		log = LogManager.getLogger();
+
+		String langCode = getGlobalProperties().getProperty(environmentName + ".lang", "--"); //$NON-NLS-1$ //$NON-NLS-2$
+		if (!"--".equals(langCode)) { //$NON-NLS-1$
+			Locale l = null;
+			l = Locale.forLanguageTag(langCode);
+			if (l != null) {
+				Locale.setDefault(l);
+				BSAppMessages.reload();
+				log.info(BSAppMessages.getString("Common.locale_set"), l.toLanguageTag()); //$NON-NLS-1$
+			}
+		}
+
+		log.log(Level.INFO,
+				BSAppMessages.getString("Common.2") + "  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv", //$NON-NLS-1$//$NON-NLS-2$
+				getAppName()); // $NON-NLS-3$
+
+		// přidání konfigurované lib složky do classpath
+		String libDir = getGlobalProperties().getProperty(PREF_LIBDIR);
+		if (StringUtils.hasText(libDir)) {
+			File libsDir = new File(libDir); // $NON-NLS-1$ //$NON-NLS-2$
+
+			if (libsDir.isDirectory()) {
+				ClasspathUtils.addDirectory(libsDir);
+				log.log(Level.DEBUG, BSAppMessages.getString("Common.libDirAddedToCp"), libsDir); //$NON-NLS-1$ //$NON-NLS-2$
+			} else {
+				log.log(Level.WARN, BSAppMessages.getString("Common.LibDirNotFound"), libsDir); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+		} else {
+			log.debug("No \"lib\" directory configured.");
+		}
+
+		if (sessionManager == null) {
+			setSessionManager(new DefaultUnrestrictedSessionManager());
+			log.debug("Session manager wasn't set, setting to default: {}", String.valueOf(sessionManager));
+		} else {
+			log.debug("Session manager was set to {}", String.valueOf(sessionManager));
+		}
+
+		ImageLoader.setDefault(new AnyImageLoader());
+
+		// načtení modulů a import jejich definic
+		Modules.loadModules();
+
+		// inicializace modulů
+		Modules.initModules();
+
+		// instalace modulů
+		Modules.installModules();
+
+		log.log(Level.INFO, BSAppMessages.getString("Common.InitializationCompleted") //$NON-NLS-1$
+				+ " ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"); //$NON-NLS-1$ //$NON-NLS-3$
+	}
+
+	/**
+	 * pokusí se uzavřít aplikaci
+	 * 
+	 * @return úspěšnost
+	 */
+	public static boolean close() {
+		ClosingEvent evt = ClosingEvent.fire("Requested by framework close()");
+		if (evt.isBlocked()) {
+			for (String reason : evt.getBlockingReasons())
+				log.info("Closing blocked: {}", reason);
+			return false;
+		}
+
+		ClosedEvent.fire("Reached framework close");
+
+		log.info("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"); //$NON-NLS-1$
+		log.info("Starting modules cleanup before closing."); //$NON-NLS-1$
+
+		Modules.cleanup();
+		return true;
+	}
+
+	private static SessionManager sessionManager = null;
+
+	public static SessionManager getSessionManager() {
+		return sessionManager;
+	}
+
+	public static void setSessionManager(SessionManager sessionManager) {
+		if (BSApp.sessionManager != null) {
+			throw new SecurityException(
+					"Session manager already set, that can be done only once, before \"load\" is called.");
+		}
+		BSApp.sessionManager = sessionManager;
+	}
+
+}

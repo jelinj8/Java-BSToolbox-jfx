@@ -51,7 +51,8 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.setPromptText("Filter…");
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
-		FilteredList<T> filtered = new FilteredList<>(FXCollections.observableArrayList(dataSource.get()), s -> true);
+		FilteredList<T> filtered = new FilteredList<>(FXCollections.observableArrayList(dataSource.get()),
+				additionalFilter == null ? (s -> true) : additionalFilter);
 
 		ListView<T> list = new ListView<>(filtered);
 		list.setPrefHeight(260);
@@ -62,7 +63,8 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		Runnable applyFilter = () -> {
 			String t = filterField.getText() == null ? "" : filterField.getText().trim().toLowerCase();
 
-			filtered.setPredicate(s -> (t.isEmpty() || filter.test(s, t)));
+			filtered.setPredicate(s -> ((t.isEmpty() || filter.test(s, t))
+					&& (additionalFilter == null || additionalFilter.test(s))));
 
 			if (!filtered.isEmpty()) {
 				if (list.getSelectionModel().getSelectedItem() == null) {

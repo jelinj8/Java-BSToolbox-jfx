@@ -36,6 +36,7 @@ public final class FxTools {
 		safeRegister("/css/app.css");
 		registerCss("/css/codebook-field.css");
 		registerCss("/css/icon-text-cell.css");
+		registerCss("/css/validation.css");
 
 		// Apply to already existing windows
 		for (Window w : Window.getWindows()) {

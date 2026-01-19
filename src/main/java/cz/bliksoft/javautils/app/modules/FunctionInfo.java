@@ -1,0 +1,12 @@
+package cz.bliksoft.javautils.app.modules;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+public @interface FunctionInfo {
+	String identification();
+	String description();
+}

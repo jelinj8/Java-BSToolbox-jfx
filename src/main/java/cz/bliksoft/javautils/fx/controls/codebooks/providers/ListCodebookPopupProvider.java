@@ -8,8 +8,6 @@ import java.util.function.Supplier;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import cz.bliksoft.javautils.fx.controls.codebooks.ICodebookProvider;
 import cz.bliksoft.javautils.fx.controls.codebooks.IFilterableSelector;
-import cz.bliksoft.javautils.fx.controls.codebooks.ICodebookProvider.PopupSelector;
-import cz.bliksoft.javautils.fx.controls.codebooks.ICodebookProvider.Selector;
 import javafx.beans.property.Property;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
@@ -45,8 +43,12 @@ public class ListCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 
 		private final BiPredicate<T, String> filter;
 
+		private final BasicCodebookProvider<T> base;
+
 		PopupFilteredListSelector(Consumer<T> onConfirm, BasicCodebookProvider<T> base) {
-			this.filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()), s -> true);
+			this.base = base;
+			this.filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()),
+					base.additionalFilter == null ? (s -> true) : base.additionalFilter);
 			this.list = new ListView<>(filtered);
 
 			base.setCellFactory(list);
@@ -88,7 +90,8 @@ public class ListCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 		public void setFilterText(String filterText) {
 			String t = filterText == null ? "" : filterText.trim().toLowerCase();
 
-			filtered.setPredicate(s -> (t.isEmpty() || filter.test(s, filterText)));
+			filtered.setPredicate(s -> ((t.isEmpty() || filter.test(s, filterText))
+					&& (base.additionalFilter == null || base.additionalFilter.test(s))));
 
 			if (!filtered.isEmpty()) {
 				if (list.getSelectionModel().getSelectedItem() == null) {
