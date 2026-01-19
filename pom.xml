@@ -17,6 +17,14 @@
 		<main.class>cz.bliksoft.javautils.fx.test.FxTests</main.class>
 	</properties>
 
+	<repositories>
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
+	</repositories>
+
+
 	<profiles>
 		<profile>
 			<id>windows</id>
@@ -54,12 +62,32 @@
 			</properties>
 		</profile>
 	</profiles>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>cz.bliksoft.java</groupId>
+				<artifactId>dependency-management</artifactId>
+				<version>1.21.1-SNAPSHOT</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>cz.bliksoft.java</groupId>
+				<artifactId>common-java-utils</artifactId>
+				<version>0.6-SNAPSHOT</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
 			<groupId>cz.bliksoft.java</groupId>
 			<artifactId>common-java-utils</artifactId>
-			<version>0.6-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>cz.bliksoft.java</groupId>
+			<artifactId>dependency-management-log4j</artifactId>
+			<type>pom</type>
 		</dependency>
 
 		<dependency>
@@ -70,10 +98,23 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.openjfx</groupId>
+			<artifactId>javafx-swing</artifactId>
+			<version>${javafx.version}</version>
+			<classifier>${javafx.platform}</classifier>
+		</dependency>
+
+		<dependency>
 			<groupId>com.google.zxing</groupId>
 			<artifactId>core</artifactId>
-			<version>3.5.3</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.controlsfx</groupId>
+			<artifactId>controlsfx</artifactId>
+			<version>11.2.3</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
