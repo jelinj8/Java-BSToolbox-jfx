@@ -133,7 +133,66 @@
 					<release>${maven.compiler.release}</release>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>io.github.git-commit-id</groupId>
+				<artifactId>git-commit-id-maven-plugin</artifactId>
+				<version>9.0.2</version>
 
+				<executions>
+					<execution>
+						<id>get-the-git-infos</id>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+						<phase>initialize</phase>
+					</execution>
+				</executions>
+
+				<configuration>
+					<dotGitDirectory>${maven.multiModuleProjectDirectory}/.git</dotGitDirectory>
+
+					<!-- writes the file that your runtime code will read -->
+					<generateGitPropertiesFile>true</generateGitPropertiesFile>
+					<generateGitPropertiesFilename>
+						${project.build.outputDirectory}/git.properties
+					</generateGitPropertiesFilename>
+
+					<!-- so you get git.commit.id and git.commit.id.abbrev -->
+					<commitIdGenerationMode>full</commitIdGenerationMode>
+
+					<!-- helpful for CI/builds from source tarballs etc. -->
+					<failOnNoGitDirectory>false</failOnNoGitDirectory>
+
+					<!-- optional: keep the file small (adjust to what you read) -->
+					<includeOnlyProperties>
+						<includeOnlyProperty>^git\.build\.version$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.branch$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.commit\.id\.abbrev$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.tags$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.closest\.tag\.name$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.closest\.tag\.commit\.count$</includeOnlyProperty>
+						<includeOnlyProperty>^git\.dirty$</includeOnlyProperty>
+					</includeOnlyProperties>
+
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>templating-maven-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>filter-sources</goal>
+						</goals>
+						<phase>generate-sources</phase>
+					</execution>
+				</executions>
+				<configuration>
+					<outputDirectory>
+						${project.build.directory}/generated-sources/annotations</outputDirectory>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 

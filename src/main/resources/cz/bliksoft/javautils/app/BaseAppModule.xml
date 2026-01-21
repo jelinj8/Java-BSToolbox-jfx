@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns="http://bliksoft.cz/XmlFilesystem"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://bliksoft.cz/XmlFilesystem XmlFilesystem.xsd">
+
+	<folder name="translations">
+		<folder name="licences">
+			<file name="LGPL3_NAME">
+				<attribute name="default">GNU Lesser General Public License</attribute>
+			</file>
+			<file name="LGPL3_URL">
+				<attribute name="default">http://www.gnu.org/copyleft/lesser.html</attribute>
+			</file>
+			<file name="APACHE2_NAME">
+				<attribute name="default">APACHE LICENSE, VERSION 2.0</attribute>
+			</file>
+			<file name="APACHE2_URL">
+				<attribute name="default">https://www.apache.org/licenses/LICENSE-2.0</attribute>
+			</file>
+			<file name="BSD2_NAME">
+				<attribute name="default">The BSD 2-Clause License</attribute>
+			</file>
+			<file name="BSD2_URL">
+				<attribute name="default">http://opensource.org/licenses/bsd-license.html</attribute>
+			</file>
+			<file name="CreativeCommons_URL">
+				<attribute name="default">https://en.wikipedia.org/wiki/Creative_Commons_license</attribute>
+			</file>
+			<file name="CreativeCommons_NAME">
+				<attribute name="default">Creative Commons</attribute>
+			</file>
+			<file name="commercial_NAME">
+				<attribute name="default">commercial licence</attribute>
+				<attribute name="cs">komerční licence</attribute>
+				<attribute name="sk">komerčná licencia</attribute>
+			</file>
+		</folder>
+	</folder>
+	<folder name="licences">
+		<file name="LGPL3">
+			<attribute name="name">licences/LGPL3_NAME</attribute>
+			<attribute name="url">licences/LGPL3_URL</attribute>
+		</file>
+		<file name="commercial">
+			<attribute name="name">licences/commercial_NAME</attribute>
+		</file>
+		<file name="APACHE2">
+			<attribute name="name">licences/APACHE2_NAME</attribute>
+			<attribute name="url">licences/APACHE2_URL</attribute>
+		</file>
+		<file name="BSD2">
+			<attribute name="name">licences/BSD2_NAME</attribute>
+			<attribute name="url">licences/BSD2_URL</attribute>
+		</file>
+		<file name="CreativeCommons">
+			<attribute name="name">licences/CreativeCommons_NAME</attribute>
+			<attribute name="url">licences/CreativeCommons_URL</attribute>
+		</file>
+	</folder>
+	
+	<folder name="lib_credits">
+		<file name="Freemarker">
+			<attribute name="name">FreeMarker</attribute>
+			<attribute name="url">http://freemarker.org/index.html
+			</attribute>
+			<attribute name="comment">template processing tool</attribute>
+			<attribute name="licence">APACHE2</attribute>
+		</file>
+		<file name="Oxygen Icons">
+			<attribute name="url">http://www.kde.org/</attribute>
+			<attribute name="name">Oxygen Icons</attribute>
+			<attribute name="comment">balík ikon původně určený pro KDE prostředí
+			</attribute>
+			<attribute name="licence">LGPL3</attribute>
+		</file>
+		<file name="Flagcdn.com">
+			<attribute name="url">https://flagpedia.net</attribute>
+			<attribute name="name">Flagcdn.com</attribute>
+			<attribute name="comment">Vlajky z WikiMediaCommons</attribute>
+			<attribute name="licence">CreativeCommons</attribute>
+		</file>
+		<file name="SVGSalamander">
+			<attribute name="url">https://github.com/blackears/svgSalamander
+			</attribute>
+			<attribute name="name">SVG Salamander</attribute>
+			<attribute name="comment">SVG rendering library</attribute>
+			<attribute name="licence">LGPL3</attribute>
+		</file>
+	</folder>
+
+</root>

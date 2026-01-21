@@ -1,7 +1,3 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package cz.bliksoft.javautils.app;
 
 import java.io.File;
@@ -19,19 +15,18 @@ import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.events.ClosedEvent;
 import cz.bliksoft.javautils.app.events.ClosingEvent;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
-import cz.bliksoft.javautils.app.modules.Modules;
 import cz.bliksoft.javautils.app.properties.XmlProperties;
 import cz.bliksoft.javautils.app.rights.DefaultUnrestrictedSessionManager;
 import cz.bliksoft.javautils.app.rights.SessionManager;
 import cz.bliksoft.javautils.fx.controls.images.AnyImageLoader;
 import cz.bliksoft.javautils.images.ImageLoader;
+import cz.bliksoft.javautils.modules.Modules;
 
 /**
  * jádro frameworku
  * 
  * @author Jakub Jelínek
  */
-//@VersionInfo(majorVersion = 1, minorVersion = 6, revisionVersion = 0)
 public class BSApp {
 
 	static Logger log = null;
@@ -40,6 +35,9 @@ public class BSApp {
 
 	public static final String PREF_LIBDIR = "libDir"; //$NON-NLS-1$
 	public static final String PREF_LIBDIR_DEFAULT = "lib"; //$NON-NLS-1$
+	public static final String PREF_MODULEDIR = "moduleDir"; //$NON-NLS-1$
+	public static final String PREF_DISABLED_MODULES = "DisabledModules"; //$NON-NLS-1$
+	public static final String PREF_ENABLED_MODULES = "EnabledModules"; //$NON-NLS-1$
 
 	/**
 	 * zjišťuje zapisovatelnost globálního konfiguračního souboru
@@ -318,7 +316,37 @@ public class BSApp {
 	 * @throws Exception
 	 */
 	public static void init() {
-		//getAppName();
+		log = LogManager.getLogger();
+		
+		String plugDir = BSApp.getGlobalProperties().getProperty(PREF_MODULEDIR);
+		if (StringUtils.hasText(plugDir)) {
+			File pluginsDir = new File(plugDir); // $NON-NLS-1$ //$NON-NLS-2$
+			if (pluginsDir.isDirectory()) {
+				ClasspathUtils.addDirectory(pluginsDir);
+				log.log(Level.DEBUG, BSAppMessages.getString("App.pluginDirAddedToCp"), pluginsDir); //$NON-NLS-1$ //$NON-NLS-2$
+			} else {
+				log.log(Level.WARN, BSAppMessages.getString("App.pluginsDirNotFound"), pluginsDir); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+		} else {
+			log.debug("No \"modules\" directory configured.");
+		}
+
+		{
+			String tmp_disabledModules = (String) BSApp.getEnvironmentProperty(PREF_DISABLED_MODULES, ""); //$NON-NLS-1$ //$NON-NLS-2$
+			for (String s : tmp_disabledModules.split(";")) {
+				if (StringUtils.hasText(s))
+					Modules.disableModule(s);
+			}
+		}
+		{
+			String tmp_enabledModules = (String) BSApp.getEnvironmentProperty(PREF_ENABLED_MODULES, "*"); //$NON-NLS-1$ //$NON-NLS-2$
+			for (String s : tmp_enabledModules.split(";")) {
+				if (StringUtils.hasText(s))
+					Modules.enableModule(s);
+			}
+		}
+
+		// getAppName();
 		environmentName = getGlobalProperties().getProperty("app.configname", "default"); //$NON-NLS-1$ //$NON-NLS-2$
 
 		log = LogManager.getLogger();
@@ -330,12 +358,12 @@ public class BSApp {
 			if (l != null) {
 				Locale.setDefault(l);
 				BSAppMessages.reload();
-				log.info(BSAppMessages.getString("Common.locale_set"), l.toLanguageTag()); //$NON-NLS-1$
+				log.info(BSAppMessages.getString("App.locale_set"), l.toLanguageTag()); //$NON-NLS-1$
 			}
 		}
 
 		log.log(Level.INFO,
-				BSAppMessages.getString("Common.2") + "  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv", //$NON-NLS-1$//$NON-NLS-2$
+				BSAppMessages.getString("App.starting") + "  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv", //$NON-NLS-1$//$NON-NLS-2$
 				getAppName()); // $NON-NLS-3$
 
 		// přidání konfigurované lib složky do classpath
@@ -345,9 +373,9 @@ public class BSApp {
 
 			if (libsDir.isDirectory()) {
 				ClasspathUtils.addDirectory(libsDir);
-				log.log(Level.DEBUG, BSAppMessages.getString("Common.libDirAddedToCp"), libsDir); //$NON-NLS-1$ //$NON-NLS-2$
+				log.log(Level.DEBUG, BSAppMessages.getString("App.libDirAddedToCp"), libsDir); //$NON-NLS-1$ //$NON-NLS-2$
 			} else {
-				log.log(Level.WARN, BSAppMessages.getString("Common.LibDirNotFound"), libsDir); //$NON-NLS-1$ //$NON-NLS-2$
+				log.log(Level.WARN, BSAppMessages.getString("App.LibDirNotFound"), libsDir); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		} else {
 			log.debug("No \"lib\" directory configured.");
