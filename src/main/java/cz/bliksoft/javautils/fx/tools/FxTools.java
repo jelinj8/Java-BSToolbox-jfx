@@ -33,7 +33,6 @@ public final class FxTools {
 
 		// register here (or do it elsewhere and call install after)
 		// (keep yours)
-		safeRegister("/css/app.css");
 		registerCss("/css/codebook-field.css");
 		registerCss("/css/icon-text-cell.css");
 		registerCss("/css/validation.css");
@@ -55,7 +54,7 @@ public final class FxTools {
 		});
 	}
 
-	private static void safeRegister(String resourcePath) {
+	public static void safeRegister(String resourcePath) {
 		URL url = FxTools.class.getResource(resourcePath);
 		if (url != null)
 			GLOBAL_STYLES.add(url.toExternalForm());

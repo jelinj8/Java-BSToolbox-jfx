@@ -1,0 +1,10 @@
+.statusbar-label {
+	-fx-background-color: linear-gradient(to bottom, #dcdcdc, #cfcfcf);
+	-fx-background-insets: 0;
+	-fx-padding: 4 8 4 8;
+	-fx-border-color: #b0b0b0 #f5f5f5 #f5f5f5 #b0b0b0;
+	-fx-border-width: 1;
+	-fx-border-insets: 0;
+	-fx-border-radius: 0;
+	-fx-text-fill: #303030;
+}

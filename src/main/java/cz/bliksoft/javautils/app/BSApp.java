@@ -19,7 +19,7 @@ import cz.bliksoft.javautils.app.properties.XmlProperties;
 import cz.bliksoft.javautils.app.rights.DefaultUnrestrictedSessionManager;
 import cz.bliksoft.javautils.app.rights.SessionManager;
 import cz.bliksoft.javautils.fx.controls.images.AnyImageLoader;
-import cz.bliksoft.javautils.images.ImageLoader;
+import cz.bliksoft.javautils.fx.controls.images.ImageLoader;
 import cz.bliksoft.javautils.modules.Modules;
 
 /**
@@ -395,7 +395,7 @@ public class BSApp {
 
 		// inicializace modulů
 		Modules.initModules();
-
+		
 		// instalace modulů
 		Modules.installModules();
 

@@ -1,13 +1,10 @@
 package cz.bliksoft.javautils.fx.controls.images;
 
-import java.awt.Image;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.imageio.ImageIO;
-
-import cz.bliksoft.javautils.images.ImageLoader;
+import javafx.scene.image.Image;
 
 public class AnyImageLoader extends ImageLoader {
 
@@ -32,7 +29,7 @@ public class AnyImageLoader extends ImageLoader {
 		Image orginalImage;
 
 		try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
-			orginalImage = ImageIO.read(bais);
+			orginalImage = new Image(bais);
 		}
 
 		return orginalImage;

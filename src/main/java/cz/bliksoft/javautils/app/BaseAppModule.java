@@ -1,6 +1,7 @@
 package cz.bliksoft.javautils.app;
 
 import cz.bliksoft.javautils.VersionInfo;
+import cz.bliksoft.javautils.fx.tools.FxTools;
 import cz.bliksoft.javautils.modules.ModuleBase;
 
 public class BaseAppModule extends ModuleBase {
@@ -18,5 +19,12 @@ public class BaseAppModule extends ModuleBase {
 	@Override
 	public String getVersionInfo() {
 		return new VersionInfo().getDisplayVersion();
+	}
+	
+	@Override
+	public void init() {
+		super.init();
+		FxTools.safeRegister("/css/app.css");
+
 	}
 }

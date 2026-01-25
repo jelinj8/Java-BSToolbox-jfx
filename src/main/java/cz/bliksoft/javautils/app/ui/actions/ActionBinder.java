@@ -1,0 +1,68 @@
+package cz.bliksoft.javautils.app.ui.actions;
+
+import javafx.beans.binding.Bindings;
+import javafx.scene.control.ButtonBase;
+import javafx.scene.control.MenuItem;
+
+public final class ActionBinder {
+	private ActionBinder() {
+	}
+
+	public static void bind(ButtonBase btn, IUIAction a) {
+		btn.setOnAction(e -> a.execute());
+
+		// enabled -> disable
+		btn.disableProperty().bind(Bindings.not(a.enabledProperty()));
+
+		// visible -> visible + managed (avoid layout gaps)
+		btn.visibleProperty().bind(a.visibleProperty());
+		btn.managedProperty().bind(a.visibleProperty());
+
+		// text/graphic (bind only if you want action to own them)
+		if (a.textProperty() != null)
+			btn.textProperty().bind(a.textProperty());
+
+		if (a.iconSpecProperty() != null) {
+			IconBinder.bindToolbarIcon(btn, a, 24);
+		} else if (a.graphicProperty() != null) {
+			// Compatibility fallback (NOTE: Node may be shared; clone if you need)
+			a.graphicProperty().addListener((obs, o, n) -> btn.setGraphic(n));
+			btn.setGraphic(a.graphicProperty().get());
+		}
+//		if (a.graphicProperty() != null)
+//			btn.graphicProperty().bind(a.graphicProperty());
+	}
+
+	public static void bind(MenuItem mi, IUIAction a) {
+		mi.setOnAction(e -> a.execute());
+
+		mi.disableProperty().bind(Bindings.not(a.enabledProperty()));
+
+		// MenuItem has visibleProperty in modern JavaFX; if you target very old
+		// versions, guard it.
+		try {
+			mi.visibleProperty().bind(a.visibleProperty());
+		} catch (Throwable ignored) {
+			// If running on an older JavaFX where MenuItem has no visibleProperty,
+			// you can approximate by disabling, or handle via parent menu rebuild.
+			mi.disableProperty().bind(Bindings.not(a.visibleProperty()).or(Bindings.not(a.enabledProperty())));
+		}
+
+		if (a.textProperty() != null)
+			mi.textProperty().bind(a.textProperty());
+
+		// MenuItem supports graphicProperty
+//		if (a.graphicProperty() != null)
+//			mi.graphicProperty().bind(a.graphicProperty());
+		if (a.iconSpecProperty() != null) {
+			IconBinder.bindMenuIcon(mi, a, 16);
+		} else if (a.graphicProperty() != null) {
+			a.graphicProperty().addListener((obs, o, n) -> mi.setGraphic(n));
+			mi.setGraphic(a.graphicProperty().get());
+		}
+
+		if (a.acceleratorProperty() != null && mi.acceleratorProperty() != null) {
+			mi.acceleratorProperty().bind(a.acceleratorProperty());
+		}
+	}
+}

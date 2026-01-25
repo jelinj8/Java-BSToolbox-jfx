@@ -1,4 +1,4 @@
-package cz.bliksoft.javautils;
+package cz.bliksoft.javautils.fx;
 
 import cz.bliksoft.javautils.modules.IVersionInfo;
 
