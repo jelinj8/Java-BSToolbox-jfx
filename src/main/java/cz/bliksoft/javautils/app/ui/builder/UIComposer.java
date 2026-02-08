@@ -30,7 +30,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -108,13 +107,15 @@ public final class UIComposer {
 	}
 
 	public static void buildUI(FileObject file, Stage stage) {
-		Object o = FileLoader.loadFile(file);
-		attachToStage(stage, toUiProduct(o), file, new UIBuildContext());
-	}
-
-	private static UiProduct loadUIProduct(FileObject file) {
-		Object o = FileLoader.loadFile(file);
-		return toUiProduct(o);
+		UIBuildContext ctx = new UIBuildContext();
+		UiProduct product;
+		try {
+			product = build(file, ctx);
+		} catch (Exception e) {
+			throw new InitializationException("Failed to build UI", e);
+		}
+//		Object o = FileLoader.loadFile(file);
+		attachToStage(stage, product, file, ctx);
 	}
 
 	private static void attachToStage(Stage stage, UiProduct product, FileObject file, UIBuildContext ctx) {
@@ -144,7 +145,7 @@ public final class UIComposer {
 		ctx.accelerators().attach(scn);
 	}
 
-	public static void setStageIcons(Stage stage, String basePath) {
+	private static void setStageIcons(Stage stage, String basePath) {
 		int[] sizes = { 16, 32, 48, 256 };
 		for (int s : sizes) {
 			String path = String.format("%s%d.png", basePath, s);
@@ -154,13 +155,17 @@ public final class UIComposer {
 		}
 	}
 
-	public static UiProduct buildUI(FileObject entry, UIBuildContext ctx) throws Exception {
-		UiProduct result = build(entry, ctx);
-		return result;
+//	private static UiProduct buildUIProduct(FileObject entry, UIBuildContext ctx) throws Exception {
+//		UiProduct result = build(entry, ctx);
+//		return result;
+//	}
+
+	private static UiProduct loadUIProduct(FileObject file) {
+		Object o = FileLoader.loadFile(file);
+		return toUiProduct(o);
 	}
 
 	private static UiProduct build(FileObject entry, UIBuildContext ctx) throws Exception {
-		UIBuildContextHolder.set(ctx);
 		try {
 			UiProduct parent = loadUIProduct(entry);
 
@@ -218,41 +223,41 @@ public final class UIComposer {
 			}
 
 			applyNodeAttribs(parent.getNodeContext(), entry, ctx);
+			if (entry.getChildren() != null)
+				for (FileObject childFile : entry.getChildren()) {
+					UiProduct child = build(childFile, ctx);
 
-			for (FileObject childFile : entry.getChildren()) {
-				UiProduct child = build(childFile, ctx);
+					if (parent.getNodeContext() instanceof javafx.scene.control.MenuBar mb) {
+						mb.getMenus().add(requireMenu(child, childFile, entry, "MenuBar"));
+						continue;
+					}
+					if (parent.getNodeContext() instanceof javafx.scene.control.MenuButton mbtn) {
+						MenuItem item = requireMenuItem(child, childFile, entry, "MenuButton");
+						bindMenuActionIfPresent(item, childFile, ctx);
+						mbtn.getItems().add(item);
+						continue;
+					}
+					if (parent.getNodeContext() instanceof javafx.scene.control.SplitMenuButton smb) {
+						MenuItem item = requireMenuItem(child, childFile, entry, "SplitMenuButton");
+						bindMenuActionIfPresent(item, childFile, ctx);
+						smb.getItems().add(item);
+						continue;
+					}
 
-				if (parent.getNodeContext() instanceof javafx.scene.control.MenuBar mb) {
-					mb.getMenus().add(requireMenu(child, childFile, entry, "MenuBar"));
-					continue;
+					attach(parent.getNodeContext(), entry, child.getNodeContext(), childFile, ctx);
 				}
-				if (parent.getNodeContext() instanceof javafx.scene.control.MenuButton mbtn) {
-					MenuItem item = requireMenuItem(child, childFile, entry, "MenuButton");
-					bindMenuActionIfPresent(item, childFile, ctx);
-					mbtn.getItems().add(item);
-					continue;
-				}
-				if (parent.getNodeContext() instanceof javafx.scene.control.SplitMenuButton smb) {
-					MenuItem item = requireMenuItem(child, childFile, entry, "SplitMenuButton");
-					bindMenuActionIfPresent(item, childFile, ctx);
-					smb.getItems().add(item);
-					continue;
-				}
-
-				attach(parent.getNodeContext(), entry, child.getNodeContext(), childFile, ctx);
-			}
 			return parent;
 		} finally {
 			UIBuildContextHolder.clear();
 		}
 	}
 
-	public static Node buildNode(FileObject entry, UIBuildContext ctx) throws Exception {
-		UiProduct p = buildUI(entry, ctx);
-		if (p instanceof UiSceneProduct)
-			throw new IllegalArgumentException("Nested Scene not allowed: " + entry.getName());
-		return p.getNodeContext();
-	}
+//	private static Node buildNode(FileObject entry, UIBuildContext ctx) throws Exception {
+//		UiProduct p = buildUIProduct(entry, ctx);
+//		if (p instanceof UiSceneProduct)
+//			throw new IllegalArgumentException("Nested Scene not allowed: " + entry.getName());
+//		return p.getNodeContext();
+//	}
 
 	private static void applyNodeAttribs(Node node, FileObject definition, UIBuildContext ctx) {
 		String className = definition.getAttribute("class", null);
@@ -334,11 +339,11 @@ public final class UIComposer {
 		}
 
 		// Generic Pane: add child
-		if (parent instanceof Pane p) {
-			p.getChildren().add(child);
-			applyCommonChildConstraints(parent, child, childEntry);
-			return;
-		}
+//		if (parent instanceof Pane p) {
+//			p.getChildren().add(child);
+//			applyCommonChildConstraints(parent, child, childEntry);
+//			return;
+//		}
 
 		// Group: add child
 		if (parent instanceof Group g) {
