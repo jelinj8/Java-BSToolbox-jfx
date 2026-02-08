@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns="http://bliksoft.cz/XmlFilesystem"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://bliksoft.cz/XmlFilesystem XmlFilesystem.xsd">
+	<folder name="fileLoaders">
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.FxmlFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.ButtonFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.HyperlinkFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.LabelFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.MenuButtonFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.SplitMenuButtonFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.ToggleButtonFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.ContextMenuFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.CheckMenuItemFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.MenuBarFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.MenuFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.MenuItemFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.RadioMenuItemFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.SeparatorMenuItemFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.AccordionFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.AnchorPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.BorderPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.UIPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.FlowPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.GridPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.GroupFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.HBoxFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.ScrollPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.SplitPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.StackPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.TabPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.TilePaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.TitledPaneFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.ToolBarFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.VBoxFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.scene.SceneBorderFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.scene.SceneStackFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.scene.SceneTabsFileLoader" />
+	</folder>
+</root>

@@ -7,16 +7,21 @@ import javafx.geometry.Orientation;
 import javafx.scene.layout.FlowPane;
 
 public class FlowPaneFileLoader extends FileLoader {
-    @Override public Object loadObject(FileObject file) {
-        FlowPane fp = new FlowPane();
-        fp.setOrientation(FxAttrHelper.orientation(file, "orientation", Orientation.HORIZONTAL));
-        fp.setHgap(FxAttrHelper.d(file, "hgap", 0));
-        fp.setVgap(FxAttrHelper.d(file, "vgap", 0));
-        if (file.getAttribute("prefWrapLength", null) != null) {
-            fp.setPrefWrapLength(FxAttrHelper.d(file, "prefWrapLength", fp.getPrefWrapLength()));
-        }
-        FxAttrHelper.applyCommon(fp, file);
-        return fp;
-    }
-    @Override public String getExtension() { return "FlowPane"; }
+	@Override
+	public Object loadObject(FileObject file) {
+		FlowPane fp = new FlowPane();
+		fp.setOrientation(FxAttrHelper.orientation(file, "orientation", Orientation.HORIZONTAL));
+		fp.setHgap(file.getDouble("hgap", 0));
+		fp.setVgap(file.getDouble("vgap", 0));
+		if (file.getAttribute("prefWrapLength", null) != null) {
+			fp.setPrefWrapLength(file.getDouble("prefWrapLength", fp.getPrefWrapLength()));
+		}
+		FxAttrHelper.applyCommon(fp, file);
+		return fp;
+	}
+
+	@Override
+	public String getExtension() {
+		return "FlowPane";
+	}
 }

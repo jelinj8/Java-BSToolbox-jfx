@@ -10,7 +10,7 @@ public class StackPaneFileLoader extends FileLoader {
     @Override public Object loadObject(FileObject file) {
         StackPane sp = new StackPane();
         sp.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.CENTER));
-        FxAttrHelper.applyRegionSizing(sp, file);
+        FxAttrHelper.applyCommon(sp, file);
         return sp;
     }
 

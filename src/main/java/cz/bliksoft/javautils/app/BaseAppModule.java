@@ -1,6 +1,6 @@
 package cz.bliksoft.javautils.app;
 
-import cz.bliksoft.javautils.VersionInfo;
+import cz.bliksoft.javautils.fx.VersionInfo;
 import cz.bliksoft.javautils.fx.tools.FxTools;
 import cz.bliksoft.javautils.modules.ModuleBase;
 

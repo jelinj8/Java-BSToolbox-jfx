@@ -21,6 +21,7 @@ import cz.bliksoft.javautils.app.rights.SessionManager;
 import cz.bliksoft.javautils.fx.controls.images.AnyImageLoader;
 import cz.bliksoft.javautils.fx.controls.images.ImageLoader;
 import cz.bliksoft.javautils.modules.Modules;
+import javafx.application.Application;
 
 /**
  * jádro frameworku
@@ -39,6 +40,12 @@ public class BSApp {
 	public static final String PREF_DISABLED_MODULES = "DisabledModules"; //$NON-NLS-1$
 	public static final String PREF_ENABLED_MODULES = "EnabledModules"; //$NON-NLS-1$
 
+	private static Application jFXApp = null;
+	
+	public static Application getApplication() {
+		return jFXApp;
+	}
+	
 	/**
 	 * zjišťuje zapisovatelnost globálního konfiguračního souboru
 	 * 
@@ -315,7 +322,9 @@ public class BSApp {
 	 * 
 	 * @throws Exception
 	 */
-	public static void init() {
+	public static void init(Application app) {
+		jFXApp = app;
+		
 		log = LogManager.getLogger();
 		
 		String plugDir = BSApp.getGlobalProperties().getProperty(PREF_MODULEDIR);
@@ -399,7 +408,7 @@ public class BSApp {
 		// instalace modulů
 		Modules.installModules();
 
-		log.log(Level.INFO, BSAppMessages.getString("Common.InitializationCompleted") //$NON-NLS-1$
+		log.log(Level.INFO, BSAppMessages.getString("App.InitializationCompleted") //$NON-NLS-1$
 				+ " ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"); //$NON-NLS-1$ //$NON-NLS-3$
 	}
 

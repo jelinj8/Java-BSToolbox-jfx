@@ -7,15 +7,19 @@ import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;
 
 public class HBoxFileLoader extends FileLoader {
-    @Override public Object loadObject(FileObject file) {
-        HBox hb = new HBox();
-        hb.setSpacing(FxAttrHelper.d(file, "spacing", 0));
-        hb.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.TOP_LEFT));
-        hb.setFillHeight(FxAttrHelper.bool(file, "fillHeight", true));
+	@Override
+	public Object loadObject(FileObject file) {
+		HBox hb = new HBox();
+		hb.setSpacing(file.getDouble("spacing", 0));
+		hb.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.TOP_LEFT));
+		hb.setFillHeight(file.getBool("fillHeight", true));
 
-        FxAttrHelper.applyRegionSizing(hb, file);
-        return hb;
-    }
+		FxAttrHelper.applyCommon(hb, file);
+		return hb;
+	}
 
-    @Override public String getExtension() { return "HBox"; }
+	@Override
+	public String getExtension() {
+		return "HBox";
+	}
 }

@@ -17,7 +17,7 @@ public class TabPaneFileLoader extends FileLoader {
         }
 
         tp.setSide(FxAttrHelper.side(file, "side", tp.getSide()));
-        FxAttrHelper.applyRegionSizing(tp, file);
+        FxAttrHelper.applyCommon(tp, file);
         return tp;
     }
 

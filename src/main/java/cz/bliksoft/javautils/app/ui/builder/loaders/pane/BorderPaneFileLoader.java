@@ -10,7 +10,7 @@ public class BorderPaneFileLoader extends FileLoader {
 	public Object loadObject(FileObject file) {
 		BorderPane bp = new BorderPane();
 
-		FxAttrHelper.applyRegionSizing(bp, file);
+		FxAttrHelper.applyCommon(bp, file);
 		return bp;
 	}
 

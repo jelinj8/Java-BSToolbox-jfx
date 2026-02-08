@@ -7,11 +7,17 @@ import javafx.geometry.Orientation;
 import javafx.scene.control.ToolBar;
 
 public class ToolBarFileLoader extends FileLoader {
-    @Override public Object loadObject(FileObject file) {
-        ToolBar tb = new ToolBar();
-        tb.setOrientation(FxAttrHelper.orientation(file, "orientation", Orientation.HORIZONTAL));
-        return tb;
-    }
+	@Override
+	public Object loadObject(FileObject file) {
+		ToolBar tb = new ToolBar();
+		tb.setOrientation(FxAttrHelper.orientation(file, "orientation", Orientation.HORIZONTAL));
+		FxAttrHelper.applyControl(tb, file);
+		FxAttrHelper.applyCommon(tb, file);
+		return tb;
+	}
 
-    @Override public String getExtension() { return "ToolBar"; }
+	@Override
+	public String getExtension() {
+		return "ToolBar";
+	}
 }

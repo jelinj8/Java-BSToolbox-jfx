@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions;
 
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.ButtonBase;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.MenuItem;
 
 public final class ActionBinder {
@@ -29,8 +30,6 @@ public final class ActionBinder {
 			a.graphicProperty().addListener((obs, o, n) -> btn.setGraphic(n));
 			btn.setGraphic(a.graphicProperty().get());
 		}
-//		if (a.graphicProperty() != null)
-//			btn.graphicProperty().bind(a.graphicProperty());
 	}
 
 	public static void bind(MenuItem mi, IUIAction a) {
@@ -51,9 +50,6 @@ public final class ActionBinder {
 		if (a.textProperty() != null)
 			mi.textProperty().bind(a.textProperty());
 
-		// MenuItem supports graphicProperty
-//		if (a.graphicProperty() != null)
-//			mi.graphicProperty().bind(a.graphicProperty());
 		if (a.iconSpecProperty() != null) {
 			IconBinder.bindMenuIcon(mi, a, 16);
 		} else if (a.graphicProperty() != null) {
@@ -63,6 +59,18 @@ public final class ActionBinder {
 
 		if (a.acceleratorProperty() != null && mi.acceleratorProperty() != null) {
 			mi.acceleratorProperty().bind(a.acceleratorProperty());
+		}
+	}
+
+	public static void bind(Hyperlink hl, IUIAction a) {
+		hl.setOnAction(e -> a.execute());
+		hl.disableProperty().bind(Bindings.not(a.enabledProperty()));
+		hl.visibleProperty().bind(a.visibleProperty());
+		hl.managedProperty().bind(a.visibleProperty());
+		if (a.textProperty() != null)
+			hl.textProperty().bind(a.textProperty());
+		if (a.iconSpecProperty() != null) {
+			IconBinder.bindIcon(hl.graphicProperty()::setValue, a, 16);
 		}
 	}
 }

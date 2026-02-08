@@ -50,7 +50,7 @@ public class ImageUtils {
 
 	public static final String SCALE_PLACEHOLDER = "${scale}";
 
-	protected static Image createImage(String spec) {
+	protected static Image createImage(String spec, boolean background) {
 		if (spec == null) {
 			log.debug("NULL image path requested");
 			return null;
@@ -132,7 +132,7 @@ public class ImageUtils {
 				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath); //$NON-NLS-1$
 				var url = ImageUtils.class.getResource(res);
 				if (url != null) {
-					return new Image(url.toExternalForm(), true);
+					return new Image(url.toExternalForm(), background);
 				}
 			}
 		} catch (Exception e) {
@@ -142,7 +142,7 @@ public class ImageUtils {
 		return null;
 	}
 
-	public static Image getImageIfPossible(String spec) {
+	public static Image getImageIfPossible(String spec, boolean background) {
 		if (spec == null)
 			return null;
 
@@ -154,7 +154,7 @@ public class ImageUtils {
 
 		Image i = iconCache.get(nSpec);
 		if (i == null) {
-			i = createImage(nSpec);
+			i = createImage(nSpec, background);
 			if (i != null) {
 				iconCache.put(nSpec, i);
 			}
@@ -162,11 +162,11 @@ public class ImageUtils {
 		return i;
 	}
 
-	public static Image getImage(String spec) {
-		Image i = getImageIfPossible(spec);
+	public static Image getImage(String spec, boolean background) {
+		Image i = getImageIfPossible(spec, background);
 		if (i == null) {
 			// fallback kept from your original
-			i = getImageIfPossible("File_16.png#overlay/Error_9.png"); //$NON-NLS-1$
+			i = getImageIfPossible("File_16.png#overlay/Error_9.png", false); //$NON-NLS-1$
 			if (i != null) {
 				iconCache.put(spec, i);
 			}
@@ -201,7 +201,7 @@ public class ImageUtils {
 		if (input instanceof ImageView iv)
 			return iv.getImage();
 		if (input instanceof String s)
-			return getImage(s);
+			return getImage(s, true);
 		return null;
 	}
 

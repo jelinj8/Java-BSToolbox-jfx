@@ -1,50 +1,21 @@
 package cz.bliksoft.javautils.app.ui.builder;
 
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
+import javafx.geometry.VPos;
 import javafx.scene.control.Control;
 import javafx.scene.control.Labeled;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 
 public final class FxAttrHelper {
 	private FxAttrHelper() {
-	}
-
-	public static boolean bool(FileObject f, String key, boolean def) {
-		String v = f.getAttribute(key, null);
-		if (v == null)
-			return def;
-		v = v.trim();
-		if (v.isEmpty())
-			return def;
-		return Boolean.parseBoolean(v);
-	}
-
-	public static int i(FileObject f, String key, int def) {
-		String v = f.getAttribute(key, null);
-		if (v == null)
-			return def;
-		try {
-			return Integer.parseInt(v.trim());
-		} catch (Exception e) {
-			return def;
-		}
-	}
-
-	public static double d(FileObject f, String key, double def) {
-		String v = f.getAttribute(key, null);
-		if (v == null)
-			return def;
-		try {
-			return Double.parseDouble(v.trim());
-		} catch (Exception e) {
-			return def;
-		}
 	}
 
 	public static Insets insets(FileObject f, String key) {
@@ -123,26 +94,90 @@ public final class FxAttrHelper {
 		}
 	}
 
-	public static void applyRegionSizing(javafx.scene.layout.Region r, FileObject f) {
-		if (f.getAttribute("prefWidth", null) != null)
-			r.setPrefWidth(d(f, "prefWidth", r.getPrefWidth()));
-		if (f.getAttribute("prefHeight", null) != null)
-			r.setPrefHeight(d(f, "prefHeight", r.getPrefHeight()));
-		if (f.getAttribute("minWidth", null) != null)
-			r.setMinWidth(d(f, "minWidth", r.getMinWidth()));
-		if (f.getAttribute("minHeight", null) != null)
-			r.setMinHeight(d(f, "minHeight", r.getMinHeight()));
-		if (f.getAttribute("maxWidth", null) != null)
-			r.setMaxWidth(sizeInf(f.getAttribute("maxWidth", null), r.getMaxWidth()));
-		if (f.getAttribute("maxHeight", null) != null)
-			r.setMaxHeight(sizeInf(f.getAttribute("maxHeight", null), r.getMaxHeight()));
+	/**
+	 * Parses "t,r,b,l" or "t r b l" or "v h" or "all" formats: - "10" => Insets(10)
+	 * - "10,20" => Insets(top/bottom=10, left/right=20) (also supports "10 20") -
+	 * "10,20,30,40" => Insets(10,20,30,40)
+	 */
+	public static Insets parseInsets(FileObject f, String key) {
+		String s = f.getAttribute(key, null);
+		if (s == null)
+			return null;
+		String v = s.trim();
+		if (v.isEmpty())
+			return null;
 
-		Insets p = insets(f, "padding");
-		if (p != null)
-			r.setPadding(p);
+		// split by comma or whitespace
+		String[] parts = v.split("[,\\s]+");
+		try {
+			if (parts.length == 1) {
+				double a = Double.parseDouble(parts[0]);
+				return new Insets(a);
+			}
+			if (parts.length == 2) {
+				double vert = Double.parseDouble(parts[0]);
+				double horz = Double.parseDouble(parts[1]);
+				return new Insets(vert, horz, vert, horz);
+			}
+			if (parts.length == 4) {
+				double t = Double.parseDouble(parts[0]);
+				double r = Double.parseDouble(parts[1]);
+				double b = Double.parseDouble(parts[2]);
+				double l = Double.parseDouble(parts[3]);
+				return new Insets(t, r, b, l);
+			}
+		} catch (NumberFormatException ignored) {
+		}
+		return null;
 	}
 
-	private static double sizeInf(String s, double def) {
+	public static Priority growPriority(FileObject f, String key) {
+		String s = f.getAttribute(key, null);
+		if (s == null)
+			return null;
+		String v = s.trim().toUpperCase();
+		if (v.isEmpty())
+			return null;
+		try {
+			return Priority.valueOf(v);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
+	public static HPos hPos(FileObject f, String key) {
+		String s = f.getAttribute(key, null);
+		if (s == null)
+			return null;
+		String v = s.trim().toUpperCase();
+		if (v.isEmpty())
+			return null;
+		try {
+			return HPos.valueOf(v);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
+	public static VPos vPos(FileObject f, String key) {
+		String s = f.getAttribute(key, null);
+		if (s == null)
+			return null;
+		String v = s.trim().toUpperCase();
+		if (v.isEmpty())
+			return null;
+		try {
+			return VPos.valueOf(v);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Accepts "inf", "infinite", "max" for Double.MAX_VALUE, otherwise parses
+	 * double.
+	 */
+	public static Double sizeInf(String s, Double def) {
 		if (s == null)
 			return def;
 		String v = s.trim().toLowerCase();
@@ -155,13 +190,18 @@ public final class FxAttrHelper {
 		}
 	}
 
-	public static String s(FileObject f, String key, String def) {
-		String v = f.getAttribute(key, null);
-		if (v == null)
-			return def;
-		v = v.trim();
-		return v.isEmpty() ? def : v;
-	}
+//	private static Pos parsePos(String s) {
+//		if (s == null)
+//			return null;
+//		String v = s.trim().toUpperCase();
+//		if (v.isEmpty())
+//			return null;
+//		try {
+//			return Pos.valueOf(v);
+//		} catch (IllegalArgumentException e) {
+//			return null;
+//		}
+//	}
 
 	/**
 	 * Generic node-ish attributes that are safe to set in loaders too (optional).
@@ -169,17 +209,17 @@ public final class FxAttrHelper {
 	public static void applyCommon(Region r, FileObject f) {
 		// sizing
 		if (f.getAttribute("prefWidth", null) != null)
-			r.setPrefWidth(d(f, "prefWidth", r.getPrefWidth()));
+			r.setPrefWidth(f.getDouble("prefWidth", r.getPrefWidth()));
 		if (f.getAttribute("prefHeight", null) != null)
-			r.setPrefHeight(d(f, "prefHeight", r.getPrefHeight()));
+			r.setPrefHeight(f.getDouble("prefHeight", r.getPrefHeight()));
 		if (f.getAttribute("minWidth", null) != null)
-			r.setMinWidth(d(f, "minWidth", r.getMinWidth()));
+			r.setMinWidth(f.getDouble("minWidth", r.getMinWidth()));
 		if (f.getAttribute("minHeight", null) != null)
-			r.setMinHeight(d(f, "minHeight", r.getMinHeight()));
+			r.setMinHeight(f.getDouble("minHeight", r.getMinHeight()));
 		if (f.getAttribute("maxWidth", null) != null)
-			r.setMaxWidth(sizeInf(s(f, "maxWidth", null), r.getMaxWidth()));
+			r.setMaxWidth(sizeInf(f.getAttribute("maxWidth", null), r.getMaxWidth()));
 		if (f.getAttribute("maxHeight", null) != null)
-			r.setMaxHeight(sizeInf(s(f, "maxHeight", null), r.getMaxHeight()));
+			r.setMaxHeight(sizeInf(f.getAttribute("maxHeight", null), r.getMaxHeight()));
 
 		Insets p = insets(f, "padding");
 		if (p != null)
@@ -194,9 +234,9 @@ public final class FxAttrHelper {
 
 	public static void applyControl(Control c, FileObject f) {
 		if (f.getAttribute("disable", null) != null)
-			c.setDisable(bool(f, "disable", c.isDisable()));
+			c.setDisable(f.getBool("disable", c.isDisable()));
 		if (f.getAttribute("focusTraversable", null) != null)
-			c.setFocusTraversable(bool(f, "focusTraversable", c.isFocusTraversable()));
+			c.setFocusTraversable(f.getBool("focusTraversable", c.isFocusTraversable()));
 	}
 
 	public static void applyPane(Pane p, FileObject f) {

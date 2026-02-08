@@ -23,7 +23,7 @@ public class SplitPaneFileLoader extends FileLoader {
             if (n > 0) sp.setDividerPositions(vals);
         }
 
-        FxAttrHelper.applyRegionSizing(sp, file);
+        FxAttrHelper.applyCommon(sp, file);
         return sp;
     }
 

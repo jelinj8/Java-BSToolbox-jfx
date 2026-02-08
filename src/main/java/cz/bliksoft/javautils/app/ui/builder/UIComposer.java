@@ -2,13 +2,13 @@ package cz.bliksoft.javautils.app.ui.builder;
 
 import java.util.function.Consumer;
 
+import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.ui.actions.ActionBinder;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
-import cz.bliksoft.javautils.app.ui.actions.IconBinder;
+import cz.bliksoft.javautils.exceptions.InitializationException;
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
 import cz.bliksoft.javautils.xmlfilesystem.FileLoader;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
-import javafx.beans.binding.Bindings;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -128,7 +128,6 @@ public final class UIComposer {
 		Parent root = (node instanceof Parent p) ? p : new StackPane(node);
 		Scene scn = new Scene(root);
 		applySceneAttribs(scn, file);
-		stage.setScene(scn);
 
 		// Title from attributes
 		String title = file.getAttribute("title", null);
@@ -140,14 +139,16 @@ public final class UIComposer {
 		if (iconBase != null)
 			setStageIcons(stage, iconBase);
 
+		stage.setScene(scn);
+
 		ctx.accelerators().attach(scn);
 	}
 
 	public static void setStageIcons(Stage stage, String basePath) {
 		int[] sizes = { 16, 32, 48, 256 };
 		for (int s : sizes) {
-			String path = String.format("%s-%d.png", basePath, s);
-			Image i = ImageUtils.getImageIfPossible(path);
+			String path = String.format("%s%d.png", basePath, s);
+			Image i = ImageUtils.getImageIfPossible(path, false);
 			if (i != null)
 				stage.getIcons().add(i);
 		}
@@ -203,8 +204,11 @@ public final class UIComposer {
 				if (mip.item() instanceof javafx.scene.control.Menu submenu) {
 					for (FileObject childFile : entry.getChildren()) {
 						UiProduct child = build(childFile, ctx);
-						submenu.getItems().add(requireMenuItem(child, childFile, entry, "Menu"));
+						MenuItem item = requireMenuItem(child, childFile, entry, "Menu");
+						bindMenuActionIfPresent(item, childFile, ctx);
+						submenu.getItems().add(item);
 					}
+					bindMenuVisibility(submenu);
 					return parent;
 				} else {
 					if (!entry.getChildren().isEmpty())
@@ -264,7 +268,6 @@ public final class UIComposer {
 		}
 
 		bindActionIfPresent(node, definition, ctx);
-
 	}
 
 	private static void applySceneAttribs(Scene scene, FileObject definition) {
@@ -416,17 +419,14 @@ public final class UIComposer {
 		}
 
 		// BorderPane supports margin per child
-		Insets m = parseInsets(childEntry.getAttribute("margin", null));
+		Insets m = FxAttrHelper.parseInsets(childEntry, "margin");
 		if (m != null)
 			BorderPane.setMargin(child, m);
 
 		// Optional alignment inside the region (Pos enum)
-		String align = childEntry.getAttribute("alignment", null);
-		if (align != null) {
-			Pos pos = parsePos(align);
-			if (pos != null)
-				BorderPane.setAlignment(child, pos);
-		}
+		Pos pos = FxAttrHelper.pos(childEntry, "alignment", null);
+		if (pos != null)
+			BorderPane.setAlignment(child, pos);
 	}
 
 	// ------------------- TabPane helpers -------------------
@@ -438,10 +438,10 @@ public final class UIComposer {
 
 		Tab tab = new Tab(text, content);
 
-		boolean closable = parseBoolean(tabDef.getAttribute("closable", "false"), false);
+		boolean closable = tabDef.getBool("closable", false);
 		tab.setClosable(closable);
 
-		boolean disable = parseBoolean(tabDef.getAttribute("disable", "false"), false);
+		boolean disable = tabDef.getBool("disable", false);
 		tab.setDisable(disable);
 
 		// Optional: tooltip
@@ -457,23 +457,23 @@ public final class UIComposer {
 
 		// Optional maxWidth/maxHeight for resizable nodes
 		if (child instanceof Region r) {
-			String mw = def.getAttribute("maxWidth", null);
+			Double mw = def.getDouble("maxWidth", null);
 			if (mw != null)
-				r.setMaxWidth(parseSize(mw, r.getMaxWidth()));
+				r.setMaxWidth(mw);
 
-			String mh = def.getAttribute("maxHeight", null);
+			Double mh = def.getDouble("maxHeight", null);
 			if (mh != null)
-				r.setMaxHeight(parseSize(mh, r.getMaxHeight()));
+				r.setMaxHeight(mh);
 		}
 	}
 
 	// ------------------- GridPane helpers -------------------
 
 	private static void applyGridConstraints(Node child, FileObject def) {
-		Integer row = parseIntOrNull(def.getAttribute("grid.row", null));
-		Integer col = parseIntOrNull(def.getAttribute("grid.col", null));
-		Integer rowSpan = parseIntOrNull(def.getAttribute("grid.rowSpan", null));
-		Integer colSpan = parseIntOrNull(def.getAttribute("grid.colSpan", null));
+		Integer row = def.getInteger("grid.row", null);
+		Integer col = def.getInteger("grid.col", null);
+		Integer rowSpan = def.getInteger("grid.rowSpan", null);
+		Integer colSpan = def.getInteger("grid.colSpan", null);
 
 		if (row != null)
 			GridPane.setRowIndex(child, row);
@@ -485,22 +485,22 @@ public final class UIComposer {
 			GridPane.setColumnSpan(child, colSpan);
 
 		// Optional hgrow/vgrow as Priority enum
-		Priority hg = parsePriority(def.getAttribute("grid.hgrow", null));
-		Priority vg = parsePriority(def.getAttribute("grid.vgrow", null));
+		Priority hg = FxAttrHelper.growPriority(def, "grid.hgrow");
+		Priority vg = FxAttrHelper.growPriority(def, "grid.vgrow");
 		if (hg != null)
 			GridPane.setHgrow(child, hg);
 		if (vg != null)
 			GridPane.setVgrow(child, vg);
 
 		// Optional halign/valign
-		HPos halign = parseHPos(def.getAttribute("grid.halign", null));
-		VPos valign = parseVPos(def.getAttribute("grid.valign", null));
+		HPos halign = FxAttrHelper.hPos(def, "grid.halign");
+		VPos valign = FxAttrHelper.vPos(def, "grid.valign");
 		if (halign != null)
 			GridPane.setHalignment(child, halign);
 		if (valign != null)
 			GridPane.setValignment(child, valign);
 
-		Insets m = parseInsets(def.getAttribute("margin", null));
+		Insets m = FxAttrHelper.parseInsets(def, "margin");
 		if (m != null)
 			GridPane.setMargin(child, m);
 
@@ -511,173 +511,29 @@ public final class UIComposer {
 	// ------------------- HBox / VBox helpers -------------------
 
 	private static void applyHBoxConstraints(Node child, FileObject def) {
-		Priority hgrow = parsePriority(def.getAttribute("hgrow", null));
+		Priority hgrow = FxAttrHelper.growPriority(def, "hgrow");
 		if (hgrow != null)
 			HBox.setHgrow(child, hgrow);
 
-		Insets m = parseInsets(def.getAttribute("margin", null));
+		Insets m = FxAttrHelper.parseInsets(def, "margin");
 		if (m != null)
 			HBox.setMargin(child, m);
 	}
 
 	private static void applyVBoxConstraints(Node child, FileObject def) {
-		Priority vgrow = parsePriority(def.getAttribute("vgrow", null));
+		Priority vgrow = FxAttrHelper.growPriority(def, "vgrow");
 		if (vgrow != null)
 			VBox.setVgrow(child, vgrow);
 
-		Insets m = parseInsets(def.getAttribute("margin", null));
+		Insets m = FxAttrHelper.parseInsets(def, "margin");
 		if (m != null)
 			VBox.setMargin(child, m);
 	}
 
-	// ------------------- Parsing helpers -------------------
-
-	private static boolean parseBoolean(String s, boolean def) {
-		if (s == null)
-			return def;
-		s = s.trim();
-		if (s.isEmpty())
-			return def;
-		return Boolean.parseBoolean(s);
-	}
-
-	private static Integer parseIntOrNull(String s) {
-		if (s == null)
-			return null;
-		s = s.trim();
-		if (s.isEmpty())
-			return null;
-		try {
-			return Integer.parseInt(s);
-		} catch (NumberFormatException e) {
-			return null;
-		}
-	}
-
-	/**
-	 * Accepts "inf", "infinite", "max" for Double.MAX_VALUE, otherwise parses
-	 * double.
-	 */
-	private static double parseSize(String s, double def) {
-		if (s == null)
-			return def;
-		String v = s.trim().toLowerCase();
-		if (v.isEmpty())
-			return def;
-		if (v.equals("inf") || v.equals("infinite") || v.equals("max"))
-			return Double.MAX_VALUE;
-		try {
-			return Double.parseDouble(v);
-		} catch (NumberFormatException e) {
-			return def;
-		}
-	}
-
-	private static Priority parsePriority(String s) {
-		if (s == null)
-			return null;
-		String v = s.trim().toUpperCase();
-		if (v.isEmpty())
-			return null;
-		try {
-			return Priority.valueOf(v);
-		} catch (IllegalArgumentException e) {
-			return null;
-		}
-	}
-
-	private static HPos parseHPos(String s) {
-		if (s == null)
-			return null;
-		String v = s.trim().toUpperCase();
-		if (v.isEmpty())
-			return null;
-		try {
-			return HPos.valueOf(v);
-		} catch (IllegalArgumentException e) {
-			return null;
-		}
-	}
-
-	private static VPos parseVPos(String s) {
-		if (s == null)
-			return null;
-		String v = s.trim().toUpperCase();
-		if (v.isEmpty())
-			return null;
-		try {
-			return VPos.valueOf(v);
-		} catch (IllegalArgumentException e) {
-			return null;
-		}
-	}
-
-	private static Pos parsePos(String s) {
-		if (s == null)
-			return null;
-		String v = s.trim().toUpperCase();
-		if (v.isEmpty())
-			return null;
-		try {
-			return Pos.valueOf(v);
-		} catch (IllegalArgumentException e) {
-			return null;
-		}
-	}
-
-	/**
-	 * Parses "t,r,b,l" or "t r b l" or "v h" or "all" formats: - "10" => Insets(10)
-	 * - "10,20" => Insets(top/bottom=10, left/right=20) (also supports "10 20") -
-	 * "10,20,30,40" => Insets(10,20,30,40)
-	 */
-	private static Insets parseInsets(String s) {
-		if (s == null)
-			return null;
-		String v = s.trim();
-		if (v.isEmpty())
-			return null;
-
-		// split by comma or whitespace
-		String[] parts = v.split("[,\\s]+");
-		try {
-			if (parts.length == 1) {
-				double a = Double.parseDouble(parts[0]);
-				return new Insets(a);
-			}
-			if (parts.length == 2) {
-				double vert = Double.parseDouble(parts[0]);
-				double horz = Double.parseDouble(parts[1]);
-				return new Insets(vert, horz, vert, horz);
-			}
-			if (parts.length == 4) {
-				double t = Double.parseDouble(parts[0]);
-				double r = Double.parseDouble(parts[1]);
-				double b = Double.parseDouble(parts[2]);
-				double l = Double.parseDouble(parts[3]);
-				return new Insets(t, r, b, l);
-			}
-		} catch (NumberFormatException ignored) {
-		}
-		return null;
-	}
-
-	private static Double parseDoubleOrNull(String s) {
-		if (s == null)
-			return null;
-		s = s.trim();
-		if (s.isEmpty())
-			return null;
-		try {
-			return Double.parseDouble(s);
-		} catch (NumberFormatException e) {
-			return null;
-		}
-	}
-
 	private static void setSingleContent(String slotName, Node existingContent, Consumer<Node> setter, Node newContent,
 			FileObject childEntry, FileObject parentEntry) {
-		boolean replace = parseBoolean(childEntry.getAttribute("replace", "false"), false);
-		boolean clear = parseBoolean(childEntry.getAttribute("clear", "false"), false);
+		boolean replace = childEntry.getBool("replace", false);
+		boolean clear = childEntry.getBool("clear", false);
 
 		if (clear) {
 			setter.accept(null);
@@ -704,10 +560,10 @@ public final class UIComposer {
 
 		TitledPane tp = new TitledPane(text, content);
 
-		boolean expanded = parseBoolean(def.getAttribute("expanded", "false"), false);
+		boolean expanded = def.getBool("expanded", false);
 		tp.setExpanded(expanded);
 
-		boolean collapsible = parseBoolean(def.getAttribute("collapsible", "true"), true);
+		boolean collapsible = def.getBool("collapsible", true);
 		tp.setCollapsible(collapsible);
 
 		// Optional: graphic via separate loader etc. (not here)
@@ -715,10 +571,10 @@ public final class UIComposer {
 	}
 
 	private static void applyAnchorConstraints(Node child, FileObject childEntry) {
-		Double top = parseDoubleOrNull(childEntry.getAttribute("anchor.top", null));
-		Double right = parseDoubleOrNull(childEntry.getAttribute("anchor.right", null));
-		Double bottom = parseDoubleOrNull(childEntry.getAttribute("anchor.bottom", null));
-		Double left = parseDoubleOrNull(childEntry.getAttribute("anchor.left", null));
+		Double top = childEntry.getDouble("anchor.top", null);
+		Double right = childEntry.getDouble("anchor.right", null);
+		Double bottom = childEntry.getDouble("anchor.bottom", null);
+		Double left = childEntry.getDouble("anchor.left", null);
 
 		if (top != null)
 			AnchorPane.setTopAnchor(child, top);
@@ -744,20 +600,26 @@ public final class UIComposer {
 			return;
 		}
 
-		// Optional: other Node types that fire actions:
 		if (node instanceof javafx.scene.control.Hyperlink hl) {
-			hl.setOnAction(e -> a.execute());
-			hl.disableProperty().bind(Bindings.not(a.enabledProperty()));
-			hl.visibleProperty().bind(a.visibleProperty());
-			hl.managedProperty().bind(a.visibleProperty());
-			if (a.textProperty() != null)
-				hl.textProperty().bind(a.textProperty());
-			if (a.iconSpecProperty() != null) {
-				IconBinder.bindIcon(hl.graphicProperty()::setValue, a, 16);
-			}
-//			if (a.graphicProperty() != null)
-//				hl.graphicProperty().bind(a.graphicProperty());
+			if (a != null) {
+				ActionBinder.bind(hl, a);
+				return;
+			} else {
+				String url = entry.getAttribute("url", null);
+				if (url == null || url.isBlank())
+					return;
 
+				if (hl.getOnAction() != null)
+					return;
+
+				hl.setOnAction(e -> {
+					if (BSApp.getApplication() != null) {
+						BSApp.getApplication().getHostServices().showDocument(url.trim());
+					} else {
+						throw new InitializationException("HostServices not set, cannot open URL: " + url);
+					}
+				});
+			}
 		}
 	}
 

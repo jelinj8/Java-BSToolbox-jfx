@@ -9,7 +9,7 @@ public class AccordionFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject file) {
 		Accordion a = new Accordion();
-		FxAttrHelper.applyRegionSizing(a, file);
+		FxAttrHelper.applyCommon(a, file);
 		return a;
 	}
 

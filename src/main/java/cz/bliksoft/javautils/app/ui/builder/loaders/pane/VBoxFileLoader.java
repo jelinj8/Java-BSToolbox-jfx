@@ -7,15 +7,19 @@ import javafx.geometry.Pos;
 import javafx.scene.layout.VBox;
 
 public class VBoxFileLoader extends FileLoader {
-    @Override public Object loadObject(FileObject file) {
-        VBox vb = new VBox();
-        vb.setSpacing(FxAttrHelper.d(file, "spacing", 0));
-        vb.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.TOP_LEFT));
-        vb.setFillWidth(FxAttrHelper.bool(file, "fillWidth", true));
+	@Override
+	public Object loadObject(FileObject file) {
+		VBox vb = new VBox();
+		vb.setSpacing(file.getDouble("spacing", 0));
+		vb.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.TOP_LEFT));
+		vb.setFillWidth(file.getBool("fillWidth", true));
 
-        FxAttrHelper.applyRegionSizing(vb, file);
-        return vb;
-    }
+		FxAttrHelper.applyCommon(vb, file);
+		return vb;
+	}
 
-    @Override public String getExtension() { return "VBox"; }
+	@Override
+	public String getExtension() {
+		return "VBox";
+	}
 }
