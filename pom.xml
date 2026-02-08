@@ -89,6 +89,17 @@
 			<artifactId>dependency-management-log4j</artifactId>
 			<type>pom</type>
 		</dependency>
+		<dependency>
+			<groupId>cz.bliksoft.java</groupId>
+			<artifactId>dependency-management-junit</artifactId>
+			<type>pom</type>
+		</dependency>
+		<dependency>
+			<groupId>cz.bliksoft.java</groupId>
+			<artifactId>dependency-management-jaxb</artifactId>
+			<type>pom</type>
+			<scope>provided</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.openjfx</groupId>
@@ -103,7 +114,7 @@
 			<version>${javafx.version}</version>
 			<classifier>${javafx.platform}</classifier>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-fxml</artifactId>
@@ -139,6 +150,11 @@
 				<configuration>
 					<release>${maven.compiler.release}</release>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.4</version>
 			</plugin>
 			<plugin>
 				<groupId>io.github.git-commit-id</groupId>
@@ -185,6 +201,26 @@
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>add-generated-sources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>
+									${project.build.directory}/generated-sources/versioninfo</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>templating-maven-plugin</artifactId>
 				<version>3.0.0</version>
 				<executions>
@@ -197,7 +233,7 @@
 				</executions>
 				<configuration>
 					<outputDirectory>
-						${project.build.directory}/generated-sources/annotations</outputDirectory>
+						${project.build.directory}/generated-sources/versioninfo</outputDirectory>
 				</configuration>
 			</plugin>
 		</plugins>

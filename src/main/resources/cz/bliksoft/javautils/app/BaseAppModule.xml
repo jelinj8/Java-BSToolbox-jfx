@@ -61,16 +61,14 @@
 	<folder name="lib_credits">
 		<file name="Freemarker">
 			<attribute name="name">FreeMarker</attribute>
-			<attribute name="url">http://freemarker.org/index.html
-			</attribute>
+			<attribute name="url">http://freemarker.org/index.html</attribute>
 			<attribute name="comment">template processing tool</attribute>
 			<attribute name="licence">APACHE2</attribute>
 		</file>
 		<file name="Oxygen Icons">
 			<attribute name="url">http://www.kde.org/</attribute>
 			<attribute name="name">Oxygen Icons</attribute>
-			<attribute name="comment">balík ikon původně určený pro KDE prostředí
-			</attribute>
+			<attribute name="comment">balík ikon původně určený pro KDE prostředí</attribute>
 			<attribute name="licence">LGPL3</attribute>
 		</file>
 		<file name="Flagcdn.com">
@@ -80,8 +78,7 @@
 			<attribute name="licence">CreativeCommons</attribute>
 		</file>
 		<file name="SVGSalamander">
-			<attribute name="url">https://github.com/blackears/svgSalamander
-			</attribute>
+			<attribute name="url">https://github.com/blackears/svgSalamander</attribute>
 			<attribute name="name">SVG Salamander</attribute>
 			<attribute name="comment">SVG rendering library</attribute>
 			<attribute name="licence">LGPL3</attribute>
