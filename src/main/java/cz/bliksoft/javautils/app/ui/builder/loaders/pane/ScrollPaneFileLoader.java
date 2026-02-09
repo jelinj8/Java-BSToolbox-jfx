@@ -1,6 +1,5 @@
 package cz.bliksoft.javautils.app.ui.builder.loaders.pane;
 
-import cz.bliksoft.javautils.app.ui.builder.FxAttrHelper;
 import cz.bliksoft.javautils.xmlfilesystem.FileLoader;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import javafx.scene.control.ScrollPane;
@@ -16,7 +15,6 @@ public class ScrollPaneFileLoader extends FileLoader {
 		sp.setHbarPolicy(parseBarPolicy(file.getAttribute("hbar", null), sp.getHbarPolicy()));
 		sp.setVbarPolicy(parseBarPolicy(file.getAttribute("vbar", null), sp.getVbarPolicy()));
 
-		FxAttrHelper.applyCommon(sp, file);
 		return sp;
 	}
 

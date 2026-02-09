@@ -1,19 +1,17 @@
 package cz.bliksoft.javautils.app.ui.builder;
 
-import cz.bliksoft.javautils.app.ui.actions.IUIAction;
+import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 
 public class UIBuildContext {
 	public SlotResolver slotResolver = new SlotResolver();
-	
-	private final AcceleratorManager accelerators = new AcceleratorManager();
-	public AcceleratorManager accelerators() { return accelerators; }
-	
-	public IUIAction getAction(String key) {
-//		Object obj = registry.getRaw(key);
-//		IUIAction a = (obj instanceof IUIAction ua) ? ua
-//		          : (obj instanceof org.controlsfx.control.action.Action cfx) ? UIActions.fromControlsFx(cfx)
-//		          : throw ...
 
-		return null;
+	public ToggleGroupResolver toggleGoupResolver = new ToggleGroupResolver();
+
+	private final AcceleratorManager accelerators = new AcceleratorManager();
+
+	public AcceleratorManager accelerators() {
+		return accelerators;
 	}
+	
+	public FileObject currentBuildObject = null;
 }

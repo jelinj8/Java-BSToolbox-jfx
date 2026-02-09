@@ -16,7 +16,6 @@ public class FlowPaneFileLoader extends FileLoader {
 		if (file.getAttribute("prefWrapLength", null) != null) {
 			fp.setPrefWrapLength(file.getDouble("prefWrapLength", fp.getPrefWrapLength()));
 		}
-		FxAttrHelper.applyCommon(fp, file);
 		return fp;
 	}
 

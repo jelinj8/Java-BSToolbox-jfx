@@ -10,9 +10,6 @@ public class MenuButtonFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject f) {
 		MenuButton mb = new MenuButton();
-		FxAttrHelper.applyLabeled(mb, f);
-		FxAttrHelper.applyControl(mb, f);
-		FxAttrHelper.applyCommon(mb, f);
 
 		// popupSide="TOP|RIGHT|BOTTOM|LEFT"
 		if (f.getAttribute("popupSide", null) != null) {
@@ -25,6 +22,6 @@ public class MenuButtonFileLoader extends FileLoader {
 
 	@Override
 	public String getExtension() {
-		return ".MenuButton";
+		return "MenuButton";
 	}
 }

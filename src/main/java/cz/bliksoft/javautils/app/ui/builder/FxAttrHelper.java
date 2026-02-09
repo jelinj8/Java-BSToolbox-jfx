@@ -7,12 +7,14 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
-import javafx.scene.control.Control;
-import javafx.scene.control.Labeled;
-import javafx.scene.layout.Pane;
+import javafx.scene.Cursor;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.FontWeight;
 
 public final class FxAttrHelper {
 	private FxAttrHelper() {
@@ -190,56 +192,75 @@ public final class FxAttrHelper {
 		}
 	}
 
-//	private static Pos parsePos(String s) {
-//		if (s == null)
-//			return null;
-//		String v = s.trim().toUpperCase();
-//		if (v.isEmpty())
-//			return null;
-//		try {
-//			return Pos.valueOf(v);
-//		} catch (IllegalArgumentException e) {
-//			return null;
-//		}
-//	}
+	public static Font getFont(FileObject file) {
+		String family = file.getAttribute("font", null);
+		Double size = file.getDouble("fontSize", null);
+		Boolean bold = file.getBool("bold", null);
+		Boolean italic = file.getBool("italic", null);
 
-	/**
-	 * Generic node-ish attributes that are safe to set in loaders too (optional).
-	 */
-	public static void applyCommon(Region r, FileObject f) {
-		// sizing
-		if (f.getAttribute("prefWidth", null) != null)
-			r.setPrefWidth(f.getDouble("prefWidth", r.getPrefWidth()));
-		if (f.getAttribute("prefHeight", null) != null)
-			r.setPrefHeight(f.getDouble("prefHeight", r.getPrefHeight()));
-		if (f.getAttribute("minWidth", null) != null)
-			r.setMinWidth(f.getDouble("minWidth", r.getMinWidth()));
-		if (f.getAttribute("minHeight", null) != null)
-			r.setMinHeight(f.getDouble("minHeight", r.getMinHeight()));
-		if (f.getAttribute("maxWidth", null) != null)
-			r.setMaxWidth(sizeInf(f.getAttribute("maxWidth", null), r.getMaxWidth()));
-		if (f.getAttribute("maxHeight", null) != null)
-			r.setMaxHeight(sizeInf(f.getAttribute("maxHeight", null), r.getMaxHeight()));
+		if (family == null && size == null && bold == null && italic == null)
+			return null;
 
-		Insets p = insets(f, "padding");
-		if (p != null)
-			r.setPadding(p);
+		String fam = (family != null ? family : Font.getDefault().getFamily());
+		double sz = (size != null ? size : Font.getDefault().getSize());
+
+		FontWeight w = (bold != null && bold) ? FontWeight.BOLD : FontWeight.NORMAL;
+		FontPosture p = (italic != null && italic) ? FontPosture.ITALIC : FontPosture.REGULAR;
+
+		return Font.font(fam, w, p, sz);
 	}
 
-	public static void applyLabeled(Labeled l, FileObject f) {
-		String text = f.getAttribute("text", null);
-		if (text != null)
-			l.setText(text);
-	}
+	public static Paint getPaint(FileObject file, String key) {
+		String val = file.getAttribute(key, null);
+		if (val == null || val.isBlank())
+			return null;
 
-	public static void applyControl(Control c, FileObject f) {
-		if (f.getAttribute("disable", null) != null)
-			c.setDisable(f.getBool("disable", c.isDisable()));
-		if (f.getAttribute("focusTraversable", null) != null)
-			c.setFocusTraversable(f.getBool("focusTraversable", c.isFocusTraversable()));
+		try {
+			return Color.web(val.trim());
+		} catch (IllegalArgumentException ex) {
+			// neplatná barva → ignoruj
+			return null;
+		}
 	}
+	
+	public static Cursor parseCursor(String v) {
+	    if (v == null) return null;
+	    String s = v.trim();
+	    if (s.isEmpty()) return null;
 
-	public static void applyPane(Pane p, FileObject f) {
-		// (nothing universal here beyond Region sizing, which Pane inherits)
+	    // nejběžnější názvy
+	    return switch (s.toUpperCase()) {
+	        case "DEFAULT" -> Cursor.DEFAULT;
+	        case "HAND" -> Cursor.HAND;
+	        case "TEXT" -> Cursor.TEXT;
+	        case "WAIT" -> Cursor.WAIT;
+	        case "CROSSHAIR" -> Cursor.CROSSHAIR;
+	        case "MOVE" -> Cursor.MOVE;
+	        case "E_RESIZE" -> Cursor.E_RESIZE;
+	        case "W_RESIZE" -> Cursor.W_RESIZE;
+	        case "N_RESIZE" -> Cursor.N_RESIZE;
+	        case "S_RESIZE" -> Cursor.S_RESIZE;
+	        case "NE_RESIZE" -> Cursor.NE_RESIZE;
+	        case "NW_RESIZE" -> Cursor.NW_RESIZE;
+	        case "SE_RESIZE" -> Cursor.SE_RESIZE;
+	        case "SW_RESIZE" -> Cursor.SW_RESIZE;
+	        case "H_RESIZE" -> Cursor.H_RESIZE;
+	        case "V_RESIZE" -> Cursor.V_RESIZE;
+	        case "DISAPPEAR" -> Cursor.DISAPPEAR;
+	        case "NONE" -> Cursor.NONE;
+	        default -> {
+	            // pokus o obecné parsování (javfx má Cursor.cursor(String))
+	            try { yield Cursor.cursor(s); } catch (Exception ex) { yield null; }
+	        }
+	    };
+	}
+	
+	public static ContentDisplay parseContentDisplay(String v) {
+	    if (v == null) return null;
+	    try {
+	        return ContentDisplay.valueOf(v.trim().toUpperCase());
+	    } catch (Exception ex) {
+	        return null;
+	    }
 	}
 }

@@ -3,8 +3,11 @@ package cz.bliksoft.javautils.app.rights;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -62,16 +65,16 @@ public class Rights {
 			}
 		}
 
-//		ServiceLoader<Right> loader = ServiceLoader.load(Right.class);
-//		Iterator<Right> rightIterator = loader.iterator();
-//		while (rightIterator.hasNext()) {
-//			try {
-//				Right right = rightIterator.next();
-//				registerRight(right);
-//			} catch (ServiceConfigurationError e) {
-//				log.error("Class doesn't seem to be a valid BSFramework Right implementation: {}", e.getMessage());
-//			}
-//		}
+		ServiceLoader<Right> svcLoader = ServiceLoader.load(Right.class);
+		Iterator<Right> rightIterator = svcLoader.iterator();
+		while (rightIterator.hasNext()) {
+			try {
+				Right right = rightIterator.next();
+				registerRight(right);
+			} catch (ServiceConfigurationError e) {
+				log.error("Class doesn't seem to be a valid BSApp Right implementation: {}", e.getMessage());
+			}
+		}
 
 	}
 

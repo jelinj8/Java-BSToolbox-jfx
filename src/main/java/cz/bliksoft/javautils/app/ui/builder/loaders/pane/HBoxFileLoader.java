@@ -14,7 +14,6 @@ public class HBoxFileLoader extends FileLoader {
 		hb.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.TOP_LEFT));
 		hb.setFillHeight(file.getBool("fillHeight", true));
 
-		FxAttrHelper.applyCommon(hb, file);
 		return hb;
 	}
 

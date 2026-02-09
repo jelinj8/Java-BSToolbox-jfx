@@ -10,9 +10,6 @@ public class SplitMenuButtonFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject f) {
 		SplitMenuButton mb = new SplitMenuButton();
-		FxAttrHelper.applyLabeled(mb, f);
-		FxAttrHelper.applyControl(mb, f);
-		FxAttrHelper.applyCommon(mb, f);
 
 		if (f.getAttribute("popupSide", null) != null) {
 			Side s = FxAttrHelper.side(f, "popupSide", mb.getPopupSide());
@@ -24,6 +21,6 @@ public class SplitMenuButtonFileLoader extends FileLoader {
 
 	@Override
 	public String getExtension() {
-		return ".SplitMenuButton";
+		return "SplitMenuButton";
 	}
 }

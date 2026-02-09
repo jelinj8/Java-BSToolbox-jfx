@@ -21,7 +21,6 @@ public class TilePaneFileLoader extends FileLoader {
 			tp.setPrefTileWidth(file.getDouble("prefTileWidth", tp.getPrefTileWidth()));
 		if (file.getAttribute("prefTileHeight", null) != null)
 			tp.setPrefTileHeight(file.getDouble("prefTileHeight", tp.getPrefTileHeight()));
-		FxAttrHelper.applyCommon(tp, file);
 		return tp;
 	}
 

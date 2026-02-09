@@ -2,8 +2,12 @@ package cz.bliksoft.javautils.app.ui.builder;
 
 import java.util.function.Consumer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.ui.actions.ActionBinder;
+import cz.bliksoft.javautils.app.ui.actions.UIActions;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.exceptions.InitializationException;
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
@@ -13,18 +17,26 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Control;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
@@ -34,9 +46,12 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public final class UIComposer {
+	static Logger log = LogManager.getLogger();
 
 	private UIComposer() {
 	}
@@ -112,7 +127,11 @@ public final class UIComposer {
 		try {
 			product = build(file, ctx);
 		} catch (Exception e) {
-			throw new InitializationException("Failed to build UI", e);
+			if (ctx.currentBuildObject == null)
+				throw new InitializationException("Failed to build UI", e);
+			else
+				throw new InitializationException(
+						"Failed to build UI, failed on " + ctx.currentBuildObject.getFullPath(), e);
 		}
 //		Object o = FileLoader.loadFile(file);
 		attachToStage(stage, product, file, ctx);
@@ -142,6 +161,14 @@ public final class UIComposer {
 
 		stage.setScene(scn);
 
+		IUIAction closeAction = UIActions.getAction("AppClose");
+		if (closeAction != null) {
+			stage.setOnCloseRequest(e -> {
+				e.consume();
+				closeAction.execute();
+			});
+		}
+
 		ctx.accelerators().attach(scn);
 	}
 
@@ -167,6 +194,9 @@ public final class UIComposer {
 
 	private static UiProduct build(FileObject entry, UIBuildContext ctx) throws Exception {
 		try {
+			log.debug("Building UI for " + entry.getName());
+			ctx.currentBuildObject = entry;
+
 			UiProduct parent = loadUIProduct(entry);
 
 			if (parent instanceof UiSceneProduct sp) {
@@ -197,6 +227,11 @@ public final class UIComposer {
 				for (FileObject childFile : entry.getChildren()) {
 					UiProduct child = build(childFile, ctx);
 					MenuItem item = requireMenuItem(child, childFile, entry, "Menu");
+					if (item instanceof RadioMenuItem) {
+						String group = childFile.getAttribute("group");
+						if (group != null)
+							((RadioMenuItem) item).setToggleGroup(ctx.toggleGoupResolver.getGroup(group));
+					}
 					bindMenuActionIfPresent(item, childFile, ctx);
 					mp.menu().getItems().add(item);
 				}
@@ -222,30 +257,49 @@ public final class UIComposer {
 				}
 			}
 
-			applyNodeAttribs(parent.getNodeContext(), entry, ctx);
-			if (entry.getChildren() != null)
-				for (FileObject childFile : entry.getChildren()) {
-					UiProduct child = build(childFile, ctx);
+			Node n = parent.getNodeContext();
+			applyNodeAttribs(n, entry, ctx);
 
-					if (parent.getNodeContext() instanceof javafx.scene.control.MenuBar mb) {
-						mb.getMenus().add(requireMenu(child, childFile, entry, "MenuBar"));
-						continue;
-					}
-					if (parent.getNodeContext() instanceof javafx.scene.control.MenuButton mbtn) {
-						MenuItem item = requireMenuItem(child, childFile, entry, "MenuButton");
-						bindMenuActionIfPresent(item, childFile, ctx);
-						mbtn.getItems().add(item);
-						continue;
-					}
-					if (parent.getNodeContext() instanceof javafx.scene.control.SplitMenuButton smb) {
-						MenuItem item = requireMenuItem(child, childFile, entry, "SplitMenuButton");
-						bindMenuActionIfPresent(item, childFile, ctx);
-						smb.getItems().add(item);
-						continue;
-					}
+			if (n instanceof Region)
+				applyCommon((Region) n, entry);
 
-					attach(parent.getNodeContext(), entry, child.getNodeContext(), childFile, ctx);
+			if (n instanceof Labeled)
+				applyLabeled((Labeled) n, entry);
+
+			if (n instanceof Control)
+				applyControl((Control) n, entry);
+
+			if (n instanceof TextInputControl)
+				applyTextInputControl((TextInputControl) n, entry);
+
+			if (n instanceof RadioButton) {
+				String group = entry.getAttribute("group");
+				if (group != null)
+					((RadioButton) n).setToggleGroup(ctx.toggleGoupResolver.getGroup(group));
+			}
+
+			for (FileObject childFile : entry.getChildren()) {
+				UiProduct child = build(childFile, ctx);
+
+				if (parent.getNodeContext() instanceof javafx.scene.control.MenuBar mb) {
+					mb.getMenus().add(requireMenu(child, childFile, entry, "MenuBar"));
+					continue;
 				}
+				if (parent.getNodeContext() instanceof javafx.scene.control.MenuButton mbtn) {
+					MenuItem item = requireMenuItem(child, childFile, entry, "MenuButton");
+					bindMenuActionIfPresent(item, childFile, ctx);
+					mbtn.getItems().add(item);
+					continue;
+				}
+				if (parent.getNodeContext() instanceof javafx.scene.control.SplitMenuButton smb) {
+					MenuItem item = requireMenuItem(child, childFile, entry, "SplitMenuButton");
+					bindMenuActionIfPresent(item, childFile, ctx);
+					smb.getItems().add(item);
+					continue;
+				}
+
+				attach(parent.getNodeContext(), entry, child.getNodeContext(), childFile, ctx);
+			}
 			return parent;
 		} finally {
 			UIBuildContextHolder.clear();
@@ -259,22 +313,6 @@ public final class UIComposer {
 //		return p.getNodeContext();
 //	}
 
-	private static void applyNodeAttribs(Node node, FileObject definition, UIBuildContext ctx) {
-		String className = definition.getAttribute("class", null);
-		if (className != null)
-			node.getStyleClass().add(className);
-
-		String classes = definition.getAttribute("classes", null);
-		if (classes != null) {
-			for (String c : classes.split("\\s+")) {
-				if (!c.isBlank())
-					node.getStyleClass().add(c);
-			}
-		}
-
-		bindActionIfPresent(node, definition, ctx);
-	}
-
 	private static void applySceneAttribs(Scene scene, FileObject definition) {
 		String styles = definition.getAttribute("stylesheets", null);
 		if (styles != null && !styles.isBlank()) {
@@ -282,6 +320,135 @@ public final class UIComposer {
 				scene.getStylesheets().add(s.trim());
 		}
 	}
+
+	public static void applyNodeAttribs(Node node, FileObject definition, UIBuildContext ctx) {
+		String className = definition.getAttribute("FXclass");
+		if (className != null)
+			node.getStyleClass().add(className);
+
+		String classes = definition.getAttribute("FXclasses");
+		if (classes != null) {
+			for (String c : classes.split("\\s+")) {
+				if (!c.isBlank())
+					node.getStyleClass().add(c);
+			}
+		}
+
+		Boolean disabled = definition.getBool("disabled");
+		if (disabled != null)
+			node.setDisable(disabled);
+
+		Boolean visible = definition.getBool("visible");
+		if (visible != null)
+			node.setVisible(visible);
+
+		Boolean managed = definition.getBool("managed");
+		if (managed != null)
+			node.setManaged(managed);
+
+		String id = definition.getAttribute("id", null);
+		if (id != null)
+			node.setId(id);
+
+		Boolean focusTraversable = definition.getBool("focusTraversable");
+		if (focusTraversable != null)
+			node.setFocusTraversable(focusTraversable);
+
+		Double opacity = definition.getDouble("opacity", null);
+		if (opacity != null)
+			node.setOpacity(opacity);
+
+		String cursor = definition.getAttribute("cursor", null);
+		if (cursor != null) {
+			Cursor c = FxAttrHelper.parseCursor(cursor);
+			if (c != null)
+				node.setCursor(c);
+		}
+
+		bindActionIfPresent(node, definition, ctx);
+	}
+
+	public static void applyControl(Control c, FileObject f) {
+		String tt = f.getAttribute("tooltip");
+		if (tt != null)
+			c.setTooltip(new Tooltip(tt));
+	}
+
+	public static void applyTextInputControl(TextInputControl c, FileObject f) {
+		Font fnt = FxAttrHelper.getFont(f);
+		if (fnt != null)
+			c.setFont(fnt);
+
+		Boolean b = f.getBool("editable");
+		if (b != null)
+			c.setEditable(b);
+
+		String prompt = f.getAttribute("prompt");
+		if (prompt != null)
+			c.setPromptText(prompt);
+	}
+
+	public static void applyCommon(Region r, FileObject f) {
+		// sizing
+		if (f.getAttribute("prefWidth", null) != null)
+			r.setPrefWidth(f.getDouble("prefWidth", r.getPrefWidth()));
+		if (f.getAttribute("prefHeight", null) != null)
+			r.setPrefHeight(f.getDouble("prefHeight", r.getPrefHeight()));
+		if (f.getAttribute("minWidth", null) != null)
+			r.setMinWidth(f.getDouble("minWidth", r.getMinWidth()));
+		if (f.getAttribute("minHeight", null) != null)
+			r.setMinHeight(f.getDouble("minHeight", r.getMinHeight()));
+		if (f.getAttribute("maxWidth", null) != null)
+			r.setMaxWidth(FxAttrHelper.sizeInf(f.getAttribute("maxWidth", null), r.getMaxWidth()));
+		if (f.getAttribute("maxHeight", null) != null)
+			r.setMaxHeight(FxAttrHelper.sizeInf(f.getAttribute("maxHeight", null), r.getMaxHeight()));
+
+		Insets p = FxAttrHelper.insets(f, "padding");
+		if (p != null)
+			r.setPadding(p);
+	}
+
+	public static void applyLabeled(Labeled l, FileObject f) {
+		String text = f.getAttribute("text", null);
+		if (text != null)
+			l.setText(text);
+
+		Font fnt = FxAttrHelper.getFont(f);
+		if (fnt != null)
+			l.setFont(fnt);
+
+		Boolean wrap = f.getBool("wrap");
+		if (wrap != null)
+			l.setWrapText(wrap);
+
+		String iconDef = f.getAttribute("icon");
+		if (iconDef != null) {
+			l.setGraphic(ImageUtils.getIconNode(iconDef));
+		}
+
+		Paint textFill = FxAttrHelper.getPaint(f, "textFill"); // nebo "fill" pokud chceš alias
+		if (textFill != null)
+			l.setTextFill(textFill);
+
+		Pos p = FxAttrHelper.pos(f, "alignment", null);
+		if (p != null)
+			l.setAlignment(p);
+
+		String cd = f.getAttribute("contentDisplay", null);
+		if (cd != null) {
+			ContentDisplay d = FxAttrHelper.parseContentDisplay(cd);
+			if (d != null)
+				l.setContentDisplay(d);
+		}
+
+		Double gap = f.getDouble("graphicTextGap", null);
+		if (gap != null)
+			l.setGraphicTextGap(gap);
+	}
+
+//	public static void applyPane(Pane p, FileObject f) {
+//		// (nothing universal here beyond Region sizing, which Pane inherits)
+//	}
 
 	private static void attach(Node parent, FileObject parentEntry, Node child, FileObject childEntry,
 			UIBuildContext ctx) {
@@ -469,6 +636,10 @@ public final class UIComposer {
 			Double mh = def.getDouble("maxHeight", null);
 			if (mh != null)
 				r.setMaxHeight(mh);
+
+			Boolean focusable = def.getBool("focusable", parent instanceof ToolBar ? false : null);
+			if (focusable != null)
+				child.setFocusTraversable(focusable);
 		}
 	}
 
@@ -596,7 +767,7 @@ public final class UIComposer {
 		if (actionKey == null || actionKey.isBlank())
 			return;
 
-		IUIAction a = ctx.getAction(actionKey.trim());
+		IUIAction a = UIActions.getAction(actionKey.trim());
 
 		if (node instanceof javafx.scene.control.ButtonBase bb) {
 			ActionBinder.bind(bb, a);
@@ -634,7 +805,7 @@ public final class UIComposer {
 		if (actionKey == null || actionKey.isBlank())
 			return;
 
-		IUIAction a = ctx.getAction(actionKey.trim());
+		IUIAction a = UIActions.getAction(actionKey.trim());
 		ActionBinder.bind(mi, a);
 	}
 

@@ -11,8 +11,7 @@ public class ToolBarFileLoader extends FileLoader {
 	public Object loadObject(FileObject file) {
 		ToolBar tb = new ToolBar();
 		tb.setOrientation(FxAttrHelper.orientation(file, "orientation", Orientation.HORIZONTAL));
-		FxAttrHelper.applyControl(tb, file);
-		FxAttrHelper.applyCommon(tb, file);
+
 		return tb;
 	}
 

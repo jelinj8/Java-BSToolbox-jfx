@@ -4,12 +4,15 @@
 	xsi:schemaLocation="http://bliksoft.cz/XmlFilesystem XmlFilesystem.xsd">
 	<folder name="fileLoaders">
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.FxmlFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.custom.GenericUIFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.ButtonFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.HyperlinkFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.LabelFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.MenuButtonFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.SplitMenuButtonFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.ToggleButtonFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.TextAreaFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.TextFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.ContextMenuFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.CheckMenuItemFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.MenuBarFileLoader" />
@@ -33,8 +36,20 @@
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.TitledPaneFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.ToolBarFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.VBoxFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.TextFlowFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.scene.SceneBorderFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.scene.SceneStackFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.scene.SceneTabsFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.WebViewFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.TextFieldFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.SpinnerFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.CheckBoxFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.RadioButtonFileLoader" />
+	</folder>
+	
+	<folder name="core">
+		<folder name="actions">
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppClose" />
+		</folder>
 	</folder>
 </root>

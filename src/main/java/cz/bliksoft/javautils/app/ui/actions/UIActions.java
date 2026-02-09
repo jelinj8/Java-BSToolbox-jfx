@@ -1,168 +1,80 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
-import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
+import java.util.stream.Collectors;
 
-import org.controlsfx.control.action.Action;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableBooleanValue;
-import javafx.collections.MapChangeListener;
-import javafx.collections.ObservableMap;
-import javafx.scene.Node;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.shape.SVGPath;
+import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.xmlfilesystem.FileObject;
+import cz.bliksoft.javautils.xmlfilesystem.FileObjectClassLoader;
+import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 
-public final class UIActions {
+public class UIActions {
+	private static final Logger log = LogManager.getLogger();
+	private static boolean isLoaded = false;
+
+	public static final String ACTIONS_FOLDER_NAME = "actions";
+
 	private UIActions() {
 	}
 
-	/**
-	 * Adapts ControlsFX {@link Action} to your {@link IUIAction}.
-	 *
-	 * Icon spec support:
-	 * - preferred: a.getProperties().put("iconSpec", "res:/icons/save@{scale}x.png")
-	 * - fallback: tries to derive from Action.graphicProperty() (ImageView url, SVGPath content)
-	 */
-	public static IUIAction fromControlsFx(Action a) {
+	private static Map<String, IUIAction> registeredActions = new HashMap<>();
 
-		// Icon spec (string) used by your ImageUtils-based binding.
-		// We keep it in a wrapper so we can update it from action properties / graphic.
-		final ReadOnlyStringWrapper iconSpec = new ReadOnlyStringWrapper(null);
-
-		// 1) Prefer action.getProperties()["iconSpec"] if available
-		wireIconSpecFromActionProperties(a, iconSpec);
-
-		// 2) Fallback: derive from graphic if iconSpec not set
-		wireIconSpecFromGraphicFallback(a, iconSpec);
-
-		return new IUIAction() {
-
-			@Override
-			public void execute() {
-				// ControlsFX Action implements EventHandler<ActionEvent>
-				a.handle(null);
-			}
-
-			@Override
-			public ObservableBooleanValue enabledProperty() {
-				// BooleanBinding is fine as ObservableBooleanValue
-				return a.disabledProperty().not();
-			}
-
-			// ControlsFX Action may not have built-in visibility -> keep custom
-			private final javafx.beans.property.BooleanProperty visible =
-					new javafx.beans.property.SimpleBooleanProperty(true);
-
-			@Override
-			public ReadOnlyBooleanProperty visibleProperty() {
-				return visible;
-			}
-
-			@Override
-			public ReadOnlyStringProperty textProperty() {
-				return a.textProperty();
-			}
-
-			@Override
-			public ReadOnlyObjectProperty<Node> graphicProperty() {
-				return a.graphicProperty();
-			}
-
-			@Override
-			public ReadOnlyObjectProperty<KeyCombination> acceleratorProperty() {
-				try {
-					return a.acceleratorProperty();
-				} catch (Throwable t) {
-					return null;
-				}
-			}
-
-			/**
-			 * Icon spec for your ImageUtils binder.
-			 *
-			 * IMPORTANT: Do NOT annotate with @Override unless IUIAction definitely declares it.
-			 * (This keeps the adapter usable even if some projects still compile with older IUIAction.)
-			 */
-			public ReadOnlyStringProperty iconSpecProperty() {
-				return iconSpec.getReadOnlyProperty();
-			}
-		};
+	public static void registerAction(String key, IUIAction action, String source) {
+		IUIAction currentValue = registeredActions.get(key);
+		if (currentValue != null)
+			log.log(Level.INFO,
+					"Re-registering an action with key {} from {}. Previous implementation: {} New implementation: {}",
+					key, source, currentValue.getClass().getName(), action.getClass().getName());
+		registeredActions.put(key, action);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static void wireIconSpecFromActionProperties(Action a, ReadOnlyStringWrapper iconSpec) {
-		try {
-			// ControlsFX Action typically has getProperties(): ObservableMap<Object,Object>
-			Method m = a.getClass().getMethod("getProperties");
-			Object propsObj = m.invoke(a);
-			if (propsObj instanceof ObservableMap props) {
-				// initial
-				Object v = props.get("iconSpec");
-				if (v instanceof String s && !s.isBlank()) {
-					iconSpec.set(s.trim());
-				}
-
-				// live updates
-				props.addListener((MapChangeListener) (MapChangeListener.Change ch) -> {
-					if (!"iconSpec".equals(String.valueOf(ch.getKey()))) return;
-
-					Object nv = ch.getMap().get("iconSpec");
-					if (nv instanceof String s2 && !s2.isBlank()) {
-						iconSpec.set(s2.trim());
-					} else {
-						// allow clearing; fallback may repopulate later
-						iconSpec.set(null);
-					}
-				});
-			}
-		} catch (Throwable ignored) {
-			// No properties map or not accessible -> ignore
-		}
+	public static IUIAction getAction(String key) {
+		loadActions();
+		return registeredActions.get(key);
 	}
 
-	private static void wireIconSpecFromGraphicFallback(Action a, ReadOnlyStringWrapper iconSpec) {
-		a.graphicProperty().addListener((obs, oldG, newG) -> {
-			// Only derive if iconSpec isn't explicitly set (or was cleared)
-			if (iconSpec.get() != null && !iconSpec.get().isBlank()) return;
+	private static void loadActions() {
+		if (isLoaded)
+			return;
 
-			String derived = deriveIconSpecFromGraphic(newG);
-			iconSpec.set((derived == null || derived.isBlank()) ? null : derived);
-		});
+		log.debug("Loading UI actions.");
 
-		// initial
-		if (iconSpec.get() == null || iconSpec.get().isBlank()) {
-			String derived = deriveIconSpecFromGraphic(a.getGraphic());
-			iconSpec.set((derived == null || derived.isBlank()) ? null : derived);
+		isLoaded = true;
+
+		FileObject actionsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
+		FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
+		for (FileObject f : actionsFile.getChildFiles()) {
+			try {
+				IUIAction action = loader.loadFile(f);
+				registerAction(action.getKey(), action, f.getResourceId());
+			} catch (Exception e) {
+				log.error("Failed to register IUIAction {} ({})", f.getName(), e.getMessage());
+			}
 		}
+
+		ServiceLoader<IUIAction> svcLoader = ServiceLoader.load(IUIAction.class);
+		Iterator<IUIAction> actionIterator = svcLoader.iterator();
+		while (actionIterator.hasNext()) {
+			try {
+				IUIAction action = actionIterator.next();
+				registerAction(action.getKey(), action, "classpath");
+			} catch (ServiceConfigurationError e) {
+				log.error("Class doesn't seem to be a valid BSApp IUIAction implementation: {}", e.getMessage());
+			}
+		}
+
 	}
 
-	private static String deriveIconSpecFromGraphic(Node g) {
-		if (g == null) return null;
-
-		// ImageView -> use URL if present (best we can do)
-		if (g instanceof ImageView iv) {
-			Image img = iv.getImage();
-			if (img != null && img.getUrl() != null && !img.getUrl().isBlank()) {
-				return img.getUrl(); // let ImageUtils interpret URLs if you support that
-			}
-			return null;
-		}
-
-		// SVGPath -> use your svgpath spec convention
-		if (g instanceof SVGPath p) {
-			String c = p.getContent();
-			if (c != null && !c.isBlank()) {
-				return "[P]:" + c; // matches your earlier svgpath prefix convention
-			}
-			return null;
-		}
-
-		// Unknown node type -> cannot derive
-		return null;
+	public static String dumpActions() {
+		loadActions();
+		return registeredActions.keySet().stream().sorted().collect(Collectors.joining("\n"));
 	}
 }

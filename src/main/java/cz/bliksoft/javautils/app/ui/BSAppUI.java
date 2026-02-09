@@ -46,6 +46,10 @@ public class BSAppUI extends ModuleBase {
 	public static void setStage(Stage stage) {
 		mainStage = stage;
 	}
+	
+	public static Stage getStage() {
+		return mainStage;
+	}
 
 	@Override
 	public int getModuleLoadingOrder() {

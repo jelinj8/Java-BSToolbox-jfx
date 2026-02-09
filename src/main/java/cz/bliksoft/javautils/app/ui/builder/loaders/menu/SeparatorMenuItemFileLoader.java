@@ -5,9 +5,13 @@ import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import javafx.scene.control.SeparatorMenuItem;
 
 public class SeparatorMenuItemFileLoader extends FileLoader {
-    @Override public Object loadObject(FileObject file) {
-        return new SeparatorMenuItem();
-    }
+	@Override
+	public Object loadObject(FileObject file) {
+		return new SeparatorMenuItem();
+	}
 
-    @Override public String getExtension() { return "SeparatorMenuItem"; }
+	@Override
+	public String getExtension() {
+		return "SeparatorMenuItem";
+	}
 }

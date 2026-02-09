@@ -5,9 +5,13 @@ import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import javafx.scene.control.ContextMenu;
 
 public class ContextMenuFileLoader extends FileLoader {
-    @Override public Object loadObject(FileObject file) {
-        return new ContextMenu();
-    }
+	@Override
+	public Object loadObject(FileObject file) {
+		return new ContextMenu();
+	}
 
-    @Override public String getExtension() { return "ContextMenu"; }
+	@Override
+	public String getExtension() {
+		return "ContextMenu";
+	}
 }

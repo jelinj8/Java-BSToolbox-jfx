@@ -1,6 +1,5 @@
 package cz.bliksoft.javautils.app.ui.builder.loaders.controls;
 
-import cz.bliksoft.javautils.app.ui.builder.FxAttrHelper;
 import cz.bliksoft.javautils.xmlfilesystem.FileLoader;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import javafx.scene.control.Button;
@@ -9,9 +8,6 @@ public class ButtonFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject f) {
 		Button b = new Button();
-		FxAttrHelper.applyLabeled(b, f);
-		FxAttrHelper.applyControl(b, f);
-		FxAttrHelper.applyCommon(b, f);
 
 		// defaultButton / cancelButton
 		if (f.getAttribute("defaultButton", null) != null)
@@ -24,6 +20,6 @@ public class ButtonFileLoader extends FileLoader {
 
 	@Override
 	public String getExtension() {
-		return ".Button";
+		return "Button";
 	}
 }

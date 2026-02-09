@@ -14,7 +14,6 @@ public class VBoxFileLoader extends FileLoader {
 		vb.setAlignment(FxAttrHelper.pos(file, "alignment", Pos.TOP_LEFT));
 		vb.setFillWidth(file.getBool("fillWidth", true));
 
-		FxAttrHelper.applyCommon(vb, file);
 		return vb;
 	}
 

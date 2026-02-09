@@ -12,12 +12,18 @@ public final class ActionBinder {
 	public static void bind(ButtonBase btn, IUIAction a) {
 		btn.setOnAction(e -> a.execute());
 
-		// enabled -> disable
-		btn.disableProperty().bind(Bindings.not(a.enabledProperty()));
+		var enabled = a.enabledProperty();
+		if (enabled != null) {
+			// enabled -> disable
+			btn.disableProperty().bind(Bindings.not(a.enabledProperty()));
+		}
 
-		// visible -> visible + managed (avoid layout gaps)
-		btn.visibleProperty().bind(a.visibleProperty());
-		btn.managedProperty().bind(a.visibleProperty());
+		var visible = a.visibleProperty();
+		if (visible != null) {
+			// visible -> visible + managed (avoid layout gaps)
+			btn.visibleProperty().bind(a.visibleProperty());
+			btn.managedProperty().bind(a.visibleProperty());
+		}
 
 		// text/graphic (bind only if you want action to own them)
 		if (a.textProperty() != null)
@@ -35,16 +41,22 @@ public final class ActionBinder {
 	public static void bind(MenuItem mi, IUIAction a) {
 		mi.setOnAction(e -> a.execute());
 
-		mi.disableProperty().bind(Bindings.not(a.enabledProperty()));
+		var enabled = a.enabledProperty();
+		if (enabled != null) {
+			mi.disableProperty().bind(Bindings.not(a.enabledProperty()));
+		}
 
-		// MenuItem has visibleProperty in modern JavaFX; if you target very old
-		// versions, guard it.
-		try {
-			mi.visibleProperty().bind(a.visibleProperty());
-		} catch (Throwable ignored) {
-			// If running on an older JavaFX where MenuItem has no visibleProperty,
-			// you can approximate by disabling, or handle via parent menu rebuild.
-			mi.disableProperty().bind(Bindings.not(a.visibleProperty()).or(Bindings.not(a.enabledProperty())));
+		var visible = a.visibleProperty();
+		if (visible != null) {
+			// MenuItem has visibleProperty in modern JavaFX; if you target very old
+			// versions, guard it.
+			try {
+				mi.visibleProperty().bind(a.visibleProperty());
+			} catch (Throwable ignored) {
+				// If running on an older JavaFX where MenuItem has no visibleProperty,
+				// you can approximate by disabling, or handle via parent menu rebuild.
+				mi.disableProperty().bind(Bindings.not(a.visibleProperty()).or(Bindings.not(a.enabledProperty())));
+			}
 		}
 
 		if (a.textProperty() != null)

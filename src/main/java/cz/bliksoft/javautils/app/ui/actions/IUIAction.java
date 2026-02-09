@@ -9,19 +9,49 @@ import javafx.scene.input.KeyCombination;
 public interface IUIAction {
 	void execute();
 
-	ObservableBooleanValue enabledProperty();
+	/** controls enabling of a Control (optional) */
+	default ObservableBooleanValue enabledProperty() {
+		return null;
+	}
 
-	/** If false, hide the control/menu entry. */
-	ObservableBooleanValue visibleProperty();
+	/** If false, hide the control/menu entry. (optional) */
+	default ObservableBooleanValue visibleProperty() {
+		return null;
+	}
 
-	/** UI presentation (optional, but nice). */
-	ReadOnlyStringProperty textProperty();
+	/** UI presentation (optional). */
+	default ReadOnlyStringProperty textProperty() {
+		return null;
+	}
 
-	ReadOnlyStringProperty iconSpecProperty();
-	default ReadOnlyObjectProperty<Node> graphicProperty() { return null; }
+	/**
+	 * String specification of an icon
+	 * 
+	 * @return
+	 */
+	default ReadOnlyStringProperty iconSpecProperty() {
+		return null;
+	}
+
+	/**
+	 * graphical Node factory
+	 * 
+	 * @return
+	 */
+	default ReadOnlyObjectProperty<Node> graphicProperty() {
+		return null;
+	}
 
 	/** Useful for MenuItem (optional). */
 	default ReadOnlyObjectProperty<KeyCombination> acceleratorProperty() {
 		return null;
 	}
+
+	/**
+	 * Key to be used for action registry
+	 * 
+	 * @return
+	 */
+	String getKey();
+
 }
