@@ -3,8 +3,8 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://bliksoft.cz/XmlFilesystem XmlFilesystem.xsd">
 
-	<folder name="translations">
-		<folder name="licences">
+	<file name="translations">
+		<file name="licences">
 			<file name="LGPL3_NAME">
 				<attribute name="default">GNU Lesser General Public License</attribute>
 			</file>
@@ -34,9 +34,9 @@
 				<attribute name="cs">komerční licence</attribute>
 				<attribute name="sk">komerčná licencia</attribute>
 			</file>
-		</folder>
-	</folder>
-	<folder name="licences">
+		</file>
+	</file>
+	<file name="licences">
 		<file name="LGPL3">
 			<attribute name="name">licences/LGPL3_NAME</attribute>
 			<attribute name="url">licences/LGPL3_URL</attribute>
@@ -56,9 +56,9 @@
 			<attribute name="name">licences/CreativeCommons_NAME</attribute>
 			<attribute name="url">licences/CreativeCommons_URL</attribute>
 		</file>
-	</folder>
+	</file>
 	
-	<folder name="lib_credits">
+	<file name="lib_credits">
 		<file name="Freemarker">
 			<attribute name="name">FreeMarker</attribute>
 			<attribute name="url">http://freemarker.org/index.html</attribute>
@@ -83,6 +83,6 @@
 			<attribute name="comment">SVG rendering library</attribute>
 			<attribute name="licence">LGPL3</attribute>
 		</file>
-	</folder>
+	</file>
 
 </root>

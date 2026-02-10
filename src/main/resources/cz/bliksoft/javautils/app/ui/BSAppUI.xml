@@ -2,7 +2,7 @@
 <root xmlns="http://bliksoft.cz/XmlFilesystem"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://bliksoft.cz/XmlFilesystem XmlFilesystem.xsd">
-	<folder name="fileLoaders">
+	<file name="fileLoaders">
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.FxmlFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.custom.GenericUIFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.ButtonFileLoader" />
@@ -45,11 +45,11 @@
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.SpinnerFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.CheckBoxFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.RadioButtonFileLoader" />
-	</folder>
+	</file>
 	
-	<folder name="core">
-		<folder name="actions">
+	<file name="core">
+		<file name="actions">
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppClose" />
-		</folder>
-	</folder>
+		</file>
+	</file>
 </root>

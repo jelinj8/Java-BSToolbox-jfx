@@ -54,7 +54,8 @@ public class UIActions {
 		for (FileObject f : actionsFile.getChildFiles()) {
 			try {
 				IUIAction action = loader.loadFile(f);
-				registerAction(action.getKey(), action, f.getResourceId());
+				String key = f.getAttribute("key");
+				registerAction(key != null ? key : action.getKey(), action, f.getResourceId());
 			} catch (Exception e) {
 				log.error("Failed to register IUIAction {} ({})", f.getName(), e.getMessage());
 			}
