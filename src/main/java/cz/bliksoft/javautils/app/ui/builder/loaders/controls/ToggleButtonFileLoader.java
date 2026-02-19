@@ -16,7 +16,7 @@ public class ToggleButtonFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "ToggleButton";
 	}
 }

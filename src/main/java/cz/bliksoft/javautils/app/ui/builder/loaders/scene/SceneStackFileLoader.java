@@ -17,7 +17,7 @@ public class SceneStackFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "SceneStack";
 	}
 }

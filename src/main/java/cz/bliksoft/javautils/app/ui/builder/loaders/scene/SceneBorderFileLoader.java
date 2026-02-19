@@ -22,7 +22,7 @@ public class SceneBorderFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "SceneBorder";
 	}
 }

@@ -73,7 +73,7 @@ public class SpinnerFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "Spinner";
 	}
 }

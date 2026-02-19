@@ -14,7 +14,7 @@ public class MenuFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "Menu";
 	}
 }

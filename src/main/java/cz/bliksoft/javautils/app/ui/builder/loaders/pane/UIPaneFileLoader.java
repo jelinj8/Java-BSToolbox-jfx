@@ -13,7 +13,7 @@ public class UIPaneFileLoader extends BorderPaneFileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "UIPane";
 	}
 }

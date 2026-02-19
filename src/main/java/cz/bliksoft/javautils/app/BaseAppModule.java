@@ -1,8 +1,9 @@
 package cz.bliksoft.javautils.app;
 
 import cz.bliksoft.javautils.fx.VersionInfo;
-import cz.bliksoft.javautils.fx.tools.FxTools;
+import cz.bliksoft.javautils.fx.tools.Styling;
 import cz.bliksoft.javautils.modules.ModuleBase;
+import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
 
 public class BaseAppModule extends ModuleBase {
 
@@ -20,11 +21,12 @@ public class BaseAppModule extends ModuleBase {
 	public String getVersionInfo() {
 		return new VersionInfo().getDisplayVersion();
 	}
-	
+
 	@Override
 	public void init() {
 		super.init();
-		FxTools.safeRegister("/css/app.css");
-
+		Styling.safeRegister("/css/app.css");
+		Singletons.loadServices();
 	}
+
 }

@@ -12,16 +12,20 @@ import org.apache.logging.log4j.Logger;
 import cz.bliksoft.javautils.ClasspathUtils;
 import cz.bliksoft.javautils.EnvironmentUtils;
 import cz.bliksoft.javautils.StringUtils;
-import cz.bliksoft.javautils.app.events.ClosedEvent;
-import cz.bliksoft.javautils.app.events.ClosingEvent;
+import cz.bliksoft.javautils.app.events.AppClosedEvent;
+import cz.bliksoft.javautils.app.events.TryCloseEvent;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
 import cz.bliksoft.javautils.app.properties.XmlProperties;
 import cz.bliksoft.javautils.app.rights.DefaultUnrestrictedSessionManager;
 import cz.bliksoft.javautils.app.rights.SessionManager;
+import cz.bliksoft.javautils.context.Context;
+import cz.bliksoft.javautils.context.events.EventListener;
 import cz.bliksoft.javautils.fx.controls.images.AnyImageLoader;
 import cz.bliksoft.javautils.fx.controls.images.ImageLoader;
 import cz.bliksoft.javautils.modules.Modules;
+import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
 import javafx.application.Application;
+import javafx.application.Platform;
 
 /**
  * jádro frameworku
@@ -41,11 +45,11 @@ public class BSApp {
 	public static final String PREF_ENABLED_MODULES = "EnabledModules"; //$NON-NLS-1$
 
 	private static Application jFXApp = null;
-	
+
 	public static Application getApplication() {
 		return jFXApp;
 	}
-	
+
 	/**
 	 * zjišťuje zapisovatelnost globálního konfiguračního souboru
 	 * 
@@ -324,9 +328,9 @@ public class BSApp {
 	 */
 	public static void init(Application app) {
 		jFXApp = app;
-		
+
 		log = LogManager.getLogger();
-		
+
 		String plugDir = BSApp.getGlobalProperties().getProperty(PREF_MODULEDIR);
 		if (StringUtils.hasText(plugDir)) {
 			File pluginsDir = new File(plugDir); // $NON-NLS-1$ //$NON-NLS-2$
@@ -371,8 +375,8 @@ public class BSApp {
 			}
 		}
 
-		log.log(Level.INFO,
-				BSAppMessages.getString("App.starting") + "  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv", //$NON-NLS-1$//$NON-NLS-2$
+		log.log(Level.INFO, BSAppMessages.getString("App.starting") //$NON-NLS-1$
+				+ "  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv", //$NON-NLS-1$
 				getAppName()); // $NON-NLS-3$
 
 		// přidání konfigurované lib složky do classpath
@@ -404,34 +408,39 @@ public class BSApp {
 
 		// inicializace modulů
 		Modules.initModules();
-		
+
 		// instalace modulů
 		Modules.installModules();
 
 		log.log(Level.INFO, BSAppMessages.getString("App.InitializationCompleted") //$NON-NLS-1$
 				+ " ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"); //$NON-NLS-1$ //$NON-NLS-3$
+
+		Context.getRoot().addEventListener(new EventListener<AppClosedEvent>(AppClosedEvent.class, "BSApp") {
+			@Override
+			public void fired(AppClosedEvent event) {
+				Platform.exit();
+				close();
+			}
+		});
 	}
 
 	/**
-	 * pokusí se uzavřít aplikaci
+	 * vyvolá pokus o ukončení aplikace
 	 * 
 	 * @return úspěšnost
 	 */
-	public static boolean close() {
-		ClosingEvent evt = ClosingEvent.fire("Requested by framework close()");
-		if (evt.isBlocked()) {
-			for (String reason : evt.getBlockingReasons())
-				log.info("Closing blocked: {}", reason);
-			return false;
-		}
+	public static void tryClose() {
+		TryCloseEvent.fire("Requested by framework close()");
+	}
 
-		ClosedEvent.fire("Reached framework close");
-
+	/**
+	 * úklid systému po dokončení práce, dostupnost frameworku už není zaručená
+	 */
+	private static void close() {
 		log.info("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"); //$NON-NLS-1$
 		log.info("Starting modules cleanup before closing."); //$NON-NLS-1$
-
+		Singletons.cleanup();
 		Modules.cleanup();
-		return true;
 	}
 
 	private static SessionManager sessionManager = null;

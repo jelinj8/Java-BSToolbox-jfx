@@ -2,11 +2,11 @@ package cz.bliksoft.javautils.app.events;
 
 import cz.bliksoft.javautils.context.Context;
 
-public class ClosedEvent {
+public class AppClosedEvent {
 
 	private String reason;
 	
-	private ClosedEvent(String reason) {
+	private AppClosedEvent(String reason) {
 		this.reason = reason;
 	}
 	
@@ -15,6 +15,6 @@ public class ClosedEvent {
 	}
 	
 	public static void fire(String reason) {
-		Context.getGlobal().fireGUIEvent(new ClosedEvent(reason));
+		Context.getRoot().fireGUIEvent(new AppClosedEvent(reason));
 	}
 }

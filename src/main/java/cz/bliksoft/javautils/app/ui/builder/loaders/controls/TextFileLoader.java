@@ -28,7 +28,7 @@ public class TextFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "Text";
 	}
 }

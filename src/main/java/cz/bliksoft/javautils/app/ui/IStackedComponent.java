@@ -1,7 +1,9 @@
 package cz.bliksoft.javautils.app.ui;
 
 public interface IStackedComponent {
-	void afterPush();
+	default void afterPush() {
+	};
 
-	void beforePop();
+	default void beforePop() {
+	};
 }

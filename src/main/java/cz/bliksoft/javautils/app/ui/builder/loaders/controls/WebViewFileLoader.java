@@ -34,7 +34,7 @@ public class WebViewFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "WebView";
 	}
 }

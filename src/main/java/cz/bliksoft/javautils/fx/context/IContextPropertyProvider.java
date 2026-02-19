@@ -44,7 +44,7 @@ public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISi
 	 *                                  v případě změny
 	 */
 	default void addDefaultSwitchedContextListener(Class<?> key, AbstractContextListener<T> additionalContextListener) {
-		Context.getSwitchedContext().addContextListener(
+		Context.getCurrentContext().addContextListener(
 				new BasicContextObjectListener<T>(key, this, "default switched", additionalContextListener), true);
 	}
 
@@ -65,7 +65,7 @@ public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISi
 	 *                                  v případě změny
 	 */
 	default void addDefaultGlobalContextListener(Class<?> key, AbstractContextListener<T> additionalContextListener) {
-		Context.getGlobal().addContextListener(
+		Context.getRoot().addContextListener(
 				new BasicContextObjectListener<T>(key, this, "default global", additionalContextListener), true);
 	}
 
@@ -75,7 +75,7 @@ public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISi
 	 * @param key
 	 */
 	default void addDefaultGlobalContextListener(Class<?> key) {
-		Context.getGlobal().addContextListener(new BasicContextObjectListener<T>(key, this, "default global", null),
+		Context.getRoot().addContextListener(new BasicContextObjectListener<T>(key, this, "default global", null),
 				true);
 	}
 

@@ -15,7 +15,7 @@ public class StackPaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "StackPane";
 	}
 }

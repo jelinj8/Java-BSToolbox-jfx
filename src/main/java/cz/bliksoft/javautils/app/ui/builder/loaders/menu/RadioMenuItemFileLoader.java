@@ -15,7 +15,7 @@ public class RadioMenuItemFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "RadioMenuItem";
 	}
 }

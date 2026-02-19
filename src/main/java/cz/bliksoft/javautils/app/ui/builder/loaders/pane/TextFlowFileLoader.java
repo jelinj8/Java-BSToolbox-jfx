@@ -24,7 +24,7 @@ public class TextFlowFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "TextFlow";
 	}
 }

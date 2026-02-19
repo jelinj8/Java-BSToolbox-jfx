@@ -189,6 +189,9 @@ public final class UIComposer {
 
 	private static UiProduct loadUIProduct(FileObject file) {
 		Object o = FileLoader.loadFile(file);
+		if (o == null) {
+			throw new InitializationException("Failed to load UI item from file " + file.getFullPath());
+		}
 		return toUiProduct(o);
 	}
 
@@ -391,17 +394,17 @@ public final class UIComposer {
 	public static void applyCommon(Region r, FileObject f) {
 		// sizing
 		if (f.getAttribute("prefWidth", null) != null)
-			r.setPrefWidth(f.getDouble("prefWidth", r.getPrefWidth()));
+			r.setPrefWidth(FxAttrHelper.sizeInfPref(f.getAttribute("prefWidth"), r.getPrefWidth()));
 		if (f.getAttribute("prefHeight", null) != null)
-			r.setPrefHeight(f.getDouble("prefHeight", r.getPrefHeight()));
+			r.setPrefHeight(FxAttrHelper.sizeInfPref(f.getAttribute("prefHeight"), r.getPrefHeight()));
 		if (f.getAttribute("minWidth", null) != null)
-			r.setMinWidth(f.getDouble("minWidth", r.getMinWidth()));
+			r.setMinWidth(FxAttrHelper.sizeInfPref(f.getAttribute("minWidth"), r.getMinWidth()));
 		if (f.getAttribute("minHeight", null) != null)
-			r.setMinHeight(f.getDouble("minHeight", r.getMinHeight()));
+			r.setMinHeight(FxAttrHelper.sizeInfPref(f.getAttribute("minHeight"), r.getMinHeight()));
 		if (f.getAttribute("maxWidth", null) != null)
-			r.setMaxWidth(FxAttrHelper.sizeInf(f.getAttribute("maxWidth", null), r.getMaxWidth()));
+			r.setMaxWidth(FxAttrHelper.sizeInfPref(f.getAttribute("maxWidth"), r.getMaxWidth()));
 		if (f.getAttribute("maxHeight", null) != null)
-			r.setMaxHeight(FxAttrHelper.sizeInf(f.getAttribute("maxHeight", null), r.getMaxHeight()));
+			r.setMaxHeight(FxAttrHelper.sizeInfPref(f.getAttribute("maxHeight"), r.getMaxHeight()));
 
 		Insets p = FxAttrHelper.insets(f, "padding");
 		if (p != null)

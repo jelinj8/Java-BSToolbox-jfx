@@ -26,7 +26,7 @@ public class CheckBoxFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "CheckBox";
 	}
 }

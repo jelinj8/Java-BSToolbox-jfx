@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.fx.controls.codebooks;
 
 import java.util.Objects;
 
+import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -16,8 +17,8 @@ import javafx.stage.Window;
 public class CodebookField<T> extends HBox {
 
 	private final TextField textField = new TextField();
-	private final Button selectButton = new Button("...");
-	private final Button clearButton = new Button("✕");
+	private final Button selectButton = new Button();
+//	private final Button clearButton = new Button("✕");
 //	private final StackPane iconPane = new StackPane();
 
 	private final ObjectProperty<T> value = new SimpleObjectProperty<>();
@@ -40,17 +41,20 @@ public class CodebookField<T> extends HBox {
 		getStyleClass().add("codebook-field");
 //		iconPane.getStyleClass().add("codebook-icon");
 		textField.getStyleClass().add("codebook-text");
+
 		selectButton.getStyleClass().add("select-button");
 		selectButton.setFocusTraversable(false);
 
-		clearButton.getStyleClass().add("clear-button");
-		clearButton.setFocusTraversable(false);
+		selectButton.setGraphic(ImageUtils.getIconView("codebook/Codebook_16.png"));
+		
+//		clearButton.getStyleClass().add("clear-button");
+//		clearButton.setFocusTraversable(false);
 
 		setAlignment(Pos.CENTER_LEFT);
 		setSpacing(4);
 		HBox.setHgrow(textField, Priority.ALWAYS);
 
-		getChildren().addAll(/* iconPane, */textField, selectButton, clearButton);
+		getChildren().addAll(/* iconPane, */textField, selectButton/*, clearButton*/);
 
 		// start unlocked (editable)
 		unlock();
@@ -67,7 +71,7 @@ public class CodebookField<T> extends HBox {
 		});
 
 		selectButton.setOnAction(e -> identifyOrSelect());
-		clearButton.setOnAction(e -> clear());
+//		clearButton.setOnAction(e -> clear());
 
 		textField.setOnKeyPressed(e -> {
 
@@ -109,20 +113,22 @@ public class CodebookField<T> extends HBox {
 	}
 
 	private void identifyOrSelect() {
-		if (locked)
-			unlock();
-
-		String text = textField.getText();
-		if (text != null && !text.isBlank()) {
-			T identified = provider.identify(text, true);
-			if (identified != null) {
-				acceptValue(identified);
-				return;
+		if (locked) {
+//			unlock();
+			clear();
+		} else {
+			String text = textField.getText();
+			if (text != null && !text.isBlank()) {
+				T identified = provider.identify(text, true);
+				if (identified != null) {
+					acceptValue(identified);
+					return;
+				}
 			}
-		}
 
-		// identify failed -> open popup or dialog based on provider
-		openSelector();
+			// identify failed -> open popup or dialog based on provider
+			openSelector();
+		}
 	}
 
 	private void openSelector() {

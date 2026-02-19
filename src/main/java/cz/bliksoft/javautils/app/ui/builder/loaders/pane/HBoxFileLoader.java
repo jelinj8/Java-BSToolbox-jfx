@@ -18,7 +18,7 @@ public class HBoxFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "HBox";
 	}
 }

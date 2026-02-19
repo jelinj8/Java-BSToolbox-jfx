@@ -11,7 +11,7 @@ public class SeparatorMenuItemFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "SeparatorMenuItem";
 	}
 }

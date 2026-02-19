@@ -15,7 +15,7 @@ public class CheckMenuItemFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "CheckMenuItem";
 	}
 }

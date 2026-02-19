@@ -74,4 +74,28 @@ public class XmlProperties extends Properties {
 			log = LogManager.getLogger();
 		return log;
 	}
+
+	public Double getDouble(String k) {
+		String v = getProperty(k);
+		if (v == null)
+			return null;
+		try {
+			return Double.parseDouble(v);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	public void putDouble(String k, double v) {
+		setProperty(k, Double.toString(v));
+	}
+
+	public Boolean getBool(String k) {
+		String v = getProperty(k);
+		return v == null ? null : Boolean.parseBoolean(v);
+	}
+
+	public void putBool(String k, boolean v) {
+		setProperty(k, Boolean.toString(v));
+	}
 }

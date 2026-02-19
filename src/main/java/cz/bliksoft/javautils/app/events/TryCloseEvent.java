@@ -2,17 +2,23 @@ package cz.bliksoft.javautils.app.events;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.context.Context;
 
-public class ClosingEvent {
+public class TryCloseEvent {
+
+	static Logger log = LogManager.getLogger();
 
 	private String closeReason;
 	private ArrayList<String> blockedReasons = new ArrayList<>();
 
 	private boolean blocked = false;
 
-	private ClosingEvent(String reason) {
+	private TryCloseEvent(String reason) {
 		closeReason = reason;
 	}
 
@@ -33,10 +39,14 @@ public class ClosingEvent {
 		return closeReason;
 	}
 
-	public static ClosingEvent fire(String reason) {
-		ClosingEvent evt = new ClosingEvent(reason);
-		Context.getGlobal().fireGUIEvent(evt);
-		return evt;
+	public static void fire(String reason) {
+		TryCloseEvent evt = new TryCloseEvent(reason);
+		Context.getRoot().fireGUIEvent(evt);
+		if (evt.isBlocked()) {
+			log.info("Closing blocked:\n" + evt.getBlockingReasons().stream().collect(Collectors.joining("\n")));
+		} else {
+			AppClosedEvent.fire(reason);
+		}
 	}
 
 }

@@ -25,7 +25,7 @@ public class TilePaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "TilePane";
 	}
 }

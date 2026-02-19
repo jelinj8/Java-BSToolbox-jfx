@@ -21,7 +21,7 @@ public class HyperlinkFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "Hyperlink";
 	}
 }

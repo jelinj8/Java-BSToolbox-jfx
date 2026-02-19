@@ -24,7 +24,17 @@
 		</repository>
 	</repositories>
 
-
+	<distributionManagement>
+		<repository>
+			<id>bliksoft-private</id>
+			<url>https://mvn.bliksoft.cz/private</url>
+		</repository>
+		<snapshotRepository>
+			<id>bliksoft-private-snapshots</id>
+			<url>https://mvn.bliksoft.cz/private-snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+	
 	<profiles>
 		<profile>
 			<id>windows</id>

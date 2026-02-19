@@ -20,7 +20,7 @@ public class SplitMenuButtonFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "SplitMenuButton";
 	}
 }

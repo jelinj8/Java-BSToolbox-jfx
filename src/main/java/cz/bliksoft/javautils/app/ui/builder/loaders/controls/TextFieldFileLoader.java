@@ -18,7 +18,7 @@ public class TextFieldFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "TextField";
 	}
 }

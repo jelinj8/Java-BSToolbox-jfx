@@ -18,7 +18,7 @@ public class VBoxFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "VBox";
 	}
 }

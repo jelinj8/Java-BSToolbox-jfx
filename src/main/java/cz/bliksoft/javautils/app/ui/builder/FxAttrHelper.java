@@ -10,6 +10,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
@@ -176,15 +177,17 @@ public final class FxAttrHelper {
 	}
 
 	/**
-	 * Accepts "inf", "infinite", "max" for Double.MAX_VALUE, otherwise parses
-	 * double.
+	 * Accepts "inf", "infinite", "max" for Double.MAX_VALUE, "pref", "preferred"
+	 * for Region.USE_PREF_SIZE/-infinity, otherwise parses double.
 	 */
-	public static Double sizeInf(String s, Double def) {
+	public static Double sizeInfPref(String s, Double def) {
 		if (s == null)
 			return def;
 		String v = s.trim().toLowerCase();
 		if (v.equals("inf") || v.equals("infinite") || v.equals("max"))
 			return Double.MAX_VALUE;
+		if (v.equals("pref") || v.equals("preferred"))
+			return Region.USE_PREF_SIZE;
 		try {
 			return Double.parseDouble(v);
 		} catch (Exception e) {
@@ -222,45 +225,52 @@ public final class FxAttrHelper {
 			return null;
 		}
 	}
-	
-	public static Cursor parseCursor(String v) {
-	    if (v == null) return null;
-	    String s = v.trim();
-	    if (s.isEmpty()) return null;
 
-	    // nejběžnější názvy
-	    return switch (s.toUpperCase()) {
-	        case "DEFAULT" -> Cursor.DEFAULT;
-	        case "HAND" -> Cursor.HAND;
-	        case "TEXT" -> Cursor.TEXT;
-	        case "WAIT" -> Cursor.WAIT;
-	        case "CROSSHAIR" -> Cursor.CROSSHAIR;
-	        case "MOVE" -> Cursor.MOVE;
-	        case "E_RESIZE" -> Cursor.E_RESIZE;
-	        case "W_RESIZE" -> Cursor.W_RESIZE;
-	        case "N_RESIZE" -> Cursor.N_RESIZE;
-	        case "S_RESIZE" -> Cursor.S_RESIZE;
-	        case "NE_RESIZE" -> Cursor.NE_RESIZE;
-	        case "NW_RESIZE" -> Cursor.NW_RESIZE;
-	        case "SE_RESIZE" -> Cursor.SE_RESIZE;
-	        case "SW_RESIZE" -> Cursor.SW_RESIZE;
-	        case "H_RESIZE" -> Cursor.H_RESIZE;
-	        case "V_RESIZE" -> Cursor.V_RESIZE;
-	        case "DISAPPEAR" -> Cursor.DISAPPEAR;
-	        case "NONE" -> Cursor.NONE;
-	        default -> {
-	            // pokus o obecné parsování (javfx má Cursor.cursor(String))
-	            try { yield Cursor.cursor(s); } catch (Exception ex) { yield null; }
-	        }
-	    };
+	public static Cursor parseCursor(String v) {
+		if (v == null)
+			return null;
+		String s = v.trim();
+		if (s.isEmpty())
+			return null;
+
+		// nejběžnější názvy
+		return switch (s.toUpperCase()) {
+		case "DEFAULT" -> Cursor.DEFAULT;
+		case "HAND" -> Cursor.HAND;
+		case "TEXT" -> Cursor.TEXT;
+		case "WAIT" -> Cursor.WAIT;
+		case "CROSSHAIR" -> Cursor.CROSSHAIR;
+		case "MOVE" -> Cursor.MOVE;
+		case "E_RESIZE" -> Cursor.E_RESIZE;
+		case "W_RESIZE" -> Cursor.W_RESIZE;
+		case "N_RESIZE" -> Cursor.N_RESIZE;
+		case "S_RESIZE" -> Cursor.S_RESIZE;
+		case "NE_RESIZE" -> Cursor.NE_RESIZE;
+		case "NW_RESIZE" -> Cursor.NW_RESIZE;
+		case "SE_RESIZE" -> Cursor.SE_RESIZE;
+		case "SW_RESIZE" -> Cursor.SW_RESIZE;
+		case "H_RESIZE" -> Cursor.H_RESIZE;
+		case "V_RESIZE" -> Cursor.V_RESIZE;
+		case "DISAPPEAR" -> Cursor.DISAPPEAR;
+		case "NONE" -> Cursor.NONE;
+		default -> {
+			// pokus o obecné parsování (javfx má Cursor.cursor(String))
+			try {
+				yield Cursor.cursor(s);
+			} catch (Exception ex) {
+				yield null;
+			}
+		}
+		};
 	}
-	
+
 	public static ContentDisplay parseContentDisplay(String v) {
-	    if (v == null) return null;
-	    try {
-	        return ContentDisplay.valueOf(v.trim().toUpperCase());
-	    } catch (Exception ex) {
-	        return null;
-	    }
+		if (v == null)
+			return null;
+		try {
+			return ContentDisplay.valueOf(v.trim().toUpperCase());
+		} catch (Exception ex) {
+			return null;
+		}
 	}
 }

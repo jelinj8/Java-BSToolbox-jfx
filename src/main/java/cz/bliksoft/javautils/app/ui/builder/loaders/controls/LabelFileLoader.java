@@ -14,7 +14,7 @@ public class LabelFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "Label";
 	}
 

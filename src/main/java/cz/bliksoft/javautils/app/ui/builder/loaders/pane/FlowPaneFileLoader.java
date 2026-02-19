@@ -20,7 +20,7 @@ public class FlowPaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "FlowPane";
 	}
 }

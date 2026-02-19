@@ -16,7 +16,7 @@ public class ToolBarFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "ToolBar";
 	}
 }

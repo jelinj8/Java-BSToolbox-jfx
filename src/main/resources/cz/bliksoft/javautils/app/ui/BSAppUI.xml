@@ -4,7 +4,6 @@
 	xsi:schemaLocation="http://bliksoft.cz/XmlFilesystem XmlFilesystem.xsd">
 	<file name="fileLoaders">
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.FxmlFileLoader" />
-		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.custom.GenericUIFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.ButtonFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.HyperlinkFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.LabelFileLoader" />
@@ -20,6 +19,7 @@
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.MenuItemFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.RadioMenuItemFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.menu.SeparatorMenuItemFileLoader" />
+		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.RegionFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.AccordionFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.AnchorPaneFileLoader" />
 		<file name="cz.bliksoft.javautils.app.ui.builder.loaders.pane.BorderPaneFileLoader" />
@@ -49,7 +49,7 @@
 	
 	<file name="core">
 		<file name="actions">
-			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppClose" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppCloseAction" />
 		</file>
 	</file>
 </root>

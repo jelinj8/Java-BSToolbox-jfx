@@ -17,7 +17,7 @@ public class SceneTabsFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "SceneTabs";
 	}
 }

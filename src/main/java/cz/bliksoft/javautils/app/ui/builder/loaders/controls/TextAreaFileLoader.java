@@ -29,7 +29,7 @@ public class TextAreaFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "TextArea";
 	}
 }

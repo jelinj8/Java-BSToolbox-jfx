@@ -14,7 +14,7 @@ public class TitledPaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "TitledPane";
 	}
 }

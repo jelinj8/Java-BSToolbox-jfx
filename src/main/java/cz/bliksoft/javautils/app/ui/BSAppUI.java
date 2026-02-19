@@ -4,8 +4,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.StringUtils;
-import cz.bliksoft.javautils.app.events.ClosingEvent;
+import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.events.MessageEvent;
+import cz.bliksoft.javautils.app.events.TryCloseEvent;
 import cz.bliksoft.javautils.app.ui.builder.UIComposer;
+import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
+import cz.bliksoft.javautils.app.ui.utils.state.binders.StageStateBinder;
 import cz.bliksoft.javautils.context.AbstractContextListener;
 import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.ContextChangedEvent;
@@ -15,10 +19,11 @@ import cz.bliksoft.javautils.context.holders.SingleContextHolder;
 import cz.bliksoft.javautils.context.holders.StackedContextHolder;
 import cz.bliksoft.javautils.fx.VersionInfo;
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
-import cz.bliksoft.javautils.fx.tools.FxTools;
+import cz.bliksoft.javautils.fx.tools.Styling;
 import cz.bliksoft.javautils.modules.ModuleBase;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
+import javafx.application.Application;
 import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
@@ -27,8 +32,6 @@ public class BSAppUI extends ModuleBase {
 	static Logger log = null;
 
 	public static final String CTX_MAIN_COMPONENT = "MainDesktopComponent"; //$NON-NLS-1$
-	public static final String CTX_MESSAGE_KEY = "CTX_status_message"; //$NON-NLS-1$
-	public static final String CTX_MESSAGE_ICON_KEY = "CTX_status_message_icon"; //$NON-NLS-1$
 
 	public static final String FS_UI_ROOT = "/AppUI"; //$NON-NLS-1$
 
@@ -46,7 +49,7 @@ public class BSAppUI extends ModuleBase {
 	public static void setStage(Stage stage) {
 		mainStage = stage;
 	}
-	
+
 	public static Stage getStage() {
 		return mainStage;
 	}
@@ -56,22 +59,24 @@ public class BSAppUI extends ModuleBase {
 		return 10000;
 	}
 
+	/**
+	 * inicializace aplikačního frameworku s UI
+	 * 
+	 * @throws Exception
+	 */
+	public static void init(Application app, Stage stage) {
+		setStage(stage);
+		BSApp.init(app);
+	}
+
 	@Override
 	public void init() {
-		FxTools.registerCss("/css/app-ui.css");
-
 		mainStage.setOnCloseRequest(event -> {
-			ClosingEvent e = ClosingEvent.fire("Application closing");
-			if (e.isBlocked()) {
-				event.consume();
-			}
+			TryCloseEvent.fire("Window closing");
+			event.consume();
 		});
 
 		log = LogManager.getLogger();
-
-		// načtení globálních akcí do cache
-		initActions();
-//		AppFunction.init();
 
 		FileObject f = FileSystem.getRoot().getFile(FS_UI_ROOT);
 		if (f != null) {
@@ -80,13 +85,38 @@ public class BSAppUI extends ModuleBase {
 				f = f.getFile(rootName);
 
 				if (f != null) {
+					String theme = f.getAttribute("theme");
+					if (theme != null) {
+						switch (theme.toUpperCase()) {
+						case "LIGHT":
+							Styling.setThemeMode(Styling.ThemeMode.LIGHT);
+							break;
+						case "DARK":
+							Styling.setThemeMode(Styling.ThemeMode.DARK);
+							break;
+						case "SYSTEM":
+							Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
+							break;
+						}
+
+					} else {
+
+					}
+					Styling.installGlobalCss();
 					UIComposer.buildUI(f, mainStage);
+					StageAutoSizer.install(mainStage);
 				}
 			}
 		}
 
+		uiContextHolder = new StackedContextHolder("UI StackedContextHolder");
+		uiContextHolder.push(new Context("UI root context"));
+
+		Context.getRoot().addContext(uiContextHolder);
+		Context.setCurrentContext(uiContextHolder);
+
 		if (mainPane != null) {
-			Context.getSwitchedContext().addContextListener(
+			Context.getCurrentContext().addContextListener(
 					new AbstractContextListener<Node>(CTX_MAIN_COMPONENT, "Main component switcher") {
 
 						@Override
@@ -95,38 +125,33 @@ public class BSAppUI extends ModuleBase {
 							if (event.isNewNotNull()) {
 								mainPane.setCenter(event.getNewValue());
 							}
+							StageAutoSizer.autoSize();
 						}
 					});
 		}
 
-		uiContextHolder = new StackedContextHolder("UI StackedContextHolder");
-		uiContextHolder.push(new Context("UI root context"));
-		Context.setCurrentContext(uiContextHolder);
-
+		StageStateBinder.restore(mainStage, "@main");
 	}
 
 	@Override
 	public void install() {
 		super.install();
-
 		mainStage.show();
 	}
 
-	private void initActions() {
-		// FIXME unimplemented
-	}
-
 	public static void showStatusMessage(String text) {
-		showStatusMessage(text, null);
+		MessageEvent e = new MessageEvent(text);
+		Context.getCurrentContext().fireEvent(e);
 	}
 
 	public static void showStatusMessage(String text, String icon) {
-		showStatusMessage(text, StringUtils.hasText(icon) ? ImageUtils.getIconView(icon) : null);
+		MessageEvent e = new MessageEvent(text, ImageUtils.getIconView(icon));
+		Context.getCurrentContext().fireEvent(e);
 	}
 
-	public static void showStatusMessage(String text, Object icon) {
-		Context.getGlobal().put(CTX_MESSAGE_ICON_KEY, icon);
-		Context.getGlobal().put(CTX_MESSAGE_KEY, text);
+	public static void showStatusMessage(String text, String icon, String fxClass) {
+		MessageEvent e = new MessageEvent(text, icon != null ? ImageUtils.getIconView(icon) : null, fxClass);
+		Context.getCurrentContext().fireEvent(e);
 	}
 
 //	private static WorkingWheelDialog workingWheelDialog = null;
@@ -294,7 +319,7 @@ public class BSAppUI extends ModuleBase {
 		Context lvlCtx = null;
 		if (uiComponent == null) {
 			if (ctx == null) {
-				log.error("No CTX nor JComponent specified");
+				log.error("No CTX nor Component specified");
 				return;
 			}
 			lvlCtx = ctx;
@@ -306,7 +331,7 @@ public class BSAppUI extends ModuleBase {
 			else
 				component = (Node) c.getResult();
 		} else {
-
+			component = uiComponent;
 			if (ctx == null) {
 				if (uiComponent instanceof IContextProvider)
 					lvlCtx = ((IContextProvider) uiComponent).getItemContext();

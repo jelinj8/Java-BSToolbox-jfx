@@ -29,7 +29,7 @@ public class ScrollPaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "ScrollPane";
 	}
 }

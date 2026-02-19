@@ -11,7 +11,7 @@ public class MenuBarFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "MenuBar";
 	}
 }

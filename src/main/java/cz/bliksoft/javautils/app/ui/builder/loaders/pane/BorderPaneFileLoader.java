@@ -13,7 +13,7 @@ public class BorderPaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "BorderPane";
 	}
 }

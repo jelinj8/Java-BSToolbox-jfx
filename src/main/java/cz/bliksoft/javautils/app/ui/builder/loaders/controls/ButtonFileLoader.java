@@ -19,7 +19,7 @@ public class ButtonFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "Button";
 	}
 }

@@ -22,7 +22,7 @@ public class RadioButtonFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "RadioButton";
 	}
 }

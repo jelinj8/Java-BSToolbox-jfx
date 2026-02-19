@@ -32,7 +32,7 @@ public class SplitPaneFileLoader extends FileLoader {
 	}
 
 	@Override
-	public String getExtension() {
+	public String getSupportedType() {
 		return "SplitPane";
 	}
 }

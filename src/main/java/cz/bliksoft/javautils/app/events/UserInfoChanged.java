@@ -6,6 +6,6 @@ import cz.bliksoft.javautils.context.Context;
 public class UserInfoChanged {
 
 	public static void fire(UserInfo oldUserInfo, UserInfo newUserInfo) {
-		Context.getGlobal().fireGUIEvent(new UserInfoChanged());
+		Context.getRoot().fireGUIEvent(new UserInfoChanged());
 	}
 }

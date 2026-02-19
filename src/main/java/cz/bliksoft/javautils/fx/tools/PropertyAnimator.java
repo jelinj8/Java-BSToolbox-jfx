@@ -1,22 +1,21 @@
 package cz.bliksoft.javautils.fx.tools;
 
-import javafx.animation.PauseTransition;
-import javafx.application.Platform;
-import javafx.util.Duration;
+import java.util.function.Consumer;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
+import javafx.util.Duration;
 
 public class PropertyAnimator<T> {
 	private static final Logger log = LogManager.getLogger();
 
-	private Method setter;
-	private Object subject;
+	Consumer<T> setter;
 
 	private T stillValue;
-	private T[] blinkValues;
+	private T[] runningValues;
 
 	private final PauseTransition timer;
 	private int valueIndex = 0;
@@ -32,24 +31,16 @@ public class PropertyAnimator<T> {
 
 	private Runnable doOnStop = null;
 
-	public PropertyAnimator(Object _subject, String _setter, int intervalMillis, T _stillValue, T[] _blinkValues,
-			Class<?> type) {
-		subject = _subject;
-		stillValue = _stillValue;
-		blinkValues = _blinkValues;
+	public PropertyAnimator(Consumer<T> setter, int intervalMillis, T stillValue, T[] runningValues) {
+		this.stillValue = stillValue;
+		this.runningValues = runningValues;
 
-		Method found = null;
-		try {
-			found = _subject.getClass().getMethod(_setter, type);
-		} catch (NoSuchMethodException | SecurityException e) {
-			log.warn("Setter method '{}' not found on class {}", _setter, subject.getClass().getName());
-		}
-		setter = found;
+		this.setter = setter;
 
 		timer = new PauseTransition(Duration.millis(intervalMillis));
 		timer.setOnFinished(e -> {
 			if (cycleIndex()) {
-				setValue(blinkValues[valueIndex]);
+				setValue(runningValues[valueIndex]);
 				timer.playFromStart();
 			}
 		});
@@ -59,14 +50,14 @@ public class PropertyAnimator<T> {
 
 	public void start() {
 		reset();
-		setValue(blinkValues[valueIndex]);
+		setValue(runningValues[valueIndex]);
 		timer.playFromStart();
 	}
 
 	public void startRepeat() {
 		reset();
 		setRepeat(0);
-		setValue(blinkValues[valueIndex]);
+		setValue(runningValues[valueIndex]);
 		timer.playFromStart();
 	}
 
@@ -100,7 +91,7 @@ public class PropertyAnimator<T> {
 			valueIndex++;
 		}
 
-		if (valueIndex < 0 || valueIndex >= blinkValues.length) {
+		if (valueIndex < 0 || valueIndex >= runningValues.length) {
 			if (repeat != null) {
 				if (repeat == 0) {
 					reset();
@@ -132,18 +123,13 @@ public class PropertyAnimator<T> {
 			return;
 		}
 
-//	    try {
-//	        setter.invoke(subject, value);
-//	    } catch (Exception e) {
-//	        log.warn("Unable to set value.", e);
-//	    }
-
 		Runnable r = () -> {
-			try {
-				setter.invoke(subject, value);
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				log.warn("Unable to set value.", e);
-			}
+			setter.accept(value);
+//			try {
+//				setter.invoke(subject, value);
+//			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+//				log.warn("Unable to set value.", e);
+//			}
 		};
 
 		// Ensure property changes happen on the JavaFX Application Thread.
@@ -155,7 +141,7 @@ public class PropertyAnimator<T> {
 	}
 
 	public void reset() {
-		valueIndex = (reverse ? blinkValues.length - 1 : 0);
+		valueIndex = (reverse ? runningValues.length - 1 : 0);
 	}
 
 	public void setReverse(Boolean _reverse) {
@@ -182,10 +168,26 @@ public class PropertyAnimator<T> {
 		stillValue = _stillValue;
 	}
 
+	public void startOnceForward() {
+		timer.stop();
+		setReverse(false);
+		setRepeat(null);
+		reset();
+		start();
+	}
+
 	public void startOnceForward(T finalValue) {
 		stillValue = finalValue;
 		timer.stop();
 		setReverse(false);
+		setRepeat(null);
+		reset();
+		start();
+	}
+
+	public void startOnceBackward() {
+		timer.stop();
+		setReverse(true);
 		setRepeat(null);
 		reset();
 		start();
