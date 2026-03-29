@@ -21,6 +21,10 @@ public abstract class BasicBeanWrapper<T> implements IStatusProvider, IStatusBea
 		this.value = source;
 	}
 
+	public T getValue() {
+		return value;
+	}
+
 	protected void init() {
 		bindValues();
 		setWatched(true);
