@@ -6,7 +6,6 @@ import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -18,7 +17,6 @@ public class CodebookField<T> extends HBox {
 
 	private final TextField textField = new TextField();
 	private final Button selectButton = new Button();
-//	private final Button clearButton = new Button("✕");
 //	private final StackPane iconPane = new StackPane();
 
 	private final ObjectProperty<T> value = new SimpleObjectProperty<>();
@@ -29,7 +27,6 @@ public class CodebookField<T> extends HBox {
 	private CodebookPopup popup;
 	private boolean locked;
 
-	// for "reuse CodebookField text as filter"
 	private ChangeListener<String> filterListener;
 	private IFilterableSelector activeFilterable;
 
@@ -40,20 +37,17 @@ public class CodebookField<T> extends HBox {
 
 		getStyleClass().add("codebook-field");
 //		iconPane.getStyleClass().add("codebook-icon");
+		
 		textField.getStyleClass().add("codebook-text");
+
+		// v css nefunguje
+		HBox.setHgrow(textField, Priority.ALWAYS);
 
 		selectButton.getStyleClass().add("select-button");
 		selectButton.setFocusTraversable(false);
 
 		selectButton.setGraphic(ImageUtils.getIconView("codebook/Codebook_16.png"));
 		
-//		clearButton.getStyleClass().add("clear-button");
-//		clearButton.setFocusTraversable(false);
-
-		setAlignment(Pos.CENTER_LEFT);
-		setSpacing(4);
-		HBox.setHgrow(textField, Priority.ALWAYS);
-
 		getChildren().addAll(/* iconPane, */textField, selectButton/*, clearButton*/);
 
 		// start unlocked (editable)
@@ -71,7 +65,6 @@ public class CodebookField<T> extends HBox {
 		});
 
 		selectButton.setOnAction(e -> identifyOrSelect());
-//		clearButton.setOnAction(e -> clear());
 
 		textField.setOnKeyPressed(e -> {
 
@@ -100,7 +93,6 @@ public class CodebookField<T> extends HBox {
 			case BACK_SPACE -> {
 				if (locked) {
 					unlock();
-					// Optional: clear value so "select same value again" triggers a change
 					setValue(null);
 					textField.selectAll();
 					e.consume();

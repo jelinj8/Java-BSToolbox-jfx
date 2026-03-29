@@ -18,7 +18,7 @@ import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 
 public class UIActions {
 	private static final Logger log = LogManager.getLogger();
-	private static boolean isLoaded = false;
+	private static volatile boolean isLoaded = false;
 
 	public static final String ACTIONS_FOLDER_NAME = "actions";
 
@@ -45,33 +45,37 @@ public class UIActions {
 		if (isLoaded)
 			return;
 
-		log.debug("Loading UI actions.");
+		synchronized (UIActions.class) {
+			if (isLoaded)
+				return;
 
-		isLoaded = true;
+			log.debug("Loading UI actions.");
 
-		FileObject actionsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
-		FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
-		for (FileObject f : actionsFile.getChildFiles()) {
-			try {
-				IUIAction action = loader.loadFile(f);
-				String key = f.getAttribute("key");
-				registerAction(key != null ? key : action.getKey(), action, f.getResourceId());
-			} catch (Exception e) {
-				log.error("Failed to register IUIAction {} ({})", f.getName(), e.getMessage());
+			FileObject actionsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
+			FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
+			for (FileObject f : actionsFile.getChildFiles()) {
+				try {
+					IUIAction action = loader.loadFile(f);
+					String key = f.getAttribute("key");
+					registerAction(key != null ? key : action.getKey(), action, f.getResourceId());
+				} catch (Exception e) {
+					log.error("Failed to register IUIAction {} ({})", f.getName(), e.getMessage());
+				}
 			}
-		}
 
-		ServiceLoader<IUIAction> svcLoader = ServiceLoader.load(IUIAction.class);
-		Iterator<IUIAction> actionIterator = svcLoader.iterator();
-		while (actionIterator.hasNext()) {
-			try {
-				IUIAction action = actionIterator.next();
-				registerAction(action.getKey(), action, "classpath");
-			} catch (ServiceConfigurationError e) {
-				log.error("Class doesn't seem to be a valid BSApp IUIAction implementation: {}", e.getMessage());
+			ServiceLoader<IUIAction> svcLoader = ServiceLoader.load(IUIAction.class);
+			Iterator<IUIAction> actionIterator = svcLoader.iterator();
+			while (actionIterator.hasNext()) {
+				try {
+					IUIAction action = actionIterator.next();
+					registerAction(action.getKey(), action, "classpath");
+				} catch (ServiceConfigurationError e) {
+					log.error("Class doesn't seem to be a valid BSApp IUIAction implementation: {}", e.getMessage());
+				}
 			}
-		}
 
+			isLoaded = true;
+		}
 	}
 
 	public static String dumpActions() {

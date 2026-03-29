@@ -179,11 +179,10 @@ public class ImageUtils {
 	}
 
 	public static Image getScaledSvgIcon(String iconName, Integer size) {
-		// kept same formatting logic (even though the original looked swapped)
 		if (size == null) {
-			return getImage(MessageFormat.format("{0}.svg||{1}|{2}", iconName, size, scale)); // $NON-NLS-3$
+			return getImage(MessageFormat.format("{0}.svg|||{1}", iconName, scale)); // $NON-NLS-2$
 		} else {
-			return getImage(MessageFormat.format("{0}.svg|||{1}", iconName, scale)); // $NON-NLS-3$
+			return getImage(MessageFormat.format("{0}.svg||{1}|{2}", iconName, size, scale)); // $NON-NLS-3$
 		}
 	}
 

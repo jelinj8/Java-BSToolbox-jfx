@@ -324,7 +324,7 @@ public class BSAppUI extends ModuleBase {
 			}
 			lvlCtx = ctx;
 			ContextSearchResult c = ctx.getValue(CTX_MAIN_COMPONENT);
-			if (!c.isValid())
+			if (c == null || !c.isValid())
 				log.warn(
 						"Pushed context doesn't contain a component to display (key:[{}]) and no component was specified",
 						CTX_MAIN_COMPONENT);

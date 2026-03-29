@@ -27,12 +27,8 @@ public class XmlProperties extends Properties {
 		this.path = path;
 
 		if (path.exists()) {
-
-			FileInputStream fis;
-			try {
-				fis = new FileInputStream(path);
+			try (FileInputStream fis = new FileInputStream(path)) {
 				this./* properties. */loadFromXML(fis);
-				fis.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -40,16 +36,15 @@ public class XmlProperties extends Properties {
 	}
 
 	public void save() throws ViewableException {
-		FileOutputStream fs;
 		String dir = this.path.getParent();
 		File savedir = new File(dir);
 		savedir.mkdirs();
 		getLogger().trace("Saving properties file {}", this.path);
 		try {
 			File tmpfile = new File(this.path.getPath() + ".tmp");
-			fs = new FileOutputStream(tmpfile);
-			this./* properties. */storeToXML(fs, null);
-			fs.close();
+			try (FileOutputStream fs = new FileOutputStream(tmpfile)) {
+				this./* properties. */storeToXML(fs, null);
+			}
 			path.delete();
 			tmpfile.renameTo(path);
 		} catch (Exception e) {

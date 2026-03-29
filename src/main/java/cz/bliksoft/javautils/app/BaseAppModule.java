@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.app;
 import cz.bliksoft.javautils.fx.VersionInfo;
 import cz.bliksoft.javautils.fx.tools.Styling;
 import cz.bliksoft.javautils.modules.ModuleBase;
+import cz.bliksoft.javautils.xmlfilesystem.singletons.Services;
 import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
 
 public class BaseAppModule extends ModuleBase {
@@ -26,7 +27,8 @@ public class BaseAppModule extends ModuleBase {
 	public void init() {
 		super.init();
 		Styling.safeRegister("/css/app.css");
-		Singletons.loadServices();
+		Services.loadServices();
+		Singletons.loadSingletons();
 	}
 
 }

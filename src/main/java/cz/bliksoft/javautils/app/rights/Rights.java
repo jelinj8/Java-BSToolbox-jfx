@@ -21,7 +21,7 @@ import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 public class Rights {
 	private static final Logger log = LogManager.getLogger();
 
-	private static boolean isLoaded = false;
+	private static volatile boolean isLoaded = false;
 	private static Map<Class<? extends Right>, Right> registeredRights = null;
 	private static Map<String, List<Right>> rightByCategories = null;
 	private static Set<Class<? extends Right>> fullRightsSet = new HashSet<>();
@@ -47,35 +47,39 @@ public class Rights {
 		if (isLoaded)
 			return;
 
-		log.debug("Loading application rights.");
+		synchronized (Rights.class) {
+			if (isLoaded)
+				return;
 
-		isLoaded = true;
+			log.debug("Loading application rights.");
 
-		registeredRights = new HashMap<>();
-		rightByCategories = new HashMap<>();
+			registeredRights = new HashMap<>();
+			rightByCategories = new HashMap<>();
 
-		FileObject rightsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, RIGHTS_FOLDER_NAME);
-		FileObjectClassLoader<Right> loader = new FileObjectClassLoader<>();
-		for (FileObject f : rightsFile.getChildFiles()) {
-			try {
-				Right right = loader.loadFile(f);
-				registerRight(right);
-			} catch (Exception e) {
-				log.error("Failed to register right {} ({})", f.getName(), e.getMessage());
+			FileObject rightsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, RIGHTS_FOLDER_NAME);
+			FileObjectClassLoader<Right> loader = new FileObjectClassLoader<>();
+			for (FileObject f : rightsFile.getChildFiles()) {
+				try {
+					Right right = loader.loadFile(f);
+					registerRight(right);
+				} catch (Exception e) {
+					log.error("Failed to register right {} ({})", f.getName(), e.getMessage());
+				}
 			}
-		}
 
-		ServiceLoader<Right> svcLoader = ServiceLoader.load(Right.class);
-		Iterator<Right> rightIterator = svcLoader.iterator();
-		while (rightIterator.hasNext()) {
-			try {
-				Right right = rightIterator.next();
-				registerRight(right);
-			} catch (ServiceConfigurationError e) {
-				log.error("Class doesn't seem to be a valid BSApp Right implementation: {}", e.getMessage());
+			ServiceLoader<Right> svcLoader = ServiceLoader.load(Right.class);
+			Iterator<Right> rightIterator = svcLoader.iterator();
+			while (rightIterator.hasNext()) {
+				try {
+					Right right = rightIterator.next();
+					registerRight(right);
+				} catch (ServiceConfigurationError e) {
+					log.error("Class doesn't seem to be a valid BSApp Right implementation: {}", e.getMessage());
+				}
 			}
-		}
 
+			isLoaded = true;
+		}
 	}
 
 	public static Set<Class<? extends Right>> getFullSet() {

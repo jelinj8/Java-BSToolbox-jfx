@@ -133,7 +133,6 @@ public final class UIComposer {
 				throw new InitializationException(
 						"Failed to build UI, failed on " + ctx.currentBuildObject.getFullPath(), e);
 		}
-//		Object o = FileLoader.loadFile(file);
 		attachToStage(stage, product, file, ctx);
 	}
 
@@ -773,10 +772,13 @@ public final class UIComposer {
 		IUIAction a = UIActions.getAction(actionKey.trim());
 
 		if (node instanceof javafx.scene.control.ButtonBase bb) {
-			ActionBinder.bind(bb, a);
-
-			ctx.accelerators().bind(a);
-			return;
+			if (a != null) {
+				ActionBinder.bind(bb, a);
+				ctx.accelerators().bind(a);
+				return;
+			} else {
+				throw new InitializationException("Action not found: " + actionKey.trim() + " for " + entry);
+			}
 		}
 
 		if (node instanceof javafx.scene.control.Hyperlink hl) {

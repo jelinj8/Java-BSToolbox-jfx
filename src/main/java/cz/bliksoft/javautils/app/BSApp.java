@@ -23,6 +23,7 @@ import cz.bliksoft.javautils.context.events.EventListener;
 import cz.bliksoft.javautils.fx.controls.images.AnyImageLoader;
 import cz.bliksoft.javautils.fx.controls.images.ImageLoader;
 import cz.bliksoft.javautils.modules.Modules;
+import cz.bliksoft.javautils.xmlfilesystem.singletons.Services;
 import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -403,14 +404,20 @@ public class BSApp {
 
 		ImageLoader.setDefault(new AnyImageLoader());
 
-		// načtení modulů a import jejich definic
-		Modules.loadModules();
+		try {
+			// načtení modulů a import jejich definic
+			Modules.loadModules();
 
-		// inicializace modulů
-		Modules.initModules();
+			// inicializace modulů
+			Modules.initModules();
 
-		// instalace modulů
-		Modules.installModules();
+			// instalace modulů
+			Modules.installModules();
+		} catch (Exception e) {
+			Platform.exit();
+			close();
+			return;
+		}
 
 		log.log(Level.INFO, BSAppMessages.getString("App.InitializationCompleted") //$NON-NLS-1$
 				+ " ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"); //$NON-NLS-1$ //$NON-NLS-3$
@@ -440,6 +447,7 @@ public class BSApp {
 		log.info("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"); //$NON-NLS-1$
 		log.info("Starting modules cleanup before closing."); //$NON-NLS-1$
 		Singletons.cleanup();
+		Services.cleanup();
 		Modules.cleanup();
 	}
 
