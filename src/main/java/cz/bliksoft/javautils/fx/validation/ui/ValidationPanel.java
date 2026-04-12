@@ -105,7 +105,7 @@ public final class ValidationPanel extends VBox {
 		bindTo(null);
 		bindAutoHide(null);
 		bindHeader(null);
-		
+
 		// Auto-hide when OK/empty
 		BooleanBinding hasAnythingToShow = Bindings.createBooleanBinding(() -> {
 			ValidationResult vr = getValidationResult();
@@ -154,22 +154,22 @@ public final class ValidationPanel extends VBox {
 		});
 		vr.messages().addListener((ListChangeListener<ValidationMessage>) c -> listView.refresh());
 	}
-	
+
 	private void bindHeader(ValidationResult vr) {
-	    header.textProperty().unbind();
+		header.textProperty().unbind();
 
-	    if (vr == null) {
-	        header.setText("Validation");
-	        return;
-	    }
+		if (vr == null) {
+			header.setText("Validation");
+			return;
+		}
 
-	    header.textProperty().bind(Bindings.createStringBinding(() -> {
-	        ValidationResultLevel lvl = vr.level().getValue();
-	        int count = vr.messages().size();
-	        return "Validation: " + lvl + " (" + count + ")";
-	    }, vr.level(), vr.messages()));
+		header.textProperty().bind(Bindings.createStringBinding(() -> {
+			ValidationResultLevel lvl = vr.level().getValue();
+			int count = vr.messages().size();
+			return "Validation: " + lvl + " (" + count + ")";
+		}, vr.level(), vr.messages()));
 	}
-	
+
 	private void updatePredicate() {
 		if (filtered == null)
 			return;

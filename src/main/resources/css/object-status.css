@@ -1,0 +1,39 @@
+/* =====================================================================
+   OBJECT STATUS BADGE COLOURS
+   Companion stylesheet for ObjectStatus SVG glyphs produced by
+   cz.bliksoft.javautils.fx.binding.ObjectStatus.getSVGPath().
+   Glyphs receive class "status-badge" plus a status-specific class
+   (e.g. "status-badge-modified") so their fill adapts to the active theme.
+   ===================================================================== */
+
+/* ---------- LIGHT ---------- */
+.root {
+    -badge-new:            #1e8c3a;
+    -badge-modified:       #d15a10;
+    -badge-child-modified: #c08000;
+    -badge-deleted:        #c82030;
+    -badge-deleted-saved:  #8a1020;
+    -badge-detached:       #5a6470;
+    -badge-initial:        #8a8a8a;
+}
+
+/* ---------- DARK — brighter so glyphs stay legible on dark backgrounds ---------- */
+.root:dark {
+    -badge-new:            #4cba60;
+    -badge-modified:       #ff7040;
+    -badge-child-modified: #ffc020;
+    -badge-deleted:        #f05060;
+    -badge-deleted-saved:  #e03050;
+    -badge-detached:       #90a8b8;
+    -badge-initial:        #b0b0b0;
+}
+
+/* ---- Rules ---- */
+.status-badge                { -fx-fill: -theme-text-muted; } /* safe fallback */
+.status-badge-new            { -fx-fill: -badge-new; }
+.status-badge-modified       { -fx-fill: -badge-modified; }
+.status-badge-child-modified { -fx-fill: -badge-child-modified; }
+.status-badge-deleted        { -fx-fill: -badge-deleted; }
+.status-badge-deleted-saved  { -fx-fill: -badge-deleted-saved; }
+.status-badge-detached       { -fx-fill: -badge-detached; }
+.status-badge-initial        { -fx-fill: -badge-initial; }

@@ -48,6 +48,7 @@ public final class Styling {
 		registerCss("/css/codebook-field.css");
 		registerCss("/css/icon-text-cell.css");
 		registerCss("/css/validation.css");
+		registerCss("/css/object-status.css");
 
 		// Apply to already existing windows
 		for (Window w : Window.getWindows()) {

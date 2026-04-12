@@ -251,4 +251,9 @@ public class CodebookField<T> extends HBox {
 	public boolean isLocked() {
 		return locked;
 	}
+
+	@Override
+	public void requestFocus() {
+		textField.requestFocus();
+	}
 }

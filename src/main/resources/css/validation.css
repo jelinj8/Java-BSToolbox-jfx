@@ -19,3 +19,10 @@
 .list-cell.val-warn  .validation-list-icon { -fx-fill: #f9a825; }
 .list-cell.val-info  .validation-list-icon { -fx-fill: #1976d2; }
 .list-cell.val-ok    .validation-list-icon { -fx-fill: #2e7d32; }
+
+/* CompactValidationPanel */
+.compact-val-icon { -fx-scale-x: 0.7; -fx-scale-y: 0.7; }
+.compact-val-row.val-error .compact-val-icon { -fx-fill: #d32f2f; }
+.compact-val-row.val-warn  .compact-val-icon { -fx-fill: #f9a825; }
+.compact-val-row.val-info  .compact-val-icon { -fx-fill: #1976d2; }
+.compact-val-row.val-ok    .compact-val-icon { -fx-fill: #2e7d32; }

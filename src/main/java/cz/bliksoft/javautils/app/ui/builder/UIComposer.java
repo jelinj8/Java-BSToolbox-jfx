@@ -7,8 +7,9 @@ import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.ui.actions.ActionBinder;
-import cz.bliksoft.javautils.app.ui.actions.UIActions;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
+import cz.bliksoft.javautils.app.ui.actions.IUIActionWithSubactions;
+import cz.bliksoft.javautils.app.ui.actions.UIActions;
 import cz.bliksoft.javautils.exceptions.InitializationException;
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
 import cz.bliksoft.javautils.xmlfilesystem.FileLoader;
@@ -773,7 +774,15 @@ public final class UIComposer {
 
 		if (node instanceof javafx.scene.control.ButtonBase bb) {
 			if (a != null) {
-				ActionBinder.bind(bb, a);
+				// SplitMenuButton must be checked before MenuButton (it extends it).
+				// IUIActionWithSubactions gets special treatment to wire the dropdown items.
+				if (bb instanceof javafx.scene.control.SplitMenuButton smb && a instanceof IUIActionWithSubactions aws) {
+					ActionBinder.bind(smb, aws);
+				} else if (bb instanceof javafx.scene.control.MenuButton mb && a instanceof IUIActionWithSubactions aws) {
+					ActionBinder.bind(mb, aws);
+				} else {
+					ActionBinder.bind(bb, a);
+				}
 				ctx.accelerators().bind(a);
 				return;
 			} else {

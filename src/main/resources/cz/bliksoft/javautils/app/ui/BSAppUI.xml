@@ -48,8 +48,18 @@
 	</file>
 	
 	<file name="core">
-		<file name="actions">
+		<file name="actions" />
+		<file name="availableActions">
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppCloseAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAllAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.DeleteAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AddAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AddSelectAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.RemoveAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.PreviewAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.PrintAction" />
 		</file>
 	</file>
 </root>

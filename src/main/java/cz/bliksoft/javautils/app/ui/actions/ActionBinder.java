@@ -1,9 +1,15 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.collections.ListChangeListener;
 import javafx.scene.control.ButtonBase;
+import javafx.scene.control.Control;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SplitMenuButton;
+import javafx.scene.control.Tooltip;
 
 public final class ActionBinder {
 	private ActionBinder() {
@@ -36,6 +42,8 @@ public final class ActionBinder {
 			a.graphicProperty().addListener((obs, o, n) -> btn.setGraphic(n));
 			btn.setGraphic(a.graphicProperty().get());
 		}
+
+		bindHint(btn, a);
 	}
 
 	public static void bind(MenuItem mi, IUIAction a) {
@@ -72,6 +80,50 @@ public final class ActionBinder {
 		if (a.acceleratorProperty() != null && mi.acceleratorProperty() != null) {
 			mi.acceleratorProperty().bind(a.acceleratorProperty());
 		}
+
+		// MenuItem has no native tooltip; bind to the graphic node if it is a Control.
+		if (a.hintProperty() != null && mi.getGraphic() instanceof Control gc) {
+			bindHint(gc, a);
+		}
+	}
+
+	/**
+	 * Binds an {@link IUIActionWithSubactions} to a {@link MenuButton}.
+	 *
+	 * <p>
+	 * The button's items are kept in sync with
+	 * {@link IUIActionWithSubactions#getSubactions()}. Each subaction becomes a
+	 * {@link MenuItem} bound via the standard {@link #bind(MenuItem, IUIAction)}.
+	 */
+	public static void bind(MenuButton mb, IUIActionWithSubactions a) {
+		bind((ButtonBase) mb, a);
+		syncMenuItems(mb, a);
+	}
+
+	/**
+	 * Binds an {@link IUIActionWithSubactions} to a {@link SplitMenuButton}.
+	 *
+	 * <p>
+	 * The left (default) click fires {@link IUIAction#execute()}, which should run
+	 * the first subaction. The dropdown lists all subactions.
+	 */
+	public static void bind(SplitMenuButton smb, IUIActionWithSubactions a) {
+		bind((ButtonBase) smb, a);
+		syncMenuItems(smb, a);
+	}
+
+	private static void syncMenuItems(MenuButton mb, IUIActionWithSubactions a) {
+		rebuildMenuItems(mb, a);
+		a.getSubactions().addListener((ListChangeListener<IUIAction>) c -> rebuildMenuItems(mb, a));
+	}
+
+	private static void rebuildMenuItems(MenuButton mb, IUIActionWithSubactions a) {
+		mb.getItems().clear();
+		for (IUIAction action : a.getSubactions()) {
+			MenuItem item = new MenuItem();
+			bind(item, action);
+			mb.getItems().add(item);
+		}
 	}
 
 	public static void bind(Hyperlink hl, IUIAction a) {
@@ -84,5 +136,15 @@ public final class ActionBinder {
 		if (a.iconSpecProperty() != null) {
 			IconBinder.bindIcon(hl.graphicProperty()::setValue, a, 16);
 		}
+		bindHint(hl, a);
+	}
+
+	private static void bindHint(Control c, IUIAction a) {
+		ReadOnlyStringProperty hint = a.hintProperty();
+		if (hint == null)
+			return;
+		Tooltip tt = new Tooltip();
+		tt.textProperty().bind(hint);
+		c.setTooltip(tt);
 	}
 }

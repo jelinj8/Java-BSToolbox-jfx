@@ -1,7 +1,10 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
+import java.util.function.Consumer;
+
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.MenuItem;
@@ -14,15 +17,19 @@ public final class IconBinder {
 	}
 
 	public static void bindToolbarIcon(ButtonBase btn, IUIAction a, double sizePx) {
-		bindIcon(node -> btn.setGraphic(node), a, sizePx);
+		bindIcon(node -> btn.setGraphic(node), a.iconSpecProperty(), sizePx);
 	}
 
 	public static void bindMenuIcon(MenuItem mi, IUIAction a, double sizePx) {
-		bindIcon(node -> mi.setGraphic(node), a, sizePx);
+		bindIcon(node -> mi.setGraphic(node), a.iconSpecProperty(), sizePx);
 	}
 
-	public static void bindIcon(java.util.function.Consumer<Node> setter, IUIAction a, double sizePx) {
-		if (a.iconSpecProperty() == null)
+	public static void bindIcon(Consumer<Node> setter, IUIAction a, double sizePx) {
+		bindIcon(setter, a.iconSpecProperty(), sizePx);
+	}
+
+	public static void bindIcon(Consumer<Node> setter, ObservableValue<String> iconSpecObs, double sizePx) {
+		if (iconSpecObs == null)
 			return;
 
 		ChangeListener<String> l = (obs, oldSpec, newSpec) -> {
@@ -42,12 +49,11 @@ public final class IconBinder {
 				enforceIconSize(icon, sizePx);
 				setter.accept(icon);
 			}
-
 		};
 
 		// initial + updates
-		l.changed(a.iconSpecProperty(), null, a.iconSpecProperty().get());
-		a.iconSpecProperty().addListener(l);
+		l.changed(iconSpecObs, null, iconSpecObs.getValue());
+		iconSpecObs.addListener(l);
 	}
 
 	/** Best-effort sizing for common icon node types. */

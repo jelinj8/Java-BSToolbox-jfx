@@ -42,6 +42,11 @@ public interface IUIAction {
 		return null;
 	}
 
+	/** Mouse-hover hint shown as a tooltip on bound controls (optional). */
+	default ReadOnlyStringProperty hintProperty() {
+		return null;
+	}
+
 	/** Useful for MenuItem (optional). */
 	default ReadOnlyObjectProperty<KeyCombination> acceleratorProperty() {
 		return null;
