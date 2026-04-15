@@ -5,7 +5,17 @@ import cz.bliksoft.javautils.context.Context;
 
 public class UserInfoChanged {
 
-	public static void fire(UserInfo oldUserInfo, UserInfo newUserInfo) {
-		Context.getRoot().fireGUIEvent(new UserInfoChanged());
+	UserInfo userInfo;
+
+	public UserInfoChanged(UserInfo user) {
+		this.userInfo = user;
+	}
+
+	public UserInfo getUserInfo() {
+		return userInfo;
+	}
+
+	public static void fire(UserInfo userInfo) {
+		Context.getRoot().fireGUIEvent(new UserInfoChanged(userInfo));
 	}
 }

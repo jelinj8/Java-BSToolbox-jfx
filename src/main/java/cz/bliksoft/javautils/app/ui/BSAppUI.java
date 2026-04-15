@@ -35,11 +35,17 @@ public class BSAppUI extends ModuleBase {
 
 	public static final String FS_UI_ROOT = "/AppUI"; //$NON-NLS-1$
 
+	private static Context uiContext = new Context("global UI context");
+
 	private static StackedContextHolder uiContextHolder = null;
 
-	public static SingleContextHolder getUIContextHolder() {
-		return uiContextHolder;
+	public static Context getUIContext() {
+		return uiContext;
 	}
+
+//	public static Context getUIContextHolder() {
+//		return uiContextHolder;
+//	}
 
 	private static Stage mainStage = null;
 
@@ -111,9 +117,10 @@ public class BSAppUI extends ModuleBase {
 
 		uiContextHolder = new StackedContextHolder("UI StackedContextHolder");
 		uiContextHolder.push(new Context("UI root context"));
+		uiContext.addContext(uiContextHolder);
 
-		Context.getRoot().addContext(uiContextHolder);
-		Context.setCurrentContext(uiContextHolder);
+//		Context.getRoot().addContext(uiContext);
+		Context.setCurrentContext(uiContext);
 
 		if (mainPane != null) {
 			Context.getCurrentContext().addContextListener(
