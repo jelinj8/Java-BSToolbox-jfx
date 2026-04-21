@@ -32,9 +32,9 @@
 	-fx-focus-color: -theme-focus;
 	-fx-faint-focus-color: -theme-focus-faint;
 	/* IMPORTANT for menu/table selection (Modena uses these widely) */
-	-fx-selection-bar: derive(-theme-accent, -25%);
-	-fx-selection-bar-non-focused: derive(-theme-accent, -45%);
-	-fx-highlight-fill: derive(-theme-accent, +15%);
+	-fx-selection-bar: derive(-theme-accent, +55%);
+	-fx-selection-bar-non-focused: derive(-theme-accent, +68%);
+	-fx-highlight-fill: derive(-theme-accent, +45%);
 	-fx-highlight-text-fill: -theme-text;
 }
 
@@ -224,7 +224,10 @@
 	-fx-background-color: derive(-theme-surface, +10%);
 }
 
-.list-cell:selected {
+.list-cell:selected,
+.root:dark .list-cell:selected,
+.list-cell:selected:hover,
+.root:dark .list-cell:selected:hover {
 	-fx-background-color: -fx-selection-bar;
 	-fx-text-fill: -theme-text;
 }
@@ -278,7 +281,12 @@
 	-fx-background-color: derive(-theme-surface, +10%);
 }
 
-.table-row-cell:selected {
+.table-row-cell:selected,
+.root:dark .table-row-cell:selected,
+.table-row-cell:selected:odd,
+.root:dark .table-row-cell:selected:odd,
+.table-row-cell:selected:hover,
+.root:dark .table-row-cell:selected:hover {
 	-fx-background-color: -fx-selection-bar;
 }
 
@@ -311,7 +319,10 @@
 	-fx-background-color: derive(-theme-surface, +10%);
 }
 
-.tree-cell:selected {
+.tree-cell:selected,
+.root:dark .tree-cell:selected,
+.tree-cell:selected:hover,
+.root:dark .tree-cell:selected:hover {
 	-fx-background-color: -fx-selection-bar;
 }
 

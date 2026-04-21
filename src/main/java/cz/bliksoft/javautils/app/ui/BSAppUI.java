@@ -35,6 +35,8 @@ public class BSAppUI extends ModuleBase {
 
 	public static final String FS_UI_ROOT = "/AppUI"; //$NON-NLS-1$
 
+	public static final String PROP_THEME = "ui.theme"; //$NON-NLS-1$
+
 	private static Context uiContext = new Context("global UI context");
 
 	private static StackedContextHolder uiContextHolder = null;
@@ -107,6 +109,15 @@ public class BSAppUI extends ModuleBase {
 
 					} else {
 
+					}
+					Object localThemeObj = BSApp.getProperty(PROP_THEME);
+					if (localThemeObj != null) {
+						switch (localThemeObj.toString().toUpperCase()) {
+						case "LIGHT":  Styling.setThemeMode(Styling.ThemeMode.LIGHT);  break;
+						case "DARK":   Styling.setThemeMode(Styling.ThemeMode.DARK);   break;
+						case "SYSTEM": Styling.setThemeMode(Styling.ThemeMode.SYSTEM); break;
+						case "NONE":   Styling.setThemeMode(Styling.ThemeMode.NONE);   break;
+						}
 					}
 					Styling.installGlobalCss();
 					UIComposer.buildUI(f, mainStage);
