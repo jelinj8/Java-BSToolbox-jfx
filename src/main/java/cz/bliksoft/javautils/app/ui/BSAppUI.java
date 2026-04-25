@@ -15,17 +15,25 @@ import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.ContextChangedEvent;
 import cz.bliksoft.javautils.context.ContextSearchResult;
 import cz.bliksoft.javautils.context.IContextProvider;
-import cz.bliksoft.javautils.context.holders.SingleContextHolder;
 import cz.bliksoft.javautils.context.holders.StackedContextHolder;
 import cz.bliksoft.javautils.fx.VersionInfo;
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
 import cz.bliksoft.javautils.fx.tools.Styling;
 import cz.bliksoft.javautils.modules.ModuleBase;
+import cz.bliksoft.javautils.modules.Modules;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
+import java.util.concurrent.CountDownLatch;
+
+import org.controlsfx.dialog.ProgressDialog;
+
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class BSAppUI extends ModuleBase {
@@ -68,12 +76,14 @@ public class BSAppUI extends ModuleBase {
 	}
 
 	/**
-	 * inicializace aplikačního frameworku s UI
+	 * inicializace aplikačního frameworku s UI. Vynutí si import jako BSAppUI
+	 * modul.
 	 * 
 	 * @throws Exception
 	 */
 	public static void init(Application app, Stage stage) {
 		setStage(stage);
+		Modules.autoloadModule(BSAppUI.class);
 		BSApp.init(app);
 	}
 
@@ -113,10 +123,18 @@ public class BSAppUI extends ModuleBase {
 					Object localThemeObj = BSApp.getProperty(PROP_THEME);
 					if (localThemeObj != null) {
 						switch (localThemeObj.toString().toUpperCase()) {
-						case "LIGHT":  Styling.setThemeMode(Styling.ThemeMode.LIGHT);  break;
-						case "DARK":   Styling.setThemeMode(Styling.ThemeMode.DARK);   break;
-						case "SYSTEM": Styling.setThemeMode(Styling.ThemeMode.SYSTEM); break;
-						case "NONE":   Styling.setThemeMode(Styling.ThemeMode.NONE);   break;
+						case "LIGHT":
+							Styling.setThemeMode(Styling.ThemeMode.LIGHT);
+							break;
+						case "DARK":
+							Styling.setThemeMode(Styling.ThemeMode.DARK);
+							break;
+						case "SYSTEM":
+							Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
+							break;
+						case "NONE":
+							Styling.setThemeMode(Styling.ThemeMode.NONE);
+							break;
 						}
 					}
 					Styling.installGlobalCss();
@@ -172,138 +190,127 @@ public class BSAppUI extends ModuleBase {
 		Context.getCurrentContext().fireEvent(e);
 	}
 
-//	private static WorkingWheelDialog workingWheelDialog = null;
-//
-//	/**
-//	 * zobrazí modální otáčecí kolečko s poznámkou
-//	 * 
-//	 * @param comment
-//	 */
-//	public static void showWorkingWheel(final String comment) {
-//		if (workingWheelDialog == null) {
-//			workingWheelDialog = new WorkingWheelDialog();
-//		}
-//		SwingUtilities.invokeLater(() -> {
-//			workingWheelDialog.setLabel(comment);
-//			workingWheelDialog.setLocationRelativeTo(BSFrameworkUI.getMainForm());
-//			workingWheelDialog.setModal(true);
-//			workingWheelDialog.setVisible(true);
-//		});
-//	}
-//
-//	public static void setWorkingWheelTitle(final String comment) {
-//		SwingUtilities.invokeLater(() -> {
-//			workingWheelDialog.setLabel(comment);
-//			workingWheelDialog.setLocationRelativeTo(BSFrameworkUI.getMainForm());
-//		});
-//	}
-//
-//	public static void setWorkingWheelSubtitle(final String comment) {
-//		SwingUtilities.invokeLater(() -> {
-//			workingWheelDialog.setSubLabel(comment);
-//			workingWheelDialog.setLocationRelativeTo(BSFrameworkUI.getMainForm());
-//		});
-//	}
-//
-//	public static void setWorkingWheelProgress(final int percents) {
-//		SwingUtilities.invokeLater(() -> workingWheelDialog.setProgress(percents));
-//	}
-//
-//	/**
-//	 * zobrazí modální otáčecí kolečko s poznámkou
-//	 * 
-//	 * @param comment
-//	 */
-//	public static void showWorkingWheelWaitForSwingWorker(SwingWorker<?, ?> sw, final String comment) {
-//		if (workingWheelDialog == null) {
-//			workingWheelDialog = new WorkingWheelDialog();
-//		}
-//		sw.addPropertyChangeListener(workingWheelDialog);
-//		sw.execute();
-//		workingWheelDialog.setLabel(comment);
-//		workingWheelDialog.setLocationRelativeTo(BSFrameworkUI.getMainForm());
-//		workingWheelDialog.setModal(true);
-//		workingWheelDialog.setVisible(true);
-//	}
-//
-//	/**
-//	 * zobrazí nemodální otáčecí kolečko s poznámkou
-//	 * 
-//	 * @param comment
-//	 */
-//	public static void showWorkingWheelDontWaitForSwingWorker(SwingWorker<?, ?> sw, final String comment) {
-//		if (workingWheelDialog == null) {
-//			workingWheelDialog = new WorkingWheelDialog();
-//		}
-//		sw.addPropertyChangeListener(workingWheelDialog);
-//		sw.execute();
-//		workingWheelDialog.setLabel(comment);
-//		workingWheelDialog.setLocationRelativeTo(BSFrameworkUI.getMainForm());
-//		workingWheelDialog.setModal(false);
-//		workingWheelDialog.setVisible(true);
-//	}
-//
-//	/**
-//	 * skryje čekací dialog
-//	 */
-//	public static void hideWorkingWheel() {
-//		SwingUtilities.invokeLater(() -> workingWheelDialog.setVisible(false));
-//	}
-//
-//	/**
-//	 * zobrazí otáčecí kolečko, spustí akci na pozadí a po jejím dokončení kolečko
-//	 * skryje
-//	 * 
-//	 * @param toRun
-//	 * @param comment
-//	 */
-//	public static void executeWaiting(final Runnable toRun, String comment) {
-//		showWorkingWheel(comment);
-//		final SwingWorker<Object, Object> sw = new SwingWorker<Object, Object>() {
-//
-//			@Override
-//			protected Object doInBackground() throws Exception {
-//				toRun.run();
-//				return null;
-//			}
-//
-//			@Override
-//			protected void done() {
-//				try {
-//					this.get();
-//				} catch (InterruptedException | ExecutionException e) {
-//					log.error("Exception in \"executeWaiting\"", e);
-//				} finally {
-//					super.done();
-//					hideWorkingWheel();
-//				}
-//			}
-//		};
-//		SwingUtilities.invokeLater(() -> sw.execute());
-//		// sw.execute();
-//	}
-//
-//	public static boolean isClipped(Rectangle rec) {
-//
-//		boolean isClipped = false;
-//		int recArea = rec.width * rec.height;
-//		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-//		GraphicsDevice sd[] = ge.getScreenDevices();
-//		Rectangle bounds;
-//		int boundsArea = 0;
-//
-//		for (GraphicsDevice gd : sd) {
-//			bounds = gd.getDefaultConfiguration().getBounds();
-//			if (bounds.intersects(rec)) {
-//				bounds = bounds.intersection(rec);
-//				boundsArea = boundsArea + (bounds.width * bounds.height);
-//			}
-//		}
-//		if (boundsArea != recArea) {
-//			isClipped = true;
-//		}
-//		return isClipped;
-//	}
+	private static final class WorkingTask extends Task<Void> {
+		private final CountDownLatch latch = new CountDownLatch(1);
+
+		WorkingTask(String title) {
+			updateTitle(title);
+		}
+
+		@Override
+		protected Void call() throws Exception {
+			latch.await();
+			return null;
+		}
+
+		void complete() {
+			latch.countDown();
+		}
+
+		@Override
+		public void updateTitle(String title) {
+			super.updateTitle(title);
+		}
+
+		@Override
+		public void updateMessage(String msg) {
+			super.updateMessage(msg);
+		}
+
+		@Override
+		public void updateProgress(double done, double total) {
+			super.updateProgress(done, total);
+		}
+	}
+
+	private static volatile WorkingTask workingTask = null;
+
+	/**
+	 * Shows a modal indeterminate progress dialog. Returns immediately; call
+	 * hideWorkingWheel() to close it.
+	 */
+	public static void showWorkingWheel(String comment) {
+		WorkingTask task = new WorkingTask(comment);
+		workingTask = task;
+		Thread t = new Thread(task, "working-wheel");
+		t.setDaemon(true);
+		t.start();
+		Platform.runLater(() -> {
+			ProgressDialog dlg = new ProgressDialog(task);
+			dlg.initOwner(mainStage);
+			dlg.setTitle(comment);
+			dlg.show();
+		});
+	}
+
+	public static void setWorkingWheelTitle(String comment) {
+		WorkingTask t = workingTask;
+		if (t != null)
+			t.updateTitle(comment);
+	}
+
+	public static void setWorkingWheelSubtitle(String comment) {
+		WorkingTask t = workingTask;
+		if (t != null)
+			t.updateMessage(comment);
+	}
+
+	public static void setWorkingWheelProgress(int percents) {
+		WorkingTask t = workingTask;
+		if (t != null)
+			t.updateProgress(percents, 100);
+	}
+
+	/** Closes the dialog opened by showWorkingWheel(). */
+	public static void hideWorkingWheel() {
+		WorkingTask t = workingTask;
+		workingTask = null;
+		if (t != null)
+			t.complete();
+	}
+
+	/**
+	 * Runs toRun on a background thread behind a modal blocking progress dialog.
+	 * Must be called from the FX thread.
+	 */
+	public static void executeWaiting(Runnable toRun, String comment) {
+		Task<Void> task = new Task<>() {
+			@Override
+			protected Void call() throws Exception {
+				toRun.run();
+				return null;
+			}
+		};
+		task.setOnFailed(e -> log.error("Exception in executeWaiting", task.getException()));
+		Thread t = new Thread(task, "executeWaiting");
+		t.setDaemon(true);
+		t.start();
+		ProgressDialog dlg = new ProgressDialog(task);
+		dlg.initOwner(mainStage);
+		dlg.setTitle(comment);
+		dlg.showAndWait();
+	}
+
+	/**
+	 * Returns true if any part of rec falls outside all screen bounds.
+	 */
+	public static boolean isClipped(Rectangle2D rec) {
+		double recArea = rec.getWidth() * rec.getHeight();
+		if (recArea <= 0)
+			return false;
+		double visibleArea = 0;
+		for (Screen screen : Screen.getScreens()) {
+			Rectangle2D bounds = screen.getBounds();
+			if (bounds.intersects(rec)) {
+				double ix = Math.max(bounds.getMinX(), rec.getMinX());
+				double iy = Math.max(bounds.getMinY(), rec.getMinY());
+				double ix2 = Math.min(bounds.getMaxX(), rec.getMaxX());
+				double iy2 = Math.min(bounds.getMaxY(), rec.getMaxY());
+				visibleArea += (ix2 - ix) * (iy2 - iy);
+			}
+		}
+		return visibleArea < recArea;
+	}
 
 	public static void openMainWindow() {
 		mainStage.show();
