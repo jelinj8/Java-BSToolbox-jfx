@@ -776,9 +776,11 @@ public final class UIComposer {
 			if (a != null) {
 				// SplitMenuButton must be checked before MenuButton (it extends it).
 				// IUIActionWithSubactions gets special treatment to wire the dropdown items.
-				if (bb instanceof javafx.scene.control.SplitMenuButton smb && a instanceof IUIActionWithSubactions aws) {
+				if (bb instanceof javafx.scene.control.SplitMenuButton smb
+						&& a instanceof IUIActionWithSubactions aws) {
 					ActionBinder.bind(smb, aws);
-				} else if (bb instanceof javafx.scene.control.MenuButton mb && a instanceof IUIActionWithSubactions aws) {
+				} else if (bb instanceof javafx.scene.control.MenuButton mb
+						&& a instanceof IUIActionWithSubactions aws) {
 					ActionBinder.bind(mb, aws);
 				} else {
 					ActionBinder.bind(bb, a);
@@ -786,7 +788,8 @@ public final class UIComposer {
 				ctx.accelerators().bind(a);
 				return;
 			} else {
-				throw new InitializationException("Action not found: " + actionKey.trim() + " for " + entry);
+				throw new InitializationException(String.format("Action not found: %s for %s. Available actions:\n%s",
+						actionKey.trim(), entry, UIActions.dumpActions()));
 			}
 		}
 
