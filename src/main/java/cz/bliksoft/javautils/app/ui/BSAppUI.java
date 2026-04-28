@@ -1,7 +1,10 @@
 package cz.bliksoft.javautils.app.ui;
 
+import java.util.concurrent.CountDownLatch;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.controlsfx.dialog.ProgressDialog;
 
 import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.BSApp;
@@ -23,13 +26,11 @@ import cz.bliksoft.javautils.modules.ModuleBase;
 import cz.bliksoft.javautils.modules.Modules;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
-import java.util.concurrent.CountDownLatch;
-
-import org.controlsfx.dialog.ProgressDialog;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.event.Event;
+import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
@@ -190,23 +191,8 @@ public class BSAppUI extends ModuleBase {
 		Context.getCurrentContext().fireEvent(e);
 	}
 
-	private static final class WorkingTask extends Task<Void> {
-		private final CountDownLatch latch = new CountDownLatch(1);
-
-		WorkingTask(String title) {
-			updateTitle(title);
-		}
-
-		@Override
-		protected Void call() throws Exception {
-			latch.await();
-			return null;
-		}
-
-		void complete() {
-			latch.countDown();
-		}
-
+	/** Base task that exposes the protected update methods as public. */
+	private abstract static class ProgressTask extends Task<Void> {
 		@Override
 		public void updateTitle(String title) {
 			super.updateTitle(title);
@@ -223,7 +209,25 @@ public class BSAppUI extends ModuleBase {
 		}
 	}
 
-	private static volatile WorkingTask workingTask = null;
+	private static final class WorkingTask extends ProgressTask {
+		private final CountDownLatch latch = new CountDownLatch(1);
+
+		WorkingTask(String title) {
+			updateTitle(title);
+		}
+
+		@Override
+		protected Void call() throws Exception {
+			latch.await();
+			return null;
+		}
+
+		void complete() {
+			latch.countDown();
+		}
+	}
+
+	private static volatile ProgressTask workingTask = null;
 
 	/**
 	 * Shows a modal indeterminate progress dialog. Returns immediately; call
@@ -244,29 +248,32 @@ public class BSAppUI extends ModuleBase {
 	}
 
 	public static void setWorkingWheelTitle(String comment) {
-		WorkingTask t = workingTask;
+		ProgressTask t = workingTask;
 		if (t != null)
 			t.updateTitle(comment);
 	}
 
 	public static void setWorkingWheelSubtitle(String comment) {
-		WorkingTask t = workingTask;
+		ProgressTask t = workingTask;
 		if (t != null)
 			t.updateMessage(comment);
 	}
 
-	public static void setWorkingWheelProgress(int percents) {
-		WorkingTask t = workingTask;
+	/**
+	 * Updates progress on the active working wheel. Pass total=0 for indeterminate.
+	 */
+	public static void setWorkingWheelProgress(int done, int total) {
+		ProgressTask t = workingTask;
 		if (t != null)
-			t.updateProgress(percents, 100);
+			t.updateProgress(total == 0 ? -1 : done, total == 0 ? 1 : total);
 	}
 
 	/** Closes the dialog opened by showWorkingWheel(). */
 	public static void hideWorkingWheel() {
-		WorkingTask t = workingTask;
+		ProgressTask t = workingTask;
 		workingTask = null;
-		if (t != null)
-			t.complete();
+		if (t instanceof WorkingTask)
+			((WorkingTask) t).complete();
 	}
 
 	/**
@@ -274,21 +281,58 @@ public class BSAppUI extends ModuleBase {
 	 * Must be called from the FX thread.
 	 */
 	public static void executeWaiting(Runnable toRun, String comment) {
-		Task<Void> task = new Task<>() {
+		executeWaiting(toRun, null, comment);
+	}
+
+	/**
+	 * Runs toRun on a background thread behind a modal blocking progress dialog
+	 * with a separate subtitle. Progress starts indeterminate; call
+	 * setWorkingWheelProgress / setWorkingWheelSubtitle from the Runnable to update
+	 * it. Must be called from the FX thread.
+	 */
+	public static void executeWaiting(Runnable toRun, String title, String subtitle) {
+		ProgressTask task = new ProgressTask() {
+			{
+				updateTitle(title);
+				if (subtitle != null)
+					updateMessage(subtitle);
+			}
+
 			@Override
 			protected Void call() throws Exception {
 				toRun.run();
 				return null;
 			}
 		};
-		task.setOnFailed(e -> log.error("Exception in executeWaiting", task.getException()));
+
+		ProgressDialog dlg = new ProgressDialog(task);
+		dlg.initOwner(mainStage);
+		dlg.setTitle(title);
+		dlg.setHeaderText(subtitle != null ? subtitle : title);
+		dlg.getDialogPane().getButtonTypes().clear();
+		dlg.setOnCloseRequest(Event::consume);
+		//dlg.getDialogPane().setPadding(new Insets(12, 16, 16, 16));
+
+		Object loopKey = new Object();
+		task.setOnSucceeded(e -> Platform.exitNestedEventLoop(loopKey, null));
+		task.setOnFailed(e -> {
+			log.error("Exception in executeWaiting", task.getException());
+			Platform.exitNestedEventLoop(loopKey, null);
+		});
+		task.setOnCancelled(e -> Platform.exitNestedEventLoop(loopKey, null));
+
+		workingTask = task;
 		Thread t = new Thread(task, "executeWaiting");
 		t.setDaemon(true);
 		t.start();
-		ProgressDialog dlg = new ProgressDialog(task);
-		dlg.initOwner(mainStage);
-		dlg.setTitle(comment);
-		dlg.showAndWait();
+
+		dlg.show();
+		Platform.enterNestedEventLoop(loopKey);
+		// Dialog.hide() silently fails when no button types are registered; go
+		// directly to the window to guarantee the dialog closes.
+		if (dlg.isShowing())
+			dlg.getDialogPane().getScene().getWindow().hide();
+		workingTask = null;
 	}
 
 	/**
