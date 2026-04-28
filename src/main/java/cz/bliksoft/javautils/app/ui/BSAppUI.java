@@ -292,11 +292,6 @@ public class BSAppUI extends ModuleBase {
 	 */
 	public static void executeWaiting(Runnable toRun, String title, String subtitle) {
 		ProgressTask task = new ProgressTask() {
-			{
-				updateTitle(title);
-				if (subtitle != null)
-					updateMessage(subtitle);
-			}
 
 			@Override
 			protected Void call() throws Exception {
@@ -308,10 +303,10 @@ public class BSAppUI extends ModuleBase {
 		ProgressDialog dlg = new ProgressDialog(task);
 		dlg.initOwner(mainStage);
 		dlg.setTitle(title);
-		dlg.setHeaderText(subtitle != null ? subtitle : title);
 		dlg.getDialogPane().getButtonTypes().clear();
+		dlg.setHeaderText(subtitle != null ? subtitle : title);
 		dlg.setOnCloseRequest(Event::consume);
-		//dlg.getDialogPane().setPadding(new Insets(12, 16, 16, 16));
+		// dlg.getDialogPane().setPadding(new Insets(12, 16, 16, 16));
 
 		Object loopKey = new Object();
 		task.setOnSucceeded(e -> Platform.exitNestedEventLoop(loopKey, null));
