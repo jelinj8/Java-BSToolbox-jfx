@@ -30,9 +30,9 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.Event;
-import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.control.Dialog;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -54,19 +54,20 @@ public class BSAppUI extends ModuleBase {
 		return uiContext;
 	}
 
-//	public static Context getUIContextHolder() {
-//		return uiContextHolder;
-//	}
-
 	private static Stage mainStage = null;
 
 //	public SimpleObjectProperty<Node> rootNode = new SimpleObjectProperty<Node>();
 	public static BorderPane mainPane = null;
 
+	/**
+	 * Sets the primary stage. Called once by the application entry point before
+	 * {@link #init}.
+	 */
 	public static void setStage(Stage stage) {
 		mainStage = stage;
 	}
 
+	/** Returns the primary application stage. */
 	public static Stage getStage() {
 		return mainStage;
 	}
@@ -77,10 +78,9 @@ public class BSAppUI extends ModuleBase {
 	}
 
 	/**
-	 * inicializace aplikačního frameworku s UI. Vynutí si import jako BSAppUI
-	 * modul.
-	 * 
-	 * @throws Exception
+	 * Initialises the UI application framework. Sets the primary stage, registers
+	 * BSAppUI as a module, and delegates to {@link BSApp#init}. Must be called once
+	 * from {@code Application.start()} before any other BSAppUI call.
 	 */
 	public static void init(Application app, Stage stage) {
 		setStage(stage);
@@ -149,7 +149,6 @@ public class BSAppUI extends ModuleBase {
 		uiContextHolder.push(new Context("UI root context"));
 		uiContext.addContext(uiContextHolder);
 
-//		Context.getRoot().addContext(uiContext);
 		Context.setCurrentContext(uiContext);
 
 		if (mainPane != null) {
@@ -176,16 +175,32 @@ public class BSAppUI extends ModuleBase {
 		mainStage.show();
 	}
 
+	/**
+	 * Fires a {@link MessageEvent} with the given text into the current UI context
+	 * (status bar).
+	 */
 	public static void showStatusMessage(String text) {
 		MessageEvent e = new MessageEvent(text);
 		Context.getCurrentContext().fireEvent(e);
 	}
 
+	/**
+	 * Fires a {@link MessageEvent} with an icon into the current UI context (status
+	 * bar).
+	 *
+	 * @param icon icon resource name passed to {@link ImageUtils#getIconView}
+	 */
 	public static void showStatusMessage(String text, String icon) {
 		MessageEvent e = new MessageEvent(text, ImageUtils.getIconView(icon));
 		Context.getCurrentContext().fireEvent(e);
 	}
 
+	/**
+	 * Fires a {@link MessageEvent} with an icon and an additional CSS style class.
+	 *
+	 * @param icon    icon resource name, or {@code null} for no icon
+	 * @param fxClass CSS style class applied to the status bar entry
+	 */
 	public static void showStatusMessage(String text, String icon, String fxClass) {
 		MessageEvent e = new MessageEvent(text, icon != null ? ImageUtils.getIconView(icon) : null, fxClass);
 		Context.getCurrentContext().fireEvent(e);
@@ -227,71 +242,150 @@ public class BSAppUI extends ModuleBase {
 		}
 	}
 
-	private static volatile ProgressTask workingTask = null;
+	private static volatile Task<?> workingTask = null;
+	private static volatile Dialog<?> workingDlg = null;
 
 	/**
-	 * Shows a modal indeterminate progress dialog. Returns immediately; call
-	 * hideWorkingWheel() to close it.
+	 * Shows a modal indeterminate progress dialog and returns immediately. Call
+	 * {@link #hideWorkingWheel()} to close it. While the dialog is open,
+	 * {@link #setWorkingWheelTitle}, {@link #setWorkingWheelMessage},
+	 * {@link #setWorkingWheelDetail}, and {@link #setWorkingWheelProgress} can be
+	 * called from any thread to update it.
+	 *
+	 * @param title    window title bar text, or {@code null} to leave it empty
+	 * @param subtitle initial dialog header text, live-updatable via
+	 *                 {@link #setWorkingWheelMessage}
 	 */
-	public static void showWorkingWheel(String comment) {
-		WorkingTask task = new WorkingTask(comment);
+	public static void showWorkingWheel(String title, String subtitle) {
+		WorkingTask task = new WorkingTask(subtitle);
 		workingTask = task;
 		Thread t = new Thread(task, "working-wheel");
 		t.setDaemon(true);
 		t.start();
 		Platform.runLater(() -> {
 			ProgressDialog dlg = new ProgressDialog(task);
+			workingDlg = dlg;
 			dlg.initOwner(mainStage);
-			dlg.setTitle(comment);
+			dlg.setTitle(title);
+			dlg.getDialogPane().headerTextProperty().bind(task.titleProperty());
 			dlg.show();
 		});
 	}
 
-	public static void setWorkingWheelTitle(String comment) {
-		ProgressTask t = workingTask;
-		if (t != null)
-			t.updateTitle(comment);
-	}
-
-	public static void setWorkingWheelSubtitle(String comment) {
-		ProgressTask t = workingTask;
-		if (t != null)
-			t.updateMessage(comment);
+	/**
+	 * Convenience overload; uses {@code subtitle} as the dialog header with no
+	 * window title. See {@link #showWorkingWheel(String, String)}.
+	 */
+	public static void showWorkingWheel(String subtitle) {
+		showWorkingWheel(null, subtitle);
 	}
 
 	/**
-	 * Updates progress on the active working wheel. Pass total=0 for indeterminate.
+	 * Updates the window title bar of the active working-wheel dialog. Safe to call
+	 * from any thread.
+	 */
+	public static void setWorkingWheelTitle(String title) {
+		runOnFx(() -> {
+			if (workingDlg != null)
+				workingDlg.setTitle(title);
+		});
+	}
+
+	/**
+	 * Updates the header text of the active working-wheel dialog. Safe to call from
+	 * any thread.
+	 */
+	public static void setWorkingWheelMessage(String message) {
+		runOnFx(() -> {
+			if (workingTask instanceof ProgressTask t)
+				t.updateTitle(message);
+		});
+	}
+
+	/**
+	 * Updates the detail text (below the header, above the progress bar) of the
+	 * active working-wheel dialog. Safe to call from any thread.
+	 */
+	public static void setWorkingWheelDetail(String detail) {
+		runOnFx(() -> {
+			if (workingTask instanceof ProgressTask t)
+				t.updateMessage(detail);
+		});
+	}
+
+	/**
+	 * Updates the progress bar of the active working-wheel dialog. Pass
+	 * {@code total=0} to revert to an indeterminate (spinning) bar. Safe to call
+	 * from any thread.
 	 */
 	public static void setWorkingWheelProgress(int done, int total) {
-		ProgressTask t = workingTask;
-		if (t != null)
-			t.updateProgress(total == 0 ? -1 : done, total == 0 ? 1 : total);
+		runOnFx(() -> {
+			if (workingTask instanceof ProgressTask t)
+				t.updateProgress(total == 0 ? -1 : done, total == 0 ? 1 : total);
+		});
 	}
 
-	/** Closes the dialog opened by showWorkingWheel(). */
-	public static void hideWorkingWheel() {
-		ProgressTask t = workingTask;
-		workingTask = null;
-		if (t instanceof WorkingTask)
-			((WorkingTask) t).complete();
+	private static void runOnFx(Runnable r) {
+		if (Platform.isFxApplicationThread())
+			r.run();
+		else
+			Platform.runLater(r);
 	}
 
 	/**
-	 * Runs toRun on a background thread behind a modal blocking progress dialog.
-	 * Must be called from the FX thread.
+	 * Closes the dialog opened by {@link #showWorkingWheel}. No-op if no dialog is
+	 * active.
+	 */
+	public static void hideWorkingWheel() {
+		Task<?> t = workingTask;
+		workingTask = null;
+		workingDlg = null;
+		if (t instanceof WorkingTask wt)
+			wt.complete();
+	}
+
+	/**
+	 * Runs {@code toRun} on a background thread behind a modal blocking progress
+	 * dialog, then returns once the task finishes. {@code comment} is used as the
+	 * dialog header (subtitle); the window title is left empty. Must be called from
+	 * the FX thread.
+	 *
+	 * @see #executeWaiting(Runnable, String, String, String)
 	 */
 	public static void executeWaiting(Runnable toRun, String comment) {
-		executeWaiting(toRun, null, comment);
+		executeWaiting(toRun, null, comment, null);
 	}
 
 	/**
-	 * Runs toRun on a background thread behind a modal blocking progress dialog
-	 * with a separate subtitle. Progress starts indeterminate; call
-	 * setWorkingWheelProgress / setWorkingWheelSubtitle from the Runnable to update
-	 * it. Must be called from the FX thread.
+	 * Runs {@code toRun} on a background thread behind a modal blocking progress
+	 * dialog, then returns once the task finishes. Must be called from the FX
+	 * thread.
+	 * <p>
+	 * The dialog has three independently settable areas:
+	 * <ul>
+	 * <li><b>title</b> — window title bar; set once from this parameter.</li>
+	 * <li><b>subtitle</b> — header text inside the dialog; set initially from this
+	 * parameter and live-updatable via {@link #setWorkingWheelTitle}.</li>
+	 * <li><b>message</b> — text above the progress bar; set initially from this
+	 * parameter and live-updatable via {@link #setWorkingWheelMessage}.</li>
+	 * </ul>
+	 * Progress starts indeterminate and can be updated via
+	 * {@link #setWorkingWheelProgress}. All three setters are safe to call from
+	 * {@code toRun} (i.e. from the background thread). Any parameter may be
+	 * {@code null} to leave that area empty initially.
+	 *
+	 * @param title    window title bar text
+	 * @param subtitle initial dialog header text
+	 * @param message  initial message text above the progress bar
 	 */
-	public static void executeWaiting(Runnable toRun, String title, String subtitle) {
+	public static void executeWaiting(Runnable toRun, String title, String subtitle, String message) {
 		ProgressTask task = new ProgressTask() {
+			{
+				if (subtitle != null)
+					updateTitle(subtitle);
+				if (message != null)
+					updateMessage(message);
+			}
 
 			@Override
 			protected Void call() throws Exception {
@@ -299,14 +393,40 @@ public class BSAppUI extends ModuleBase {
 				return null;
 			}
 		};
+		executeWaiting(task, title);
+	}
 
+	/**
+	 * Runs a pre-built {@link Task} on a background thread behind a modal blocking
+	 * progress dialog, then returns the task's result once it finishes. Must be
+	 * called from the FX thread.
+	 * <p>
+	 * The task drives the dialog directly:
+	 * <ul>
+	 * <li>{@code task.titleProperty()} — dialog header text; call
+	 * {@code updateTitle} to change it live.</li>
+	 * <li>{@code task.messageProperty()} — message area above the progress bar;
+	 * call {@code updateMessage} from within the task.</li>
+	 * <li>{@code task.progressProperty()} — progress bar; call
+	 * {@code updateProgress} from within the task (negative value =
+	 * indeterminate).</li>
+	 * </ul>
+	 * <p>
+	 * The dialog header is bound to {@code task.titleProperty()}, so
+	 * {@code updateTitle()} is reflected immediately whether called from the task
+	 * constructor or from within {@link Task#call()}.
+	 *
+	 * @param windowTitle window title bar text
+	 * @return the value returned by {@link Task#call()}, or {@code null} if the
+	 *         task failed or was cancelled
+	 */
+	public static <T> T executeWaiting(Task<T> task, String windowTitle) {
 		ProgressDialog dlg = new ProgressDialog(task);
 		dlg.initOwner(mainStage);
-		dlg.setTitle(title);
+		dlg.setTitle(windowTitle);
+		dlg.getDialogPane().headerTextProperty().bind(task.titleProperty());
 		dlg.getDialogPane().getButtonTypes().clear();
-		dlg.setHeaderText(subtitle != null ? subtitle : title);
 		dlg.setOnCloseRequest(Event::consume);
-		// dlg.getDialogPane().setPadding(new Insets(12, 16, 16, 16));
 
 		Object loopKey = new Object();
 		task.setOnSucceeded(e -> Platform.exitNestedEventLoop(loopKey, null));
@@ -328,6 +448,7 @@ public class BSAppUI extends ModuleBase {
 		if (dlg.isShowing())
 			dlg.getDialogPane().getScene().getWindow().hide();
 		workingTask = null;
+		return task.getValue();
 	}
 
 	/**
@@ -351,14 +472,26 @@ public class BSAppUI extends ModuleBase {
 		return visibleArea < recArea;
 	}
 
+	/**
+	 * Makes the primary stage visible. Used to restore a minimised or hidden
+	 * window.
+	 */
 	public static void openMainWindow() {
 		mainStage.show();
 	}
 
+	/**
+	 * Pushes a context onto the UI stack. Equivalent to
+	 * {@link #pushUI(Context, Node) pushUI(ctx, null)}.
+	 */
 	public static void pushUI(Context ctx) {
 		pushUI(ctx, null);
 	}
 
+	/**
+	 * Pushes a UI component onto the UI stack. Equivalent to
+	 * {@link #pushUI(Context, Node) pushUI(null, component)}.
+	 */
 	public static void pushUI(Node uiComponent) {
 		pushUI(null, uiComponent);
 	}
@@ -421,6 +554,11 @@ public class BSAppUI extends ModuleBase {
 		}
 	}
 
+	/**
+	 * Pops the top context from the UI stack, calling
+	 * {@link IStackedComponent#beforePop()} on its main component if applicable.
+	 * Returns the popped context, or {@code null} if the operation fails.
+	 */
 	public static Context popUI() {
 		try {
 			ContextSearchResult c = uiContextHolder.peek().getValue(CTX_MAIN_COMPONENT);
