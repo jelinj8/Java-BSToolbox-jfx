@@ -37,8 +37,9 @@ public class ImageCropPane extends StackPane {
 	private double rx, ry, rw, rh; // relative to displayed image bounds (0..1)
 
 	/**
-	 * Optional limit for returned cropped image: 0 (default) = no limit. If > 0,
-	 * returned image will be downscaled so that max(width,height) <= this value.
+	 * Optional limit for returned cropped image: 0 (default) = no limit. If &gt; 0,
+	 * the returned image will be downscaled so that
+	 * {@code max(width, height) <= limit}.
 	 */
 	private final IntegerProperty maxOutputPixels = new SimpleIntegerProperty(this, "maxOutputPixels", 0);
 
@@ -64,16 +65,15 @@ public class ImageCropPane extends StackPane {
 		overlay.getChildren().addAll(topShade, leftShade, rightShade, bottomShade, selection);
 		getChildren().addAll(imageView, overlay);
 
-
 		imageView.boundsInParentProperty().addListener((obs, oldB, b) -> updateShades());
 		widthProperty().addListener((obs, o, n) -> updateShades());
 		heightProperty().addListener((obs, o, n) -> updateShades());
 
 		imageView.boundsInParentProperty().addListener((obs, oldB, b) -> {
-		    applySelectionFromNormalized();
-		    updateShades();
+			applySelectionFromNormalized();
+			updateShades();
 		});
-		
+
 		image.addListener((obs, oldImg, newImg) -> {
 			imageView.setImage(newImg);
 			clearSelection();
@@ -335,55 +335,57 @@ public class ImageCropPane extends StackPane {
 	}
 
 	private void captureSelectionNormalized() {
-	    if (!selection.isVisible()) {
-	        selectionNormalizedValid = false;
-	        return;
-	    }
-	    var b = imageView.getBoundsInParent();
-	    double X = b.getMinX(), Y = b.getMinY(), W = b.getWidth(), H = b.getHeight();
-	    if (W <= 0 || H <= 0) {
-	        selectionNormalizedValid = false;
-	        return;
-	    }
+		if (!selection.isVisible()) {
+			selectionNormalizedValid = false;
+			return;
+		}
+		var b = imageView.getBoundsInParent();
+		double X = b.getMinX(), Y = b.getMinY(), W = b.getWidth(), H = b.getHeight();
+		if (W <= 0 || H <= 0) {
+			selectionNormalizedValid = false;
+			return;
+		}
 
-	    var sel = selection.localToParent(selection.getBoundsInLocal());
-	    double sx = sel.getMinX(), sy = sel.getMinY(), sw = sel.getWidth(), sh = sel.getHeight();
+		var sel = selection.localToParent(selection.getBoundsInLocal());
+		double sx = sel.getMinX(), sy = sel.getMinY(), sw = sel.getWidth(), sh = sel.getHeight();
 
-	    rx = (sx - X) / W;
-	    ry = (sy - Y) / H;
-	    rw = sw / W;
-	    rh = sh / H;
+		rx = (sx - X) / W;
+		ry = (sy - Y) / H;
+		rw = sw / W;
+		rh = sh / H;
 
-	    // clamp (safety)
-	    rx = clamp(rx, 0, 1);
-	    ry = clamp(ry, 0, 1);
-	    rw = clamp(rw, 0, 1 - rx);
-	    rh = clamp(rh, 0, 1 - ry);
+		// clamp (safety)
+		rx = clamp(rx, 0, 1);
+		ry = clamp(ry, 0, 1);
+		rw = clamp(rw, 0, 1 - rx);
+		rh = clamp(rh, 0, 1 - ry);
 
-	    selectionNormalizedValid = true;
+		selectionNormalizedValid = true;
 	}
 
 	private void applySelectionFromNormalized() {
-	    if (!selection.isVisible() || !selectionNormalizedValid) return;
+		if (!selection.isVisible() || !selectionNormalizedValid)
+			return;
 
-	    var b = imageView.getBoundsInParent();
-	    double X = b.getMinX(), Y = b.getMinY(), W = b.getWidth(), H = b.getHeight();
-	    if (W <= 0 || H <= 0) return;
+		var b = imageView.getBoundsInParent();
+		double X = b.getMinX(), Y = b.getMinY(), W = b.getWidth(), H = b.getHeight();
+		if (W <= 0 || H <= 0)
+			return;
 
-	    double x = X + rx * W;
-	    double y = Y + ry * H;
-	    double w = rw * W;
-	    double h = rh * H;
+		double x = X + rx * W;
+		double y = Y + ry * H;
+		double w = rw * W;
+		double h = rh * H;
 
-	    // selection is in overlay coordinates; overlay shares same parent as imageView,
-	    // so we can set in parent coords by converting parent->overlay local:
-	    var p = overlay.parentToLocal(x, y);
-	    selection.setX(p.getX());
-	    selection.setY(p.getY());
-	    selection.setWidth(w);
-	    selection.setHeight(h);
+		// selection is in overlay coordinates; overlay shares same parent as imageView,
+		// so we can set in parent coords by converting parent->overlay local:
+		var p = overlay.parentToLocal(x, y);
+		selection.setX(p.getX());
+		selection.setY(p.getY());
+		selection.setWidth(w);
+		selection.setHeight(h);
 	}
-	
+
 	private WritableImage downscaleIfNeeded(Image cropped) {
 		int limit = getMaxOutputPixels();
 		if (limit <= 0) {

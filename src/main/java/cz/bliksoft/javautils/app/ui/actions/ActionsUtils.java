@@ -17,16 +17,28 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.shape.SVGPath;
 
+/**
+ * Utility methods for adapting third-party action types to {@link IUIAction}.
+ */
 public final class ActionsUtils {
 	private ActionsUtils() {
 	}
 
 	/**
-	 * Adapts ControlsFX {@link Action} to your {@link IUIAction}.
+	 * Adapts a ControlsFX {@link Action} to {@link IUIAction}.
 	 *
-	 * Icon spec support: - preferred: a.getProperties().put("iconSpec",
-	 * "res:/icons/save@{scale}x.png") - fallback: tries to derive from
-	 * Action.graphicProperty() (ImageView url, SVGPath content)
+	 * <p>
+	 * Icon spec resolution (in order of preference):
+	 * <ol>
+	 * <li>Set {@code a.getProperties().put("iconSpec",
+	 * "res:/icons/save@{scale}x.png")}</li>
+	 * <li>Fallback: icon spec derived from {@code Action.graphicProperty()}
+	 * ({@code ImageView} url or {@code SVGPath} content)</li>
+	 * </ol>
+	 *
+	 * @param a the ControlsFX action to adapt
+	 *
+	 * @return a new {@link IUIAction} that delegates to {@code a}
 	 */
 	public static IUIAction fromControlsFx(Action a) {
 

@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IPrint {
 	void print();
+
 	BooleanProperty getPrintEnabled();
-	default StringProperty getPrintIconProperty() { return null; }
+
+	default StringProperty getPrintIconProperty() {
+		return null;
+	}
 }

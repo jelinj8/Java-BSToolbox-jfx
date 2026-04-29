@@ -44,7 +44,7 @@ public class Validation {
 
 	/**
 	 * apply validation result on root node
-	 * 
+	 *
 	 * @param root
 	 * @param vr
 	 */
@@ -66,7 +66,7 @@ public class Validation {
 
 	/**
 	 * Apply validation result to registered nodes
-	 * 
+	 *
 	 * @param vr
 	 */
 	public void apply(ValidationResult vr) {

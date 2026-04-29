@@ -25,8 +25,6 @@ public class MessageStatusProvider extends Label {
 
 		this.animator = new PropertyAnimator<Boolean>(this::setVisible, 10000, false, new Boolean[] { true });
 
-		setText("TEST");
-
 		this.getStyleClass().add(BSAppUIConstants.CLASS_STATUSBAR_LABEL);
 
 		additionalClass.addListener((observable, oldClass, newClass) -> {

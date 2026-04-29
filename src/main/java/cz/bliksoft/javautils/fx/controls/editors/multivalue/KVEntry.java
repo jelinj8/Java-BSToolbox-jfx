@@ -7,11 +7,11 @@ import javafx.beans.property.StringProperty;
 
 final class KVEntry<V> {
 
-    final StringProperty key = new SimpleStringProperty();
-    final ObjectProperty<V> value = new SimpleObjectProperty<>();
+	final StringProperty key = new SimpleStringProperty();
+	final ObjectProperty<V> value = new SimpleObjectProperty<>();
 
-    KVEntry(String k, V v) {
-        key.set(k);
-        value.set(v);
-    }
+	KVEntry(String k, V v) {
+		key.set(k);
+		value.set(v);
+	}
 }

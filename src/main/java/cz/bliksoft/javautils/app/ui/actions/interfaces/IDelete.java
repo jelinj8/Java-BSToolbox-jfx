@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IDelete {
 	void delete();
+
 	BooleanProperty getDeleteEnabled();
-	default StringProperty getDeleteIconProperty() { return null; }
+
+	default StringProperty getDeleteIconProperty() {
+		return null;
+	}
 }

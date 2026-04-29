@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IClose {
 	void close();
+
 	BooleanProperty getCloseEnabled();
-	default StringProperty getCloseIconProperty() { return null; }
+
+	default StringProperty getCloseIconProperty() {
+		return null;
+	}
 }

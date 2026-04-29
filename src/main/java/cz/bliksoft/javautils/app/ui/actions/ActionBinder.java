@@ -11,10 +11,23 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.Tooltip;
 
+/**
+ * Wires {@link IUIAction} properties to JavaFX controls. All {@code bind}
+ * methods are one-way: after calling them the control's
+ * enabled/visible/text/icon/tooltip state tracks the action's observable
+ * properties for the lifetime of the control.
+ */
 public final class ActionBinder {
 	private ActionBinder() {
 	}
 
+	/**
+	 * Binds an {@link IUIAction} to a {@link ButtonBase} (Button, ToggleButton,
+	 * etc.).
+	 *
+	 * @param btn the button to wire
+	 * @param a   the action to bind
+	 */
 	public static void bind(ButtonBase btn, IUIAction a) {
 		btn.setOnAction(e -> a.execute());
 
@@ -46,6 +59,12 @@ public final class ActionBinder {
 		bindHint(btn, a);
 	}
 
+	/**
+	 * Binds an {@link IUIAction} to a {@link MenuItem}.
+	 *
+	 * @param mi the menu item to wire
+	 * @param a  the action to bind
+	 */
 	public static void bind(MenuItem mi, IUIAction a) {
 		mi.setOnAction(e -> a.execute());
 
@@ -94,6 +113,9 @@ public final class ActionBinder {
 	 * The button's items are kept in sync with
 	 * {@link IUIActionWithSubactions#getSubactions()}. Each subaction becomes a
 	 * {@link MenuItem} bound via the standard {@link #bind(MenuItem, IUIAction)}.
+	 *
+	 * @param mb the menu button to wire
+	 * @param a  the action with subactions to bind
 	 */
 	public static void bind(MenuButton mb, IUIActionWithSubactions a) {
 		bind((ButtonBase) mb, a);
@@ -106,6 +128,9 @@ public final class ActionBinder {
 	 * <p>
 	 * The left (default) click fires {@link IUIAction#execute()}, which should run
 	 * the first subaction. The dropdown lists all subactions.
+	 *
+	 * @param smb the split menu button to wire
+	 * @param a   the action with subactions to bind
 	 */
 	public static void bind(SplitMenuButton smb, IUIActionWithSubactions a) {
 		bind((ButtonBase) smb, a);
@@ -126,6 +151,12 @@ public final class ActionBinder {
 		}
 	}
 
+	/**
+	 * Binds an {@link IUIAction} to a {@link Hyperlink}.
+	 *
+	 * @param hl the hyperlink to wire
+	 * @param a  the action to bind
+	 */
 	public static void bind(Hyperlink hl, IUIAction a) {
 		hl.setOnAction(e -> a.execute());
 		hl.disableProperty().bind(Bindings.not(a.enabledProperty()));

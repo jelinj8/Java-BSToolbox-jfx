@@ -33,11 +33,11 @@ import javafx.stage.Stage;
  */
 public final class CompactValidationPanel extends VBox {
 
-	private static final Comparator<ValidationMessage> BY_SEVERITY_DESC =
-			Comparator.comparing(ValidationMessage::level).reversed();
+	private static final Comparator<ValidationMessage> BY_SEVERITY_DESC = Comparator.comparing(ValidationMessage::level)
+			.reversed();
 
-	private final ObjectProperty<ValidationResult> validationResult =
-			new SimpleObjectProperty<>(this, "validationResult");
+	private final ObjectProperty<ValidationResult> validationResult = new SimpleObjectProperty<>(this,
+			"validationResult");
 
 	/** Stored so we can remove it when the ValidationResult is replaced. */
 	private javafx.collections.ListChangeListener<ValidationMessage> messagesListener;
@@ -60,13 +60,15 @@ public final class CompactValidationPanel extends VBox {
 	// -------------------------------------------------------------------------
 
 	private void attach(ValidationResult vr) {
-		if (vr == null) return;
+		if (vr == null)
+			return;
 		messagesListener = c -> rebuild(vr);
 		vr.messages().addListener(messagesListener);
 	}
 
 	private void detach(ValidationResult vr) {
-		if (vr == null || messagesListener == null) return;
+		if (vr == null || messagesListener == null)
+			return;
 		vr.messages().removeListener(messagesListener);
 		messagesListener = null;
 	}
@@ -77,9 +79,7 @@ public final class CompactValidationPanel extends VBox {
 		if (vr == null || vr.messages().isEmpty()) {
 			setVisible(false);
 		} else {
-			List<ValidationMessage> sorted = vr.messages().stream()
-					.sorted(BY_SEVERITY_DESC)
-					.toList();
+			List<ValidationMessage> sorted = vr.messages().stream().sorted(BY_SEVERITY_DESC).toList();
 			for (ValidationMessage msg : sorted) {
 				getChildren().add(buildRow(msg));
 			}
@@ -115,10 +115,10 @@ public final class CompactValidationPanel extends VBox {
 
 	private static String iconPath(ValidationResultLevel lvl) {
 		return switch (lvl) {
-			case ERROR -> "M12 2 L22 20 H2 Z";
-			case WARN  -> "M12 2 L22 20 H2 Z";
-			case INFO  -> "M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2";
-			case OK    -> "M4 12 L10 18 L20 6";
+		case ERROR -> "M12 2 L22 20 H2 Z";
+		case WARN -> "M12 2 L22 20 H2 Z";
+		case INFO -> "M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2";
+		case OK -> "M4 12 L10 18 L20 6";
 		};
 	}
 

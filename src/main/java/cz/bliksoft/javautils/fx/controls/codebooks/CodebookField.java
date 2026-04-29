@@ -17,7 +17,7 @@ public class CodebookField<T> extends HBox {
 
 	private final TextField textField = new TextField();
 	private final Button selectButton = new Button();
-//	private final StackPane iconPane = new StackPane();
+	// private final StackPane iconPane = new StackPane();
 
 	private final ObjectProperty<T> value = new SimpleObjectProperty<>();
 	private ObjectProperty<T> boundExternal;
@@ -36,8 +36,8 @@ public class CodebookField<T> extends HBox {
 		this.provider = provider;
 
 		getStyleClass().add("codebook-field");
-//		iconPane.getStyleClass().add("codebook-icon");
-		
+		// iconPane.getStyleClass().add("codebook-icon");
+
 		textField.getStyleClass().add("codebook-text");
 
 		// v css nefunguje
@@ -47,8 +47,8 @@ public class CodebookField<T> extends HBox {
 		selectButton.setFocusTraversable(false);
 
 		selectButton.setGraphic(ImageUtils.getIconView("codebook/Codebook_16.png"));
-		
-		getChildren().addAll(/* iconPane, */textField, selectButton/*, clearButton*/);
+
+		getChildren().addAll(/* iconPane, */textField, selectButton/* , clearButton */);
 
 		// start unlocked (editable)
 		unlock();
@@ -106,7 +106,7 @@ public class CodebookField<T> extends HBox {
 
 	private void identifyOrSelect() {
 		if (locked) {
-//			unlock();
+			// unlock();
 			clear();
 		} else {
 			String text = textField.getText();

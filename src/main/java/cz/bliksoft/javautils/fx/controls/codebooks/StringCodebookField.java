@@ -10,6 +10,7 @@ public class StringCodebookField extends CodebookField<String> {
 
 	/**
 	 * proper usage
+	 *
 	 * @param provider
 	 */
 	public StringCodebookField(ICodebookProvider<String> provider) {

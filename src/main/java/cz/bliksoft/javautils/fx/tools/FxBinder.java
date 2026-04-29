@@ -50,7 +50,6 @@ public final class FxBinder {
 		if (setter != null)
 			Objects.requireNonNull(toModel, "toModel");
 
-
 		prop.setValue(toView.apply(getter.get()));
 
 		if (setter != null) {

@@ -56,7 +56,8 @@ public class BSAppUI extends ModuleBase {
 
 	private static Stage mainStage = null;
 
-//	public SimpleObjectProperty<Node> rootNode = new SimpleObjectProperty<Node>();
+	// public SimpleObjectProperty<Node> rootNode = new
+	// SimpleObjectProperty<Node>();
 	public static BorderPane mainPane = null;
 
 	/**
@@ -417,6 +418,7 @@ public class BSAppUI extends ModuleBase {
 	 * constructor or from within {@link Task#call()}.
 	 *
 	 * @param windowTitle window title bar text
+	 *
 	 * @return the value returned by {@link Task#call()}, or {@code null} if the
 	 *         task failed or was cancelled
 	 */
@@ -500,14 +502,14 @@ public class BSAppUI extends ModuleBase {
 	 * At least one parameter should be specified, the other will be defaulted. When
 	 * both are specified, the component is registered in the provided context as a
 	 * context GUI component.
-	 * 
+	 *
 	 * When there is no ctx specified, a context provided by the component will be
 	 * used or a default one will be created.
-	 * 
+	 *
 	 * When there is no component and there is no component registered in context,
 	 * no component will be used (only other registered object will be used, e.g.
 	 * actions, listeners...).
-	 * 
+	 *
 	 * @param ctx
 	 * @param uiComponent
 	 */

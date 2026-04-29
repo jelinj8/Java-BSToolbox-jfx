@@ -42,7 +42,7 @@ public final class Styling {
 		} else {
 			Styling.registerCss("/css/app-ui-themed.css");
 		}
-		
+
 		// register here (or do it elsewhere and call install after)
 		// (keep yours)
 		registerCss("/css/codebook-field.css");
@@ -166,8 +166,8 @@ public final class Styling {
 		Parent root = scene.getRoot();
 		if (root != null) {
 			root.pseudoClassStateChanged(DARK, dark);
-//			root.applyCss();
-//			root.layout();
+			// root.applyCss();
+			// root.layout();
 		}
 
 	}

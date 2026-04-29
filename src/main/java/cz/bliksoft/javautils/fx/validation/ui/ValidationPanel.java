@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.validation.ui;
 import java.util.Objects;
 
 import cz.bliksoft.javautils.StringUtils;
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.fx.validation.ValidationMessage;
 import cz.bliksoft.javautils.fx.validation.ValidationResult;
 import cz.bliksoft.javautils.fx.validation.ValidationResultLevel;
@@ -69,7 +70,7 @@ public final class ValidationPanel extends VBox {
 		visibleProperty().bind(show);
 	}
 
-	private final Label header = new Label("Validation");
+	private final Label header = new Label(BSAppMessages.getString("ValidationPanel.header"));
 	private final ComboBox<FilterMode> filterBox = new ComboBox<>();
 	private final ListView<ValidationMessage> listView = new ListView<>();
 
@@ -90,7 +91,7 @@ public final class ValidationPanel extends VBox {
 		top.setAlignment(Pos.CENTER_LEFT);
 		HBox.setHgrow(filterBox, Priority.NEVER);
 
-		listView.setPlaceholder(new Label("No validation messages."));
+		listView.setPlaceholder(new Label(BSAppMessages.getString("ValidationPanel.noMessages")));
 		listView.getStyleClass().add("validation-list");
 		listView.setCellFactory(lv -> new ValidationMessageCell());
 
@@ -121,15 +122,6 @@ public final class ValidationPanel extends VBox {
 		managedProperty().bind(visibleProperty());
 		visibleProperty().bind(hasAnythingToShow);
 
-		// Update header whenever inputs change
-		header.textProperty().bind(Bindings.createStringBinding(() -> {
-			ValidationResult vr = getValidationResult();
-			if (vr == null)
-				return "Validation";
-			ValidationResultLevel lvl = vr.level().getValue();
-			int count = vr.messages().size();
-			return "Validation: " + lvl + " (" + count + ")";
-		}, validationResult));
 	}
 
 	private void bindTo(ValidationResult vr) {
@@ -159,14 +151,14 @@ public final class ValidationPanel extends VBox {
 		header.textProperty().unbind();
 
 		if (vr == null) {
-			header.setText("Validation");
+			header.setText(BSAppMessages.getString("ValidationPanel.header"));
 			return;
 		}
 
 		header.textProperty().bind(Bindings.createStringBinding(() -> {
 			ValidationResultLevel lvl = vr.level().getValue();
 			int count = vr.messages().size();
-			return "Validation: " + lvl + " (" + count + ")";
+			return BSAppMessages.getString("ValidationPanel.header.withResult", lvl, count);
 		}, vr.level(), vr.messages()));
 	}
 

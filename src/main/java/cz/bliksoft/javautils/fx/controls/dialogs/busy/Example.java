@@ -29,45 +29,45 @@ public class Example extends Application {
 		// ...
 		// );
 
-//		run.setOnAction(e -> {
-//			Task<Void> task = new Task<>() {
-//				@Override
-//				protected Void call() throws Exception {
-//					model.setShowingFx(true);
-//					model.setTitleFx("Importing data");
-//					model.setIndeterminateFx(false);
-//					model.setProgressFx(0, 100);
-//
-//					for (int i = 1; i <= 100; i++) {
-//						if (isCancelled())
-//							break;
-//						model.setDetailFx("Processing item " + i);
-//						model.setProgressFx(i, 100);
-//						Thread.sleep(30);
-//					}
-//					return null;
-//				}
-//
-//				@Override
-//				protected void succeeded() {
-//					model.setShowingFx(false);
-//				}
-//
-//				@Override
-//				protected void failed() {
-//					model.setDetailFx(getException().toString());
-//					model.setShowingFx(false);
-//				}
-//
-//				@Override
-//				protected void cancelled() {
-//					model.setShowingFx(false);
-//				}
-//			};
-//			Thread t = new Thread(task, "worker");
-//			t.setDaemon(true);
-//			t.start();
-//		});
+		// run.setOnAction(e -> {
+		// Task<Void> task = new Task<>() {
+		// @Override
+		// protected Void call() throws Exception {
+		// model.setShowingFx(true);
+		// model.setTitleFx("Importing data");
+		// model.setIndeterminateFx(false);
+		// model.setProgressFx(0, 100);
+		//
+		// for (int i = 1; i <= 100; i++) {
+		// if (isCancelled())
+		// break;
+		// model.setDetailFx("Processing item " + i);
+		// model.setProgressFx(i, 100);
+		// Thread.sleep(30);
+		// }
+		// return null;
+		// }
+		//
+		// @Override
+		// protected void succeeded() {
+		// model.setShowingFx(false);
+		// }
+		//
+		// @Override
+		// protected void failed() {
+		// model.setDetailFx(getException().toString());
+		// model.setShowingFx(false);
+		// }
+		//
+		// @Override
+		// protected void cancelled() {
+		// model.setShowingFx(false);
+		// }
+		// };
+		// Thread t = new Thread(task, "worker");
+		// t.setDaemon(true);
+		// t.start();
+		// });
 
 		test(model);
 

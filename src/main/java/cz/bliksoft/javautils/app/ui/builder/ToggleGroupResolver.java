@@ -10,8 +10,8 @@ public final class ToggleGroupResolver {
 
 	public ToggleGroup getGroup(String group) {
 		ToggleGroup g = groups.get(group);
-		if(g==null) {
-			g=new ToggleGroup();
+		if (g == null) {
+			g = new ToggleGroup();
 			groups.put(group, g);
 		}
 		return g;

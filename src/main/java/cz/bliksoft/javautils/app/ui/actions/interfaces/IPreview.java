@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IPreview {
 	void preview();
+
 	BooleanProperty getPreviewEnabled();
-	default StringProperty getPreviewIconProperty() { return null; }
+
+	default StringProperty getPreviewIconProperty() {
+		return null;
+	}
 }

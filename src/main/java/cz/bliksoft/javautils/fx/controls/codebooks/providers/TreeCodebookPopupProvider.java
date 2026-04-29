@@ -39,8 +39,7 @@ public class TreeCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 	public T identify(String selectorText, boolean refineIfNotUnique) {
 		if (selectorText == null || selectorText.isBlank())
 			return null;
-		List<T> matches = dataSource.get().stream()
-				.filter(item -> filter.test(item, selectorText))
+		List<T> matches = dataSource.get().stream().filter(item -> filter.test(item, selectorText))
 				.collect(Collectors.toList());
 		return matches.size() == 1 ? matches.get(0) : null;
 	}
@@ -142,8 +141,7 @@ public class TreeCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 			}
 		}
 
-		private static <T> TreeItem<T> buildFilteredTree(T node, String filterLower,
-				BasicCodebookProvider<T> base) {
+		private static <T> TreeItem<T> buildFilteredTree(T node, String filterLower, BasicCodebookProvider<T> base) {
 			if (node == null)
 				return null;
 

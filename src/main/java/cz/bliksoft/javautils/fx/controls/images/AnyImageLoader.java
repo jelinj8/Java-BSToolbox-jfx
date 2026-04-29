@@ -6,7 +6,16 @@ import java.util.List;
 
 import javafx.scene.image.Image;
 
+/**
+ * Default {@link ImageLoader} that handles any file type by delegating to
+ * {@link ImageUtils} for classpath/URL resources, and by decoding raw bytes via
+ * the standard JavaFX {@link javafx.scene.image.Image} stream constructor.
+ */
 public class AnyImageLoader extends ImageLoader {
+
+	/** Creates the default image loader. */
+	public AnyImageLoader() {
+	}
 
 	@Override
 	public List<String> getSupportedExtensions() {

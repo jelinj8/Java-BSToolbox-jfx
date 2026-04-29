@@ -58,8 +58,8 @@ public final class FxStateManager {
 		}
 
 		String key = strProp(n, FxStateMeta.KEY);
-//		if (key == null || key.isBlank())
-//			key = n.getId(); // fallback (volitelně)
+		// if (key == null || key.isBlank())
+		// key = n.getId(); // fallback (volitelně)
 		if (key != null && !key.isBlank()) {
 			String prefix = buildPrefix(windowKey, nextStack, key.trim());
 			dispatch(n, prefix, mode);

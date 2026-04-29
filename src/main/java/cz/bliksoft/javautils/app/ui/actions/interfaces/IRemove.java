@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IRemove {
 	void remove();
+
 	BooleanProperty getRemoveEnabled();
-	default StringProperty getRemoveIconProperty() { return null; }
+
+	default StringProperty getRemoveIconProperty() {
+		return null;
+	}
 }

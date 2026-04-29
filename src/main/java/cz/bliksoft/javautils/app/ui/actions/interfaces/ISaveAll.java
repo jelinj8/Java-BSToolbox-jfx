@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface ISaveAll {
 	void saveAll();
+
 	BooleanProperty getSaveAllEnabled();
-	default StringProperty getSaveAllIconProperty() { return null; }
+
+	default StringProperty getSaveAllIconProperty() {
+		return null;
+	}
 }

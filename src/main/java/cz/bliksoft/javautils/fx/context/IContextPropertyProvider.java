@@ -7,38 +7,38 @@ import javafx.beans.property.Property;
 
 /**
  * Objekt, poskytující vlastní kontext (obvykle entitu k úpravám/zobrazení)
- * 
+ *
  * @param <T> typ kontextu
  */
 public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISingleContextProvider<T> */ {
 
 	Property<T> getContextProperty();
-	
-//	/**
-//	 * nastaví nový obsah kontextu
-//	 * 
-//	 * @param newContext
-//	 */
-//	default public void setContextValue(T newContext) {
-//		getBeanAdapter().setBean(newContext);
-//	}
-//
-//	/**
-//	 * aktuální stav kontextu
-//	 * 
-//	 * @return
-//	 */
-//	default public T getContextValue() {
-//		return (T) getBeanAdapter().getBean();
-//	}
-//
-//	default BeanAdapter<T> getBeanAdapter() {
-//		return BeanAdapter.getDefaultBeanAdapter(this);
-//	}
-	
+
+	// /**
+	// * nastaví nový obsah kontextu
+	// *
+	// * @param newContext
+	// */
+	// default public void setContextValue(T newContext) {
+	// getBeanAdapter().setBean(newContext);
+	// }
+	//
+	// /**
+	// * aktuální stav kontextu
+	// *
+	// * @return
+	// */
+	// default public T getContextValue() {
+	// return (T) getBeanAdapter().getBean();
+	// }
+	//
+	// default BeanAdapter<T> getBeanAdapter() {
+	// return BeanAdapter.getDefaultBeanAdapter(this);
+	// }
+
 	/**
 	 * přidá listener do přepínaného kontextu a provede inicializaci
-	 * 
+	 *
 	 * @param key                       naslouchací klíč
 	 * @param additionalContextListener přídavný listener, který má být notifikován
 	 *                                  v případě změny
@@ -50,7 +50,7 @@ public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISi
 
 	/**
 	 * přidá listener do přepínaného kontextu a provede inicializaci
-	 * 
+	 *
 	 * @param key vyhledávací klíč
 	 */
 	default void addDefaultSwitchedContextListener(Class<?> key) {
@@ -59,7 +59,7 @@ public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISi
 
 	/**
 	 * přidá listener do kořenového (systémového) kontextu a provede inicializaci
-	 * 
+	 *
 	 * @param key
 	 * @param additionalContextListener přídavný listener, který má být notifikován
 	 *                                  v případě změny
@@ -71,7 +71,7 @@ public interface IContextPropertyProvider<T> /* extends IDefaultObservable , ISi
 
 	/**
 	 * přidá listener do kořenového (systémového) kontextu a provede inicializaci
-	 * 
+	 *
 	 * @param key
 	 */
 	default void addDefaultGlobalContextListener(Class<?> key) {

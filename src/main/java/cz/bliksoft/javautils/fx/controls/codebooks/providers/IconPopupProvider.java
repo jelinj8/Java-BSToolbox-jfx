@@ -169,9 +169,9 @@ public class IconPopupProvider implements ICodebookProvider<String> {
 		}
 
 		/**
-		 * Recursively adds {@code file} into {@code target}.
-		 * At level 0 the folder itself is not shown — its children are merged directly
-		 * into target, matching the original IconCBSelector behaviour.
+		 * Recursively adds {@code file} into {@code target}. At level 0 the folder
+		 * itself is not shown — its children are merged directly into target, matching
+		 * the original IconCBSelector behaviour.
 		 */
 		private static void addFiles(TreeItem<File> target, File file, String filterLower, int level) {
 			if (!file.exists())
@@ -209,7 +209,9 @@ public class IconPopupProvider implements ICodebookProvider<String> {
 			}
 		}
 
-		/** Returns the first {@link TreeItem} whose value is a file (not a directory). */
+		/**
+		 * Returns the first {@link TreeItem} whose value is a file (not a directory).
+		 */
 		private static TreeItem<File> findFirstFile(TreeItem<File> node) {
 			if (node == null)
 				return null;

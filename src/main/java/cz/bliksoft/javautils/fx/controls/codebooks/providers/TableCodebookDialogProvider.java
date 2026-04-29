@@ -7,6 +7,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -30,7 +31,7 @@ import javafx.stage.Window;
 public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 
 	private final List<Supplier<TableColumn<T, ?>>> columnFactories = new ArrayList<>();
-	private String dialogTitle = "Select value";
+	private String dialogTitle = BSAppMessages.getString("Codebook.button.title");
 
 	public TableCodebookDialogProvider(List<T> items) {
 		super(items);
@@ -66,8 +67,7 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 	public T identify(String selectorText, boolean refineIfNotUnique) {
 		if (selectorText == null || selectorText.isBlank())
 			return null;
-		List<T> matches = dataSource.get().stream()
-				.filter(item -> filter.test(item, selectorText))
+		List<T> matches = dataSource.get().stream().filter(item -> filter.test(item, selectorText))
 				.collect(Collectors.toList());
 		return matches.size() == 1 ? matches.get(0) : null;
 	}
@@ -85,11 +85,10 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		stage.setTitle(dialogTitle);
 
 		TextField filterField = new TextField();
-		filterField.setPromptText("Filter…");
+		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
-		FilteredList<T> filtered = new FilteredList<>(
-				FXCollections.observableArrayList(dataSource.get()),
+		FilteredList<T> filtered = new FilteredList<>(FXCollections.observableArrayList(dataSource.get()),
 				additionalFilter == null ? s -> true : additionalFilter);
 
 		TableView<T> table = new TableView<>(filtered);
@@ -100,8 +99,8 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 
 		Runnable applyFilter = () -> {
 			String t = filterField.getText() == null ? "" : filterField.getText().trim();
-			filtered.setPredicate(s -> (t.isEmpty() || filter.test(s, t))
-					&& (additionalFilter == null || additionalFilter.test(s)));
+			filtered.setPredicate(
+					s -> (t.isEmpty() || filter.test(s, t)) && (additionalFilter == null || additionalFilter.test(s)));
 
 			if (!filtered.isEmpty()) {
 				if (table.getSelectionModel().getSelectedItem() == null)
@@ -114,8 +113,8 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.textProperty().addListener((obs, o, n) -> applyFilter.run());
 		applyFilter.run();
 
-		Button ok = new Button("OK");
-		Button cancel = new Button("Cancel");
+		Button ok = new Button(BSAppMessages.getString("button.ok"));
+		Button cancel = new Button(BSAppMessages.getString("button.cancel"));
 		ok.setDefaultButton(true);
 		cancel.setCancelButton(true);
 

@@ -10,11 +10,12 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
 
 public class XmlProperties extends Properties {
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 	private static Logger log = null;
@@ -48,8 +49,8 @@ public class XmlProperties extends Properties {
 			path.delete();
 			tmpfile.renameTo(path);
 		} catch (Exception e) {
-			getLogger().log(Level.ERROR, "Chyba při ukládání XML properties", e);
-			throw new ViewableException("Chyba při ukládání nastavení", e);
+			getLogger().log(Level.ERROR, "Error saving XML properties file", e);
+			throw new ViewableException(BSAppMessages.getString("XmlProperties.savingError"), e);
 		}
 	}
 

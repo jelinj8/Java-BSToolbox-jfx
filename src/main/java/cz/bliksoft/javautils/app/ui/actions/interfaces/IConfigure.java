@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IConfigure {
 	void configure();
+
 	BooleanProperty getConfigureEnabled();
-	default StringProperty getConfigureIconProperty() { return null; }
+
+	default StringProperty getConfigureIconProperty() {
+		return null;
+	}
 }

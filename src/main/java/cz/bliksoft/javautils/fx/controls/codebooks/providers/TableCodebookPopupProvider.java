@@ -54,8 +54,7 @@ public class TableCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 	public T identify(String selectorText, boolean refineIfNotUnique) {
 		if (selectorText == null || selectorText.isBlank())
 			return null;
-		List<T> matches = dataSource.get().stream()
-				.filter(item -> filter.test(item, selectorText))
+		List<T> matches = dataSource.get().stream().filter(item -> filter.test(item, selectorText))
 				.collect(Collectors.toList());
 		return matches.size() == 1 ? matches.get(0) : null;
 	}
@@ -76,8 +75,7 @@ public class TableCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 				List<Supplier<TableColumn<T, ?>>> columnFactories) {
 			this.base = base;
 
-			filtered = new FilteredList<>(
-					FXCollections.observableArrayList(base.dataSource.get()),
+			filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()),
 					base.additionalFilter == null ? s -> true : base.additionalFilter);
 
 			table = new TableView<>(filtered);

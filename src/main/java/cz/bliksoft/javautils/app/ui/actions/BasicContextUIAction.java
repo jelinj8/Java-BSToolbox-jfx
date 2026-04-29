@@ -35,11 +35,13 @@ import javafx.beans.value.ObservableBooleanValue;
  * <p>
  * Subclasses must supply:
  * <ul>
- * <li>{@link #getKey()} — unique action key for the {@link UIActions} registry</li>
+ * <li>{@link #getKey()} — unique action key for the {@link UIActions}
+ * registry</li>
  * <li>{@link #getBaseIconSpec()} — icon spec string (may be {@code null})</li>
  * <li>{@link #getEnabledProperty(Object)} — extracts the enabled property from
  * the context value</li>
- * <li>{@link #execute(Object)} — action body, receives the current context value</li>
+ * <li>{@link #execute(Object)} — action body, receives the current context
+ * value</li>
  * </ul>
  *
  * @param <I> marker interface that must be implemented by context objects
@@ -57,6 +59,8 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 	private ChangeListener<String> iconChangeListener = null;
 
 	/**
+	 * Creates a new action that watches the current context for {@code I} objects.
+	 *
 	 * @param markerInterface the {@code Class} token for {@code I}; used as the
 	 *                        context listener key — objects assignable to this type
 	 *                        will trigger the action
@@ -96,7 +100,8 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 			} else {
 				enabled.unbind();
 				enabled.set(true);
-				log.warn("Action '{}': getEnabledProperty() returned null for context value {} — action will remain permanently enabled.",
+				log.warn(
+						"Action '{}': getEnabledProperty() returned null for context value {} — action will remain permanently enabled.",
 						getKey(), newValue.getClass().getSimpleName());
 			}
 			updateIconSpec(newValue);
@@ -115,8 +120,9 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 	}
 
 	/**
-	 * Called after the context value changes. Override to react to value transitions
-	 * (e.g. mirror an observable sub-list). The base implementation does nothing.
+	 * Called after the context value changes. Override to react to value
+	 * transitions (e.g. mirror an observable sub-list). The base implementation
+	 * does nothing.
 	 *
 	 * <p>
 	 * <strong>Important:</strong> this method may be called from the
@@ -141,7 +147,8 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 	 * <p>
 	 * Call this as the <em>last</em> statement of any subclass constructor that
 	 * overrides {@link #onValueChanged} and accesses subclass-owned fields, so that
-	 * the initial context value is applied after those fields are fully initialized.
+	 * the initial context value is applied after those fields are fully
+	 * initialized.
 	 */
 	protected final void refreshContext() {
 		onValueChanged(null, currentValue);
@@ -197,18 +204,22 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 	protected abstract void execute(I current);
 
 	/**
-	 * Returns the base icon spec string for this action (may be {@code null}).
-	 * If {@link #getIconOverlay(Object)} also returns a property with a value,
-	 * the two specs are joined as {@code baseSpec#overlaySpec}.
+	 * Returns the base icon spec string for this action (may be {@code null}). If
+	 * {@link #getIconOverlay(Object)} also returns a property with a value, the two
+	 * specs are joined as {@code baseSpec#overlaySpec}.
+	 *
+	 * @return icon spec string, or {@code null}
 	 */
 	protected abstract String getBaseIconSpec();
 
 	/**
 	 * Extracts the enabled {@link BooleanProperty} from the given context value.
-	 * Return {@code null} to leave the action permanently enabled while the
-	 * context value is present.
+	 * Return {@code null} to leave the action permanently enabled while the context
+	 * value is present.
 	 *
 	 * @param current the current context value; never {@code null}
+	 *
+	 * @return the enabled property, or {@code null} for unconditionally enabled
 	 */
 	protected abstract BooleanProperty getEnabledProperty(I current);
 
@@ -218,6 +229,8 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 	 * {@code null}.
 	 *
 	 * @param current the current context value; never {@code null}
+	 *
+	 * @return the overlay property, or {@code null}
 	 */
 	protected StringProperty getIconOverlay(I current) {
 		return null;

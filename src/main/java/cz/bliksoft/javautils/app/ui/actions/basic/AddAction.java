@@ -5,8 +5,14 @@ import cz.bliksoft.javautils.app.ui.actions.interfaces.IAdd;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
 
+/**
+ * Context-aware action for {@link IAdd}: adds a new item to the current context
+ * object. Visible and enabled while an {@link IAdd} object is present in the
+ * context.
+ */
 public class AddAction extends BasicContextUIAction<IAdd> {
 
+	/** Creates the action and registers it with the current context. */
 	public AddAction() {
 		super(IAdd.class);
 	}

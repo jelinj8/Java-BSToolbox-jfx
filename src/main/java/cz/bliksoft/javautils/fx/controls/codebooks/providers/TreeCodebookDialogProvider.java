@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -29,7 +30,7 @@ import javafx.stage.Window;
 public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 
 	private final List<T> roots;
-	private String dialogTitle = "Select value";
+	private String dialogTitle = BSAppMessages.getString("Codebook.button.title");
 
 	/**
 	 * Single hidden root — its children become the top-level visible nodes.
@@ -56,8 +57,7 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 	public T identify(String selectorText, boolean refineIfNotUnique) {
 		if (selectorText == null || selectorText.isBlank())
 			return null;
-		List<T> matches = dataSource.get().stream()
-				.filter(item -> filter.test(item, selectorText))
+		List<T> matches = dataSource.get().stream().filter(item -> filter.test(item, selectorText))
 				.collect(Collectors.toList());
 		return matches.size() == 1 ? matches.get(0) : null;
 	}
@@ -75,7 +75,7 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		stage.setTitle(dialogTitle);
 
 		TextField filterField = new TextField();
-		filterField.setPromptText("Filter…");
+		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
 		TreeView<T> tree = new TreeView<>();
@@ -94,17 +94,15 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 			}
 		});
 
-		Button ok = new Button("OK");
-		Button cancel = new Button("Cancel");
+		Button ok = new Button(BSAppMessages.getString("button.ok"));
+		Button cancel = new Button(BSAppMessages.getString("button.cancel"));
 		ok.setDefaultButton(true);
 		cancel.setCancelButton(true);
 
-		BooleanBinding okDisabled = Bindings.createBooleanBinding(
-				() -> {
-					TreeItem<T> sel = tree.getSelectionModel().getSelectedItem();
-					return sel == null || sel.getValue() == null;
-				},
-				tree.getSelectionModel().selectedItemProperty());
+		BooleanBinding okDisabled = Bindings.createBooleanBinding(() -> {
+			TreeItem<T> sel = tree.getSelectionModel().getSelectedItem();
+			return sel == null || sel.getValue() == null;
+		}, tree.getSelectionModel().selectedItemProperty());
 		ok.disableProperty().bind(okDisabled);
 
 		Runnable confirmAndClose = () -> {

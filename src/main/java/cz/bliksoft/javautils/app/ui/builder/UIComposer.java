@@ -182,10 +182,11 @@ public final class UIComposer {
 		}
 	}
 
-//	private static UiProduct buildUIProduct(FileObject entry, UIBuildContext ctx) throws Exception {
-//		UiProduct result = build(entry, ctx);
-//		return result;
-//	}
+	// private static UiProduct buildUIProduct(FileObject entry, UIBuildContext ctx)
+	// throws Exception {
+	// UiProduct result = build(entry, ctx);
+	// return result;
+	// }
 
 	private static UiProduct loadUIProduct(FileObject file) {
 		Object o = FileLoader.loadFile(file);
@@ -309,12 +310,14 @@ public final class UIComposer {
 		}
 	}
 
-//	private static Node buildNode(FileObject entry, UIBuildContext ctx) throws Exception {
-//		UiProduct p = buildUIProduct(entry, ctx);
-//		if (p instanceof UiSceneProduct)
-//			throw new IllegalArgumentException("Nested Scene not allowed: " + entry.getName());
-//		return p.getNodeContext();
-//	}
+	// private static Node buildNode(FileObject entry, UIBuildContext ctx) throws
+	// Exception {
+	// UiProduct p = buildUIProduct(entry, ctx);
+	// if (p instanceof UiSceneProduct)
+	// throw new IllegalArgumentException("Nested Scene not allowed: " +
+	// entry.getName());
+	// return p.getNodeContext();
+	// }
 
 	private static void applySceneAttribs(Scene scene, FileObject definition) {
 		String styles = definition.getAttribute("stylesheets", null);
@@ -449,9 +452,9 @@ public final class UIComposer {
 			l.setGraphicTextGap(gap);
 	}
 
-//	public static void applyPane(Pane p, FileObject f) {
-//		// (nothing universal here beyond Region sizing, which Pane inherits)
-//	}
+	// public static void applyPane(Pane p, FileObject f) {
+	// // (nothing universal here beyond Region sizing, which Pane inherits)
+	// }
 
 	private static void attach(Node parent, FileObject parentEntry, Node child, FileObject childEntry,
 			UIBuildContext ctx) {
@@ -509,11 +512,11 @@ public final class UIComposer {
 		}
 
 		// Generic Pane: add child
-//		if (parent instanceof Pane p) {
-//			p.getChildren().add(child);
-//			applyCommonChildConstraints(parent, child, childEntry);
-//			return;
-//		}
+		// if (parent instanceof Pane p) {
+		// p.getChildren().add(child);
+		// applyCommonChildConstraints(parent, child, childEntry);
+		// return;
+		// }
 
 		// Group: add child
 		if (parent instanceof Group g) {

@@ -103,13 +103,13 @@ public class Rights {
 	public static Class<? extends Right> getByName(String cls) {
 		loadRights();
 
-//		Iterator<Class<? extends Right>> iterator = getFullSet().iterator();
-//		while (iterator.hasNext()) {
-//			Class<? extends Right> r = iterator.next();
-//			if (r.getName().equals(cls))
-//				return r;
-//		}
-//		return NotAllowedRight.class;
+		// Iterator<Class<? extends Right>> iterator = getFullSet().iterator();
+		// while (iterator.hasNext()) {
+		// Class<? extends Right> r = iterator.next();
+		// if (r.getName().equals(cls))
+		// return r;
+		// }
+		// return NotAllowedRight.class;
 
 		try {
 			Class<Right> c = (Class<Right>) Class.forName(cls);

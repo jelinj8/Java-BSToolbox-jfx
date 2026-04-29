@@ -9,7 +9,7 @@ public class LabelFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject file) {
 		Label result = new Label();
-		
+
 		return result;
 	}
 

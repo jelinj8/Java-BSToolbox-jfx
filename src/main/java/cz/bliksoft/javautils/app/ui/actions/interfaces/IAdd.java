@@ -5,6 +5,10 @@ import javafx.beans.property.StringProperty;
 
 public interface IAdd {
 	void add();
+
 	BooleanProperty getAddEnabled();
-	default StringProperty getAddIconProperty() { return null; }
+
+	default StringProperty getAddIconProperty() {
+		return null;
+	}
 }

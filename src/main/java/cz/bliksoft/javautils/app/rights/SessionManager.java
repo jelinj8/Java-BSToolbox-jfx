@@ -6,7 +6,7 @@ import java.util.Map;
 /**
  * base class to implement as session manager. It has to provide at least
  * UserInfo used to determine current user right set.
- * 
+ *
  * @author jakub
  *
  */

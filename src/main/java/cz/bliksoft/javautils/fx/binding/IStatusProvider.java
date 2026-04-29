@@ -3,8 +3,14 @@ package cz.bliksoft.javautils.fx.binding;
 import javafx.beans.property.Property;
 
 /**
- * provide item status
+ * Provides the lifecycle status of a bean as an observable {@link ObjectStatus}
+ * property.
  */
 public interface IStatusProvider {
-	public Property<ObjectStatus> getStatus();
+	/**
+	 * Returns the mutable status property of this bean.
+	 *
+	 * @return non-null property holding the current {@link ObjectStatus}
+	 */
+	Property<ObjectStatus> getStatus();
 }

@@ -17,7 +17,7 @@ import javafx.collections.ObservableList;
  * Context-aware action for {@link IAddOptions}.
  *
  * <p>
- * Maintains a stable {@link #getOptions()} list that mirrors the
+ * Maintains a stable {@link #getSubactions()} list that mirrors the
  * {@link IUIAction} options provided by the current context value. Bind a
  * toolbar dropdown to this list once — it tracks context changes automatically.
  *
@@ -32,6 +32,7 @@ public class AddSelectAction extends BasicContextUIAction<IAddOptions> implement
 	private final ObservableList<IUIAction> subactions = FXCollections.observableArrayList();
 	private ListChangeListener<IUIAction> sourceListener = null;
 
+	/** Creates the action and registers it with the current context. */
 	public AddSelectAction() {
 		super(IAddOptions.class);
 		// subactions is now initialized — replay the initial context value that

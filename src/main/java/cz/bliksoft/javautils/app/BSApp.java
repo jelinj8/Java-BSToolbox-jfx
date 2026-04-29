@@ -29,32 +29,52 @@ import javafx.application.Application;
 import javafx.application.Platform;
 
 /**
- * jádro frameworku
- * 
- * @author Jakub Jelínek
+ * Static hub providing access to application framework services: properties,
+ * session management, the JavaFX {@link Application} instance, and lifecycle
+ * methods.
  */
 public class BSApp {
 
 	static Logger log = null;
 
+	/** Folder name for core framework configuration resources. */
 	public static final String CORE_CONFIG_FOLDER = "core";
 
+	/**
+	 * Property key for the directory whose JARs are added to the classpath on
+	 * startup.
+	 */
 	public static final String PREF_LIBDIR = "libDir"; //$NON-NLS-1$
+	/** Default value for {@link #PREF_LIBDIR} when the property is absent. */
 	public static final String PREF_LIBDIR_DEFAULT = "lib"; //$NON-NLS-1$
+	/**
+	 * Property key for the directory whose JARs are loaded as modules on startup.
+	 */
 	public static final String PREF_MODULEDIR = "moduleDir"; //$NON-NLS-1$
+	/** Property key for a {@code ;}-separated list of module names to disable. */
 	public static final String PREF_DISABLED_MODULES = "DisabledModules"; //$NON-NLS-1$
+	/**
+	 * Property key for a {@code ;}-separated list of module names to enable
+	 * (default: {@code "*"}).
+	 */
 	public static final String PREF_ENABLED_MODULES = "EnabledModules"; //$NON-NLS-1$
 
 	private static Application jFXApp = null;
 
+	/**
+	 * Returns the running JavaFX application instance.
+	 *
+	 * @return the application instance, or {@code null} before {@link #init} is
+	 *         called
+	 */
 	public static Application getApplication() {
 		return jFXApp;
 	}
 
 	/**
-	 * zjišťuje zapisovatelnost globálního konfiguračního souboru
-	 * 
-	 * @return
+	 * Returns {@code true} if the global configuration file is writable.
+	 *
+	 * @return {@code true} if the global properties file can be saved
 	 */
 	public static boolean isGlobalPropertiesWritable() {
 		return getGlobalProperties().isWritable();
@@ -62,6 +82,12 @@ public class BSApp {
 
 	private static XmlProperties defaultGlobalProperties = null;
 
+	/**
+	 * Returns the global (application-level) properties, creating the backing file
+	 * lazily.
+	 *
+	 * @return the global {@link XmlProperties} instance; never {@code null}
+	 */
 	public static XmlProperties getGlobalProperties() {
 		if (defaultGlobalProperties == null) {
 			defaultGlobalProperties = new XmlProperties(
@@ -70,6 +96,10 @@ public class BSApp {
 		return defaultGlobalProperties;
 	}
 
+	/**
+	 * Discards the cached global properties so they will be re-read from disk on
+	 * the next access.
+	 */
 	public static void reloadGlobal() {
 		defaultGlobalProperties = null;
 		getGlobalProperties();
@@ -77,6 +107,11 @@ public class BSApp {
 
 	private static XmlProperties defaultLocalProperties = null;
 
+	/**
+	 * Returns the local (user-level) properties, creating the backing file lazily.
+	 *
+	 * @return the local {@link XmlProperties} instance; never {@code null}
+	 */
 	public static XmlProperties getLocalProperties() {
 		if (defaultLocalProperties == null) {
 			defaultLocalProperties = new XmlProperties(
@@ -85,6 +120,10 @@ public class BSApp {
 		return defaultLocalProperties;
 	}
 
+	/**
+	 * Discards the cached local properties so they will be re-read from disk on the
+	 * next access.
+	 */
 	public static void reloadLocal() {
 		defaultLocalProperties = null;
 		getLocalProperties();
@@ -92,6 +131,14 @@ public class BSApp {
 
 	private static final WeakHashMap<Object, HashMap<String, Object>> objectAttributes = new WeakHashMap<>();
 
+	/**
+	 * Returns an ad-hoc property attached to an arbitrary object.
+	 *
+	 * @param obj          the owner object
+	 * @param propertyName the property name
+	 *
+	 * @return the stored value, or {@code null} if not set
+	 */
 	public static Object getObjectProperty(Object obj, String propertyName) {
 		HashMap<String, Object> props = objectAttributes.get(obj);
 		if (props == null)
@@ -99,6 +146,14 @@ public class BSApp {
 		return props.get(propertyName);
 	}
 
+	/**
+	 * Attaches an ad-hoc property to an arbitrary object. Stored in a weak map so
+	 * the entry is automatically removed when {@code obj} becomes unreachable.
+	 *
+	 * @param obj          the owner object
+	 * @param propertyName the property name
+	 * @param value        the value to store
+	 */
 	public static void setObjectProperty(Object obj, String propertyName, Object value) {
 		HashMap<String, Object> props = objectAttributes.get(obj);
 		if (props == null) {
@@ -109,121 +164,134 @@ public class BSApp {
 	}
 
 	/**
-	 * načte hodnotu z properties, přednostně z lokálních, fallback na globální
-	 * 
-	 * @param key
-	 * @return
+	 * Returns a property value, preferring local properties over global ones.
+	 *
+	 * @param key the property key
+	 *
+	 * @return the value from local properties, or the global value if absent;
+	 *         {@code null} if not found in either
 	 */
 	public static Object getProperty(String key) {
 		return getLocalProperties().getOrDefault(key, getGlobalProperties().get(key));
 	}
 
 	/**
-	 * načte hodnotu z properties, přednostně z lokálních, fallback na globální,
-	 * potom na {@code defaultValue}
-	 * 
-	 * @param key
-	 * @param defaultValue
-	 * @return
+	 * Returns a property value, preferring local over global, falling back to
+	 * {@code defaultValue}.
+	 *
+	 * @param key          the property key
+	 * @param defaultValue fallback value when neither local nor global has the key
+	 *
+	 * @return the resolved value; never {@code null} if {@code defaultValue} is not
+	 *         {@code null}
 	 */
 	public static Object getProperty(String key, String defaultValue) {
 		return getLocalProperties().getOrDefault(key, getGlobalProperties().getOrDefault(key, defaultValue));
 	}
 
 	/**
-	 * nastavení hodnoty v local properties
-	 * 
-	 * @param key
-	 * @param value
-	 * @return
+	 * Stores a value in the local (user-level) properties.
+	 *
+	 * @param key   the property key
+	 * @param value the value to store
+	 *
+	 * @return the previous value for {@code key}, or {@code null}
 	 */
 	public static Object setLocalProperty(String key, String value) {
 		return getLocalProperties().put(key, value);
 	}
 
 	/**
-	 * odebrání hodnoty z local properties
-	 * 
-	 * @param key
-	 * @return
+	 * Removes a key from the local (user-level) properties.
+	 *
+	 * @param key the property key to remove
+	 *
+	 * @return the previous value, or {@code null}
 	 */
 	public static Object removeLocalProperty(String key) {
 		return getLocalProperties().remove(key);
 	}
 
 	/**
-	 * nastavení hodnoty v global properties
-	 * 
-	 * @param key
-	 * @param value
-	 * @return
+	 * Stores a value in the global (application-level) properties.
+	 *
+	 * @param key   the property key
+	 * @param value the value to store
+	 *
+	 * @return the previous value for {@code key}, or {@code null}
 	 */
 	public static Object setGlobalProperty(String key, String value) {
 		return getGlobalProperties().put(key, value);
 	}
 
 	/**
-	 * odebrání hodnoty z global properties
-	 * 
-	 * @param key
-	 * @return
+	 * Removes a key from the global (application-level) properties.
+	 *
+	 * @param key the property key to remove
+	 *
+	 * @return the previous value, or {@code null}
 	 */
 	public static Object removeGlobalProperty(String key) {
 		return getGlobalProperties().remove(key);
 	}
 
 	/**
-	 * nastavení hodnoty v local properties s klíčem doplněným o název
-	 * konfiguračního prostředí
-	 * 
-	 * @param key
-	 * @param value
-	 * @return
+	 * Stores a value in the local properties under the environment-qualified key
+	 * ({@code environmentName.key}).
+	 *
+	 * @param key   the base property key (without environment prefix)
+	 * @param value the value to store
+	 *
+	 * @return the previous value for the qualified key, or {@code null}
 	 */
 	public static Object setLocalEnvironmentProperty(String key, String value) {
 		return getLocalProperties().put(getEnvironmentName() + "." + key, value); //$NON-NLS-1$
 	}
 
 	/**
-	 * odebrání hodnoty z local properties s klíčem doplněným o název konfiguračního
-	 * prostředí
-	 * 
-	 * @param key
-	 * @return
+	 * Removes the environment-qualified key ({@code environmentName.key}) from the
+	 * local properties.
+	 *
+	 * @param key the base property key (without environment prefix)
+	 *
+	 * @return the previous value, or {@code null}
 	 */
 	public static Object removeLocalEnvironmentProperty(String key) {
 		return getLocalProperties().remove(getEnvironmentName() + "." + key); //$NON-NLS-1$
 	}
 
 	/**
-	 * nastavení hodnoty v globálních properties s klíčem doplněným o název
-	 * konfiguračního prostředí
-	 * 
-	 * @param key
-	 * @param value
-	 * @return
+	 * Stores a value in the global properties under the environment-qualified key
+	 * ({@code environmentName.key}).
+	 *
+	 * @param key   the base property key (without environment prefix)
+	 * @param value the value to store
+	 *
+	 * @return the previous value for the qualified key, or {@code null}
 	 */
 	public static Object setGlobalEnvironmentProperty(String key, String value) {
 		return getGlobalProperties().put(getEnvironmentName() + "." + key, value); //$NON-NLS-1$
 	}
 
 	/**
-	 * odebere z globálních properties hodnotu s klíčem doplněným o název
-	 * konfiguračního prostředí
-	 * 
-	 * @param key
-	 * @return
+	 * Removes the environment-qualified key ({@code environmentName.key}) from the
+	 * global properties.
+	 *
+	 * @param key the base property key (without environment prefix)
+	 *
+	 * @return the previous value, or {@code null}
 	 */
 	public static Object removeGlobalEnvironmentProperty(String key) {
 		return getGlobalProperties().remove(getEnvironmentName() + "." + key); //$NON-NLS-1$
 	}
 
 	/**
-	 * vrátí hodnotu property s klíčem doplněným o název prostředí - přednostně z
-	 * lokálního nastavení, fallback na globální, jinak null
-	 * 
-	 * @param key
-	 * @return
+	 * Returns an environment-qualified property value
+	 * ({@code environmentName.key}), preferring local properties over global ones.
+	 *
+	 * @param key the base property key (without environment prefix)
+	 *
+	 * @return the resolved value, or {@code null} if not found
 	 */
 	public static Object getEnvironmentProperty(String key) {
 		return getLocalProperties().getOrDefault(getEnvironmentName() + "." + key, //$NON-NLS-1$
@@ -231,12 +299,15 @@ public class BSApp {
 	}
 
 	/**
-	 * vrátí hodnotu property s klíčem doplněným o název prostředí - přednostně z
-	 * lokálního nastavení, fallback na globální, jinak {@code defaultValue}
-	 * 
-	 * @param key
-	 * @param defaultValue
-	 * @return
+	 * Returns an environment-qualified property value
+	 * ({@code environmentName.key}), preferring local over global, falling back to
+	 * {@code defaultValue}.
+	 *
+	 * @param key          the base property key (without environment prefix)
+	 * @param defaultValue fallback value when neither source has the key
+	 *
+	 * @return the resolved value; never {@code null} if {@code defaultValue} is not
+	 *         {@code null}
 	 */
 	public static Object getEnvironmentProperty(String key, String defaultValue) {
 		return getLocalProperties().getOrDefault(getEnvironmentName() + "." + key, //$NON-NLS-1$
@@ -244,56 +315,73 @@ public class BSApp {
 	}
 
 	/**
-	 * uloží lokální properties do souboru
-	 * 
-	 * @throws ViewableException
+	 * Saves the local properties to disk.
+	 *
+	 * @throws ViewableException if saving fails
 	 */
 	public static void saveLocalProperties() throws ViewableException {
 		getLocalProperties().save();
 	}
 
 	/**
-	 * pokud je soubor s globálním nastavením zapisovatelný, uloží ho, jinak oznámí
-	 * chybu
-	 * 
-	 * @throws ViewableException
+	 * Saves the global properties to disk if the file is writable; logs an error
+	 * otherwise.
+	 *
+	 * @throws ViewableException if saving fails
 	 */
 	public static void saveGlobalProperties() throws ViewableException {
 		if (getGlobalProperties().isWritable())
 			getGlobalProperties().save();
 		else {
 			log.error("Can't write global properties to " + getGlobalProperties().getPath());
-//			throw new ViewableException();
+			// throw new ViewableException();
 		}
 	}
 
-	/**
-	 * název konfiguračního prostředí
-	 */
 	private static String environmentName = "default"; //$NON-NLS-1$
 
 	/**
-	 * název konfiguračního prostředí
-	 * 
-	 * @return
+	 * Returns the active configuration environment name (default:
+	 * {@code "default"}). The value is read from the {@code app.configname} global
+	 * property.
+	 *
+	 * @return the environment name; never {@code null}
 	 */
 	public static String getEnvironmentName() {
 		return environmentName;
 	}
 
-//	private static String appName = null;
+	// private static String appName = null;
 
+	/**
+	 * Sets the application name used to resolve the user settings directory.
+	 *
+	 * @param name the application name
+	 *
+	 * @throws Exception if setting the name fails
+	 */
 	public static void setAppName(String name) throws Exception {
 		EnvironmentUtils.setAppName(name);
 		System.setProperty("appName", name);
 	}
 
+	/**
+	 * Returns the application name.
+	 *
+	 * @return the application name; never {@code null}
+	 */
 	public static String getAppName() {
 		return EnvironmentUtils.getAppName();
 	}
 
 	private static File userAppdir = null;
 
+	/**
+	 * Returns the application's settings directory ({@code APPDATA/.{appName}}),
+	 * creating it if necessary.
+	 *
+	 * @return the settings directory; never {@code null}
+	 */
 	public static File getUserAppDir() {
 		if (userAppdir == null)
 			userAppdir = new File(Constants.USER_APPDIR, "." + EnvironmentUtils.getAppName());
@@ -309,6 +397,12 @@ public class BSApp {
 
 	private static File userHomedir = null;
 
+	/**
+	 * Returns the user's home directory for this application
+	 * ({@code ~/.{appName}}), creating it if necessary.
+	 *
+	 * @return the user home directory; never {@code null}
+	 */
 	public static File getUserHomeDir() {
 		if (userHomedir == null)
 			userHomedir = new File(Constants.USER_HOMEDIR, "." + EnvironmentUtils.getAppName());
@@ -323,9 +417,15 @@ public class BSApp {
 	}
 
 	/**
-	 * inicializace aplikačního frameworku
-	 * 
-	 * @throws Exception
+	 * Initializes the application framework.
+	 *
+	 * <p>
+	 * Loads and activates all framework modules via {@link Modules}, configures
+	 * classpath extensions, sets the locale, and installs the session manager. Must
+	 * be called once from the JavaFX {@link Application#start} method before any UI
+	 * is shown.
+	 *
+	 * @param app the running JavaFX application instance
 	 */
 	public static void init(Application app) {
 		jFXApp = app;
@@ -432,17 +532,14 @@ public class BSApp {
 	}
 
 	/**
-	 * vyvolá pokus o ukončení aplikace
-	 * 
-	 * @return úspěšnost
+	 * Requests application close by firing a {@code TryCloseEvent}. Listeners may
+	 * veto the close (e.g. to prompt for unsaved changes).
 	 */
 	public static void tryClose() {
 		TryCloseEvent.fire("Requested by framework close()");
 	}
 
-	/**
-	 * úklid systému po dokončení práce, dostupnost frameworku už není zaručená
-	 */
+	/** Cleans up framework resources after the application has finished. */
 	private static void close() {
 		log.info("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"); //$NON-NLS-1$
 		log.info("Starting modules cleanup before closing."); //$NON-NLS-1$
@@ -453,10 +550,24 @@ public class BSApp {
 
 	private static SessionManager sessionManager = null;
 
+	/**
+	 * Returns the active session manager.
+	 *
+	 * @return the current {@link SessionManager}; may be {@code null} before
+	 *         {@link #init}
+	 */
 	public static SessionManager getSessionManager() {
 		return sessionManager;
 	}
 
+	/**
+	 * Sets the session manager. Can only be called once, before
+	 * {@link #init(Application)}.
+	 *
+	 * @param sessionManager the session manager to install
+	 *
+	 * @throws SecurityException if a session manager is already set
+	 */
 	public static void setSessionManager(SessionManager sessionManager) {
 		if (BSApp.sessionManager != null) {
 			throw new SecurityException(

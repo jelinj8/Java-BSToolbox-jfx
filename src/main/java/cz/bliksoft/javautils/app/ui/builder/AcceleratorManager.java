@@ -9,7 +9,24 @@ import java.util.Map;
 
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 
+/**
+ * Manages keyboard accelerators for {@link IUIAction} instances on a
+ * {@link Scene}.
+ *
+ * <p>
+ * Each bound action gets its accelerator installed in the scene's accelerator
+ * map. The binding respects the action's enabled and visible properties — the
+ * shortcut only fires when both are {@code true}. Accelerator changes are
+ * tracked live via the action's {@code acceleratorProperty()}.
+ */
 public final class AcceleratorManager {
+
+	/**
+	 * Creates an unattached accelerator manager; call {@link #attach(Scene)} before
+	 * binding actions.
+	 */
+	public AcceleratorManager() {
+	}
 
 	private Scene scene;
 
@@ -29,12 +46,23 @@ public final class AcceleratorManager {
 	// One binding per IUIAction instance
 	private final Map<IUIAction, Binding> bindings = new IdentityHashMap<>();
 
+	/**
+	 * Attaches this manager to a scene and (re-)installs all existing bindings.
+	 *
+	 * @param scene the scene whose accelerator map will be managed
+	 */
 	public void attach(Scene scene) {
 		this.scene = scene;
 		// Re-apply any existing action bindings to the new scene
 		bindings.forEach((a, b) -> installOrUpdate(a, b));
 	}
 
+	/**
+	 * Registers an action and installs its accelerator in the current scene. Does
+	 * nothing if the action has no {@code acceleratorProperty()}.
+	 *
+	 * @param action the action to register
+	 */
 	public void bind(IUIAction action) {
 		if (action.acceleratorProperty() == null)
 			return;
@@ -57,6 +85,11 @@ public final class AcceleratorManager {
 		installOrUpdate(action, binding);
 	}
 
+	/**
+	 * Removes all accelerator bindings for the given action.
+	 *
+	 * @param action the action to deregister
+	 */
 	public void unbind(IUIAction action) {
 		Binding b = bindings.remove(action);
 		if (b == null)

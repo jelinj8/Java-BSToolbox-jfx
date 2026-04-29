@@ -125,11 +125,12 @@ public class PropertyAnimator<T> {
 
 		Runnable r = () -> {
 			setter.accept(value);
-//			try {
-//				setter.invoke(subject, value);
-//			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-//				log.warn("Unable to set value.", e);
-//			}
+			// try {
+			// setter.invoke(subject, value);
+			// } catch (IllegalAccessException | IllegalArgumentException |
+			// InvocationTargetException e) {
+			// log.warn("Unable to set value.", e);
+			// }
 		};
 
 		// Ensure property changes happen on the JavaFX Application Thread.

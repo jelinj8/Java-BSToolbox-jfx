@@ -6,15 +6,39 @@
 
 	<groupId>cz.bliksoft.java</groupId>
 	<artifactId>common-java-utils-jfx</artifactId>
-	<version>0.1-SNAPSHOT</version>
+	<version>${revision}</version>
 	<name>BSToolbox-jfx</name>
+	<description>JavaFX application framework providing reusable infrastructure for OpenJFX GUI applications: module lifecycle, session/rights management, declarative UI building, action binding, observable bean patterns and UI state persistence.</description>
+	<url>https://github.com/jelinj8/Java-BSToolbox-jfx</url>
 	<packaging>jar</packaging>
 
+	<licenses>
+		<license>
+			<name>GNU Lesser General Public License v2.1</name>
+			<url>https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>jelinj8</id>
+			<name>Jakub Jelínek</name>
+			<email>jakub.jelinek@gmail.com</email>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:https://github.com/jelinj8/Java-BSToolbox-jfx.git</connection>
+		<developerConnection>scm:git:https://github.com/jelinj8/Java-BSToolbox-jfx.git</developerConnection>
+		<url>https://github.com/jelinj8/Java-BSToolbox-jfx</url>
+	</scm>
+
 	<properties>
+		<revision>0.1-SNAPSHOT</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>21</maven.compiler.release>
-		<javafx.version>21.0.9</javafx.version>
-		<main.class>cz.bliksoft.javautils.fx.test.FxTests</main.class>
+		<javafx.version>21.0.11</javafx.version>
 	</properties>
 
 	<repositories>
@@ -26,54 +50,79 @@
 
 	<profiles>
 		<profile>
-			<id>windows</id>
-			<activation>
-				<os>
-					<family>Windows</family>
-				</os>
-			</activation>
-			<properties>
-				<javafx.platform>win</javafx.platform>
-			</properties>
-		</profile>
-
-		<profile>
-			<id>linux</id>
-			<activation>
-				<os>
-					<family>unix</family>
-				</os>
-			</activation>
-			<properties>
-				<javafx.platform>linux</javafx.platform>
-			</properties>
-		</profile>
-
-		<profile>
-			<id>mac</id>
-			<activation>
-				<os>
-					<family>mac</family>
-				</os>
-			</activation>
-			<properties>
-				<javafx.platform>mac</javafx.platform>
-			</properties>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<version>3.4.0</version>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<phase>package</phase>
+								<goals>
+									<goal>jar-no-fork</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>3.12.0</version>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<phase>package</phase>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>3.2.8</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>0.10.0</version>
+						<extensions>true</extensions>
+						<configuration>
+							<publishingServerId>central</publishingServerId>
+							<autoPublish>true</autoPublish>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
 		</profile>
 	</profiles>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>dependency-management</artifactId>
-				<version>1.21.1-SNAPSHOT</version>
+				<version>1.21.1</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>common-java-utils</artifactId>
-				<version>0.6-SNAPSHOT</version>
+				<version>0.6</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -104,27 +153,23 @@
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-controls</artifactId>
 			<version>${javafx.version}</version>
-			<classifier>${javafx.platform}</classifier>
 		</dependency>
 
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-swing</artifactId>
 			<version>${javafx.version}</version>
-			<classifier>${javafx.platform}</classifier>
 		</dependency>
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-web</artifactId>
 			<version>${javafx.version}</version>
-			<classifier>${javafx.platform}</classifier>
 		</dependency>
 
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-fxml</artifactId>
 			<version>${javafx.version}</version>
-			<classifier>${javafx.platform}</classifier>
 		</dependency>
 
 		<dependency>
@@ -151,7 +196,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.13.0</version>
+				<version>3.15.0</version>
 				<configuration>
 					<release>${maven.compiler.release}</release>
 				</configuration>
@@ -159,12 +204,37 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.5.4</version>
+				<version>3.5.5</version>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>flatten-maven-plugin</artifactId>
+				<version>1.7.3</version>
+				<configuration>
+					<updatePomFile>true</updatePomFile>
+					<flattenMode>resolveCiFriendliesOnly</flattenMode>
+				</configuration>
+				<executions>
+					<execution>
+						<id>flatten</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>flatten</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>flatten.clean</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>io.github.git-commit-id</groupId>
 				<artifactId>git-commit-id-maven-plugin</artifactId>
-				<version>9.0.2</version>
+				<version>9.2.0</version>
 
 				<executions>
 					<execution>
@@ -207,7 +277,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>3.5.0</version>
+				<version>3.6.1</version>
 				<executions>
 					<execution>
 						<id>add-generated-sources</id>
@@ -227,7 +297,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>templating-maven-plugin</artifactId>
-				<version>3.0.0</version>
+				<version>3.1.0</version>
 				<executions>
 					<execution>
 						<goals>
@@ -239,6 +309,15 @@
 				<configuration>
 					<outputDirectory>
 						${project.build.directory}/generated-sources/versioninfo</outputDirectory>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>net.revelc.code.formatter</groupId>
+				<artifactId>formatter-maven-plugin</artifactId>
+				<version>2.24.1</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+					<configFile>src/formatter/EclipseFormatter.xml</configFile>
 				</configuration>
 			</plugin>
 		</plugins>

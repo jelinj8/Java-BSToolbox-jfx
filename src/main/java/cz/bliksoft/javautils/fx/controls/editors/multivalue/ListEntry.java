@@ -5,9 +5,9 @@ import javafx.beans.property.SimpleObjectProperty;
 
 final class ListEntry<V> {
 
-    final ObjectProperty<V> value = new SimpleObjectProperty<>();
+	final ObjectProperty<V> value = new SimpleObjectProperty<>();
 
-    ListEntry(V v) {
-        value.set(v);
-    }
+	ListEntry(V v) {
+		value.set(v);
+	}
 }

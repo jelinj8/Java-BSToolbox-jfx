@@ -23,7 +23,7 @@ public class TextFileLoader extends FileLoader {
 		Font f = FxAttrHelper.getFont(file);
 		if (f != null)
 			txt.setFont(f);
-		
+
 		return txt;
 	}
 

@@ -14,11 +14,11 @@ public final class StageAutoSizer {
 	}
 
 	private static Runnable autosizer = null;
-	
+
 	public static void autoSize() {
 		autosizer.run();
 	}
-	
+
 	/**
 	 * Updates stage minWidth/minHeight so the scene content is not clipped. Call
 	 * once after you set the scene. Works best after stage.show().

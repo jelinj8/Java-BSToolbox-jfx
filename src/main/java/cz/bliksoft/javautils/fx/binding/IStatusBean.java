@@ -53,8 +53,20 @@ public interface IStatusBean extends IStatusProvider {
 		}
 	}
 
+	/**
+	 * Enables or disables status tracking. While {@code false} property changes do
+	 * not transition the bean to {@code MODIFIED}.
+	 *
+	 * @param watch {@code true} to start tracking changes
+	 */
 	void setWatched(boolean watch);
 
+	/**
+	 * Returns {@code true} if this bean is currently tracking property changes for
+	 * status transitions.
+	 *
+	 * @return {@code true} if change tracking is active
+	 */
 	boolean isWatched();
 
 }

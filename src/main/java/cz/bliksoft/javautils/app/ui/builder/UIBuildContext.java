@@ -12,6 +12,6 @@ public class UIBuildContext {
 	public AcceleratorManager accelerators() {
 		return accelerators;
 	}
-	
+
 	public FileObject currentBuildObject = null;
 }

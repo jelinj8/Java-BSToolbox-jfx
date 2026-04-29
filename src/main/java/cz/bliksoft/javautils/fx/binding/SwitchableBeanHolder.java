@@ -350,6 +350,8 @@ public abstract class SwitchableBeanHolder<M> implements AutoCloseable {
 	 * A tiny abstraction so we can have ONE primitive rule instead of 5
 	 * near-duplicates. Implemented by adapters for each primitive property type
 	 * below.
+	 *
+	 * @param <P> the self-type of the property adapter
 	 */
 	protected interface PropertyLike<P> {
 		void bindBidirectional(P other);

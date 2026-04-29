@@ -7,6 +7,10 @@ import javafx.collections.ObservableList;
 
 public interface IAddOptions {
 	ObservableList<IUIAction> getOptions();
+
 	BooleanProperty getAddSelectEnabled();
-	default StringProperty getAddSelectIconProperty() { return null; }
+
+	default StringProperty getAddSelectIconProperty() {
+		return null;
+	}
 }

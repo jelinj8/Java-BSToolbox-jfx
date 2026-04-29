@@ -6,7 +6,16 @@ import cz.bliksoft.javautils.modules.ModuleBase;
 import cz.bliksoft.javautils.xmlfilesystem.singletons.Services;
 import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
 
+/**
+ * Core framework module loaded at priority -10000 (before all application
+ * modules). Registers the default CSS stylesheet, loads services, and loads
+ * singletons.
+ */
 public class BaseAppModule extends ModuleBase {
+
+	/** Creates the base application module. */
+	public BaseAppModule() {
+	}
 
 	@Override
 	public String getModuleName() {

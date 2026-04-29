@@ -45,13 +45,13 @@ public class CodebookPopup extends PopupControl {
 			}
 
 			// Add popup-specific stylesheet
-//	        var css = getClass().getResource("/css/icon-text-cell.css");
-//	        if (css != null) {
-//	            String u = css.toExternalForm();
-//	            if (!scene.getStylesheets().contains(u)) {
-//	                scene.getStylesheets().add(u);
-//	            }
-//	        }
+			// var css = getClass().getResource("/css/icon-text-cell.css");
+			// if (css != null) {
+			// String u = css.toExternalForm();
+			// if (!scene.getStylesheets().contains(u)) {
+			// scene.getStylesheets().add(u);
+			// }
+			// }
 
 			// Focus: prefer text input, then table, then list, then root
 			Platform.runLater(() -> {
