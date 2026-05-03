@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.codebooks;
 import java.util.Objects;
 
 import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -62,6 +63,11 @@ public class CodebookField<T> extends HBox {
 				if (locked)
 					unlock();
 			}
+		});
+
+		textField.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
+			if (isFocused && locked)
+				Platform.runLater(textField::deselect);
 		});
 
 		selectButton.setOnAction(e -> identifyOrSelect());

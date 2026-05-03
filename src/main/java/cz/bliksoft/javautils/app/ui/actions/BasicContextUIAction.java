@@ -100,7 +100,7 @@ public abstract class BasicContextUIAction<I> implements IUIAction {
 			} else {
 				enabled.unbind();
 				enabled.set(true);
-				log.warn(
+				log.debug(
 						"Action '{}': getEnabledProperty() returned null for context value {} — action will remain permanently enabled.",
 						getKey(), newValue.getClass().getSimpleName());
 			}

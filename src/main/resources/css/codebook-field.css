@@ -39,6 +39,10 @@
     -fx-font-weight: bold;
 }
 
+.codebook-field.locked .text-field:focused {
+    -fx-border-color: transparent transparent -theme-accent transparent;
+}
+
 /* ============================= */
 /* Buttons                       */
 /* ============================= */
