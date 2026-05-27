@@ -6,47 +6,12 @@ Custom controls and utilities provided by the framework.
 
 ## ImageUtils — icon spec system
 
-`ImageUtils` resolves a string *spec* into a JavaFX `Image` or `Node`. All
-results are cached per spec string. Use it whenever you need an icon.
+`cz.bliksoft.javautils.fx.tools.ImageUtils` — see **[ImageUtils.md](ImageUtils.md)** for full documentation.
 
 ```java
-Image img  = ImageUtils.getImage("/icons/save.png");
-Node  node = ImageUtils.getIconNode("/icons/save.png");    // ImageView or SVG node
-Node  view = ImageUtils.getIconView("/icons/save.png");    // always ImageView
-```
-
-### Spec formats
-
-| Format | Example | Notes |
-|---|---|---|
-| Relative path | `save.png` | Relative to the branding images root |
-| Absolute classpath | `/icons/save.png` | Classpath-absolute |
-| Filesystem path | `[F]:/fs/path/icon.svg` | XmlFilesystem-resolved |
-| Inline SVG path | `[P]:M0 0 L10 10|16|16|1.0|` | SVG path data \| w \| h \| scale \| CSS |
-| Inline SVG rasterised | `[PI]:M0 0 L10 10|16|16|1.0|` | Same but rasterised to PNG |
-| Scale placeholder | `icon${scale}x.png` | Replaced with `1`, `2`, or `3` based on DPI |
-
-### Overlay chains
-
-Multiple specs separated by `#` are composited. Alignment tokens control where
-each overlay is placed:
-
-```
-/icons/base.png#TL:/icons/badge.png#BR:/icons/lock.png
-```
-
-Tokens: `TL` (top-left), `TR` (top-right), `BL` (bottom-left), `BR` (bottom-right),
-`C` (center). No token means the overlay covers the full base.
-
-### Processing chains
-
-Specs separated by `##` form a sequential processing pipeline (e.g. scale, tint).
-
-### Configuration
-
-```java
-ImageUtils.setBrandingImagesRoot("/com/example/images");  // root for relative paths
-ImageUtils.setScale(2.0f);   // hint for ${scale} substitution
+Image img  = ImageUtils.getImage("save_16.png");
+ImageView  iv   = ImageUtils.getIconView("save.svg", 24.0);
+Node       node = ImageUtils.getIconNode("[P]:M0 0 L10 10|16|16");  // SVGPath
 ```
 
 ---
@@ -208,15 +173,4 @@ captured.
 
 ## AnyImageLoader
 
-`AnyImageLoader` extends `ImageLoader` (from BSToolbox) and delegates to
-`ImageUtils`, providing the full spec system for contexts that use the generic
-`ImageLoader.setDefault()` API.
-
-```java
-// Installed automatically by BSApp.init():
-ImageLoader.setDefault(new AnyImageLoader());
-```
-
-After installation, any code calling `ImageLoader.getDefault().getImage(spec)`
-benefits from the full `ImageUtils` spec system including overlays, scale
-substitution, and SVG support.
+`cz.bliksoft.javautils.fx.controls.images.AnyImageLoader` bridges `ImageUtils` to the BSToolbox `ImageLoader` SPI. Installed automatically by `BSApp.init()`. See [ImageUtils.md](ImageUtils.md#anyimageloader).

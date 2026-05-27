@@ -1,4 +1,4 @@
-package cz.bliksoft.javautils.fx.controls.images;
+package cz.bliksoft.javautils.fx.tools;
 
 import java.io.File;
 import java.io.FileInputStream;
