@@ -1,6 +1,6 @@
-package cz.bliksoft.javautils.app.rights;
+package cz.bliksoft.javautils.app.permissions;
 
-public class NotAllowedRight extends Right {
+public class NotAllowedPermission extends Permission {
 
 	@Override
 	public String getName() {

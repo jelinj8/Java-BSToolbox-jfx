@@ -1,15 +1,8 @@
-package cz.bliksoft.javautils.app.rights;
+package cz.bliksoft.javautils.app.permissions;
 
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * base class to implement as session manager. It has to provide at least
- * UserInfo used to determine current user right set.
- *
- * @author jakub
- *
- */
 public abstract class SessionManager {
 
 	public abstract UserInfo getUserInfo();

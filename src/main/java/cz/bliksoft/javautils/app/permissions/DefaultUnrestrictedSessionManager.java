@@ -1,4 +1,4 @@
-package cz.bliksoft.javautils.app.rights;
+package cz.bliksoft.javautils.app.permissions;
 
 public class DefaultUnrestrictedSessionManager extends SessionManager {
 

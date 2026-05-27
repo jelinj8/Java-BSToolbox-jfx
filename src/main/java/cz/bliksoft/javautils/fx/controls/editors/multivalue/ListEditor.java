@@ -182,8 +182,9 @@ public class ListEditor<V> extends VBox {
 	// ---- Public API ----
 
 	/**
-	 * When set, the add button calls this supplier instead of inserting a null entry.
-	 * Return {@code null} from the supplier to cancel the add (nothing is inserted).
+	 * When set, the add button calls this supplier instead of inserting a null
+	 * entry. Return {@code null} from the supplier to cancel the add (nothing is
+	 * inserted).
 	 */
 	public void setAddItemSupplier(Supplier<V> supplier) {
 		addItemSupplier = supplier;

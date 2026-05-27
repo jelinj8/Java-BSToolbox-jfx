@@ -23,45 +23,58 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 
 /**
- * A {@link TabPane} backed by a {@link MapContextHolder}: each tab owns its
- * own {@link Context}, and switching tabs changes the active context in the
+ * A {@link TabPane} backed by a {@link MapContextHolder}: each tab owns its own
+ * {@link Context}, and switching tabs changes the active context in the
  * hierarchy so that context-aware actions automatically track the selected tab.
  *
- * <p>Usage mirrors {@code pushUI}/{@code popUI}:
+ * <p>
+ * Usage mirrors {@code pushUI}/{@code popUI}:
+ *
  * <pre>
- *   ContextTabbedPane pane = new ContextTabbedPane();
- *   pane.addContextTab("Editor 1", editor1Node);
- *   pane.addContextTab("Editor 2", editor2Node);
- *   BSAppUI.pushUI(pane);
+ * ContextTabbedPane pane = new ContextTabbedPane();
+ * pane.addContextTab("Editor 1", editor1Node);
+ * pane.addContextTab("Editor 2", editor2Node);
+ * BSAppUI.pushUI(pane);
  * </pre>
  *
- * <p>The pane registers itself as {@link IClose} in the MapContextHolder so
+ * <p>
+ * The pane registers itself as {@link IClose} in the MapContextHolder so
  * {@code CloseAction} closes the active tab rather than propagating to any
  * parent close handler.
  *
- * <p>A tab's title and graphic can be driven reactively by the tab's context:
+ * <p>
+ * A tab's title and graphic can be driven reactively by the tab's context:
  * <ul>
- *   <li>{@link #CTX_TAB_TITLE} — {@code String} (static) or
- *       {@code StringProperty} (reactive); falls back to the default title
- *       passed to {@code addContextTab}</li>
- *   <li>{@link #CTX_TAB_GRAPHIC} — {@code Node}, {@code ObjectProperty<Node>},
- *       {@code String} (icon spec), or {@code StringProperty} (reactive spec)</li>
+ * <li>{@link #CTX_TAB_TITLE} — {@code String} (static) or
+ * {@code StringProperty} (reactive); falls back to the default title passed to
+ * {@code addContextTab}</li>
+ * <li>{@link #CTX_TAB_GRAPHIC} — {@code Node}, {@code ObjectProperty<Node>},
+ * {@code String} (icon spec), or {@code StringProperty} (reactive spec)</li>
  * </ul>
  */
 public class ContextTabbedPane extends TabPane implements IContextProvider, IStackedComponent {
 
 	private static final Logger log = LogManager.getLogger();
 
-	/** Context key for the tab header title. Value: {@code String} or {@code StringProperty}. */
-	public static final String CTX_TAB_TITLE   = "TabTitle";
+	/**
+	 * Context key for the tab header title. Value: {@code String} or
+	 * {@code StringProperty}.
+	 */
+	public static final String CTX_TAB_TITLE = "TabTitle";
 
-	/** Context key for the tab header graphic. Value: {@code Node}, {@code ObjectProperty<Node>},
-	 *  {@code String} (icon spec), or {@code StringProperty} (reactive icon spec). */
+	/**
+	 * Context key for the tab header graphic. Value: {@code Node},
+	 * {@code ObjectProperty<Node>}, {@code String} (icon spec), or
+	 * {@code StringProperty} (reactive icon spec).
+	 */
 	public static final String CTX_TAB_GRAPHIC = "TabGraphic";
 
-	/** Context key for the active tab's content node — scoped to this pane's context,
-	 *  intentionally separate from {@link BSAppUI#CTX_MAIN_COMPONENT} so that tab
-	 *  selection does not propagate up and replace the pane in BSAppUI's main area. */
+	/**
+	 * Context key for the active tab's content node — scoped to this pane's
+	 * context, intentionally separate from {@link BSAppUI#CTX_MAIN_COMPONENT} so
+	 * that tab selection does not propagate up and replace the pane in BSAppUI's
+	 * main area.
+	 */
 	public static final String CTX_TAB_CONTENT = "TabContent";
 
 	private final MapContextHolder<Tab, Context> contextHolder = new MapContextHolder<>("ContextTabbedPane");
@@ -175,9 +188,9 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 
 		// Graphic: Node, ObjectProperty<Node>, String spec, or StringProperty spec
 		tabCtx.addContextListener(new AbstractContextListener<Object>(CTX_TAB_GRAPHIC, "tab graphic: " + defaultTitle) {
-			private boolean graphicBound           = false;
+			private boolean graphicBound = false;
 			private ChangeListener<String> specListener = null;
-			private StringProperty         specProperty = null;
+			private StringProperty specProperty = null;
 
 			@Override
 			public void fired(ContextChangedEvent<Object> event) {

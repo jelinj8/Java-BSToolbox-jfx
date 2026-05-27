@@ -1,6 +1,6 @@
 package cz.bliksoft.javautils.app.events;
 
-import cz.bliksoft.javautils.app.rights.UserInfo;
+import cz.bliksoft.javautils.app.permissions.UserInfo;
 import cz.bliksoft.javautils.context.Context;
 
 public class UserInfoChanged {

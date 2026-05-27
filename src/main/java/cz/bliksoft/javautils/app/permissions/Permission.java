@@ -1,14 +1,14 @@
-package cz.bliksoft.javautils.app.rights;
+package cz.bliksoft.javautils.app.permissions;
 
 import cz.bliksoft.javautils.app.BSAppMessages;
 
-public abstract class Right {
+public abstract class Permission {
 	public abstract String getName();
 
 	public abstract String getAlias();
 
 	public String getCategory() {
-		return BSAppMessages.getString("Rights.UNCATEGORIZED");
+		return BSAppMessages.getString("Permissions.UNCATEGORIZED");
 	}
 
 	public String getShortDescription() {
