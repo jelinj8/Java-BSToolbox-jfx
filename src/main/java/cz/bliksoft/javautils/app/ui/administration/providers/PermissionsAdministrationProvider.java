@@ -41,6 +41,7 @@ public class PermissionsAdministrationProvider implements IAdministrationProvide
 		return component;
 	}
 
+	@SuppressWarnings("unchecked")
 	private Node buildComponent() {
 		TableView<Permission> table = new TableView<>();
 		table.setEditable(false);

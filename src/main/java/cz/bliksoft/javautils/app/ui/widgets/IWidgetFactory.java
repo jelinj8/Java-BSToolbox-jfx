@@ -4,8 +4,8 @@ package cz.bliksoft.javautils.app.ui.widgets;
  * Factory metadata and instantiation contract for a widget type.
  *
  * <p>
- * Register an implementation by adding a {@code <file>} entry whose name is
- * the fully-qualified class name under {@code core/widgets} in any module's
+ * Register an implementation by adding a {@code <file>} entry whose name is the
+ * fully-qualified class name under {@code core/widgets} in any module's
  * XmlFilesystem XML:
  *
  * <pre>{@code

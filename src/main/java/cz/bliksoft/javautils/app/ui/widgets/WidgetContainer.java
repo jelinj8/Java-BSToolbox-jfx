@@ -302,8 +302,7 @@ public class WidgetContainer extends StackPane {
 	}
 
 	private boolean bothKeysSet() {
-		return placementGroup != null && !placementGroup.isBlank()
-				&& placementID != null && !placementID.isBlank();
+		return placementGroup != null && !placementGroup.isBlank() && placementID != null && !placementID.isBlank();
 	}
 
 	private IWidgetFactory findFactory(String name) {

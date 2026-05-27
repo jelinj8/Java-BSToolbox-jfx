@@ -11,7 +11,10 @@ import javafx.scene.control.ContextMenu;
  */
 public interface IWidget {
 
-	/** Returns the widget's display title (shown in containers that have a title bar). */
+	/**
+	 * Returns the widget's display title (shown in containers that have a title
+	 * bar).
+	 */
 	String getTitle();
 
 	/** Returns the JavaFX node that represents this widget's visual content. */
