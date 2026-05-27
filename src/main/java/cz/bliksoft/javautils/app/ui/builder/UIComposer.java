@@ -11,7 +11,7 @@ import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.IUIActionWithSubactions;
 import cz.bliksoft.javautils.app.ui.actions.UIActions;
 import cz.bliksoft.javautils.exceptions.InitializationException;
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.xmlfilesystem.FileLoader;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import javafx.geometry.HPos;

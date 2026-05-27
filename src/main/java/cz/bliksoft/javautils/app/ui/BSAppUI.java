@@ -21,7 +21,7 @@ import cz.bliksoft.javautils.context.ContextSearchResult;
 import cz.bliksoft.javautils.context.IContextProvider;
 import cz.bliksoft.javautils.context.holders.StackedContextHolder;
 import cz.bliksoft.javautils.fx.VersionInfo;
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.fx.tools.Styling;
 import cz.bliksoft.javautils.modules.ModuleBase;
 import cz.bliksoft.javautils.modules.Modules;

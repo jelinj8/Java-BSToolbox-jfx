@@ -11,7 +11,7 @@ import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.ContextChangedEvent;
 import cz.bliksoft.javautils.context.IContextProvider;
 import cz.bliksoft.javautils.context.holders.MapContextHolder;
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;

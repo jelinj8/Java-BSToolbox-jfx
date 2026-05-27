@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 
 import cz.bliksoft.javautils.fx.controls.codebooks.ICodebookProvider;
 import cz.bliksoft.javautils.fx.controls.codebooks.IFilterableSelector;
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;

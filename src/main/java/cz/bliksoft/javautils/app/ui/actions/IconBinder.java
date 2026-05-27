@@ -2,7 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions;
 
 import java.util.function.Consumer;
 
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.scene.image.Image;
 
 /**

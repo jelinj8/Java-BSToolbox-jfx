@@ -1,6 +1,6 @@
 package cz.bliksoft.javautils.fx.binding;
 
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.scene.Node;
 
 public enum ObjectStatus implements IIconNodeProvider {

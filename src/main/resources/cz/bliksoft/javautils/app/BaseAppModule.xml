@@ -75,6 +75,7 @@
 				<file name="cz.bliksoft.javautils.app.ui.administration.providers.PermissionsAdministrationProvider"/>
 			</file>
 		</file>
+		<file name="widgets"/>
 	</file>
 
 	<file name="lib_credits">

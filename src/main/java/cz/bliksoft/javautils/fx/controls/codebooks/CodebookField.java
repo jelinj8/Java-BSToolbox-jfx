@@ -2,7 +2,7 @@ package cz.bliksoft.javautils.fx.controls.codebooks;
 
 import java.util.Objects;
 
-import cz.bliksoft.javautils.fx.controls.images.ImageUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
