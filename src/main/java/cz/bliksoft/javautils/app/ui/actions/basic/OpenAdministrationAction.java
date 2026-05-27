@@ -1,39 +1,34 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
-import cz.bliksoft.javautils.app.permissions.Permissions;
+import cz.bliksoft.javautils.app.permissions.UserInfo;
 import cz.bliksoft.javautils.app.permissions.basic.PermissionOpenAdministration;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
-import cz.bliksoft.javautils.app.ui.actions.IUIAction;
+import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.administration.AdministrationPanel;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
-public class OpenAdministrationAction implements IUIAction {
+public class OpenAdministrationAction extends BasicContextUIAction<UserInfo> {
 
-	private final SimpleBooleanProperty visible = new SimpleBooleanProperty(
-			Permissions.isAllowed(PermissionOpenAdministration.class));
-	private final ReadOnlyStringProperty iconSpec = new SimpleStringProperty("/icons/base/ADMINISTRATION_24.png");
+	public OpenAdministrationAction() {
+		super(UserInfo.class);
+	}
 
 	@Override
-	public void execute() {
+	protected void execute(UserInfo current) {
+		if (AdministrationPanel.isOpen())
+			return;
 		BSAppUI.pushUI(new AdministrationPanel());
 	}
 
 	@Override
-	public ObservableBooleanValue visibleProperty() {
-		return visible;
+	protected BooleanProperty getEnabledProperty(UserInfo current) {
+		return new SimpleBooleanProperty(current.isAllowed(PermissionOpenAdministration.class));
 	}
 
 	@Override
-	public ObservableBooleanValue enabledProperty() {
-		return visible;
-	}
-
-	@Override
-	public ReadOnlyStringProperty iconSpecProperty() {
-		return iconSpec;
+	protected String getBaseIconSpec() {
+		return "/icons/base/ADMINISTRATION_24.png";
 	}
 
 	@Override

@@ -66,6 +66,9 @@
 	</file>
 
 	<file name="core">
+		<file name="permissions">
+			<file name="cz.bliksoft.javautils.app.permissions.basic.PermissionOpenAdministration"/>
+		</file>
 		<file name="administration">
 			<file name="framework" translation="Administration.group.framework">
 				<file name="cz.bliksoft.javautils.app.ui.administration.providers.ModulesAdministrationProvider"/>

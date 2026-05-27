@@ -57,13 +57,15 @@ public class Permissions {
 			permissionsByCategory = new HashMap<>();
 
 			FileObject permissionsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, PERMISSIONS_FOLDER_NAME);
-			FileObjectClassLoader<Permission> loader = new FileObjectClassLoader<>();
-			for (FileObject f : permissionsFile.getChildFiles()) {
-				try {
-					Permission permission = loader.loadFile(f);
-					registerPermission(permission);
-				} catch (Exception e) {
-					log.error("Failed to register permission {} ({})", f.getName(), e.getMessage());
+			if (permissionsFile != null) {
+				FileObjectClassLoader<Permission> loader = new FileObjectClassLoader<>();
+				for (FileObject f : permissionsFile.getChildFiles()) {
+					try {
+						Permission permission = loader.loadFile(f);
+						registerPermission(permission);
+					} catch (Exception e) {
+						log.error("Failed to register permission {} ({})", f.getName(), e.getMessage());
+					}
 				}
 			}
 

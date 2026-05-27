@@ -2,9 +2,6 @@ package cz.bliksoft.javautils.app.ui.administration;
 
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.permissions.Permission;
 import cz.bliksoft.javautils.app.permissions.Permissions;
@@ -13,6 +10,8 @@ import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.ISave;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
+import cz.bliksoft.javautils.app.ui.utils.state.FxStateManager;
+import cz.bliksoft.javautils.app.ui.utils.state.FxStateMeta;
 import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.IContextProvider;
 import cz.bliksoft.javautils.context.holders.SingleContextHolder;
@@ -49,7 +48,11 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	public record GroupItem(String label, String iconSpec) implements AdministrationTreeItem {
 	}
 
-	private static final Logger log = LogManager.getLogger();
+	private static boolean isOpen = false;
+
+	public static boolean isOpen() {
+		return isOpen;
+	}
 
 	private final Context levelContext = new Context("AdministrationPanel");
 	private final SingleContextHolder providerContextHolder = new SingleContextHolder(
@@ -59,12 +62,16 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	private final BorderPane contentArea = new BorderPane();
 	private final BooleanProperty closeEnabled = new SimpleBooleanProperty(true);
 
+	private final FxStateManager stateManager = new FxStateManager("AdministrationPanel");
+
 	private IAdministrationProvider activeProvider = null;
 	private ChangeListener<Boolean> saveStateListener = null;
 	private boolean suppressSelectionEvent = false;
 
 	public AdministrationPanel() {
 		levelContext.addContext(providerContextHolder);
+
+		FxStateMeta.key(this, "split");
 
 		tree.setShowRoot(false);
 		tree.setCellFactory(tv -> new AdministrationTreeCell());
@@ -89,7 +96,6 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 			buildTreeItems(adminFolder, root, new AdministrationProviderFileLoader());
 		}
 		tree.setRoot(root);
-		selectFirstProvider(root);
 	}
 
 	private boolean buildTreeItems(FileObject folder, TreeItem<AdministrationTreeItem> parent,
@@ -118,24 +124,12 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		return hasVisible;
 	}
 
-	private void selectFirstProvider(TreeItem<AdministrationTreeItem> item) {
-		for (TreeItem<AdministrationTreeItem> child : item.getChildren()) {
-			if (child.getValue() instanceof ProviderItem) {
-				tree.getSelectionModel().select(child);
-				return;
-			}
-			selectFirstProvider(child);
-			if (activeProvider != null)
-				return;
-		}
-	}
-
 	// --- Selection handling ---
 
 	private void onTreeSelectionChanged(TreeItem<AdministrationTreeItem> old, TreeItem<AdministrationTreeItem> now) {
-		if (now == null || !(now.getValue() instanceof ProviderItem pi))
-			return;
-		if (pi.provider() == activeProvider)
+		IAdministrationProvider newProvider = (now != null && now.getValue() instanceof ProviderItem pi) ? pi.provider()
+				: null;
+		if (newProvider == activeProvider)
 			return;
 
 		if (!runSaveGuard(true)) {
@@ -145,7 +139,18 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 			return;
 		}
 
-		activateProvider(pi.provider());
+		if (newProvider != null)
+			activateProvider(newProvider);
+		else
+			deactivateProvider();
+	}
+
+	private void deactivateProvider() {
+		detachSaveListener();
+		activeProvider = null;
+		contentArea.setTop(null);
+		contentArea.setCenter(null);
+		providerContextHolder.replaceContext(null);
 	}
 
 	private void activateProvider(IAdministrationProvider provider) {
@@ -250,8 +255,16 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	// --- IStackedComponent ---
 
 	@Override
+	public void afterPush() {
+		isOpen = true;
+		stateManager.restoreState(this);
+	}
+
+	@Override
 	public void beforePop() {
+		stateManager.persistState(this);
 		runSaveGuard(false);
+		isOpen = false;
 	}
 
 	// --- IContextProvider ---
