@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.ui.BSAppUI;
-import cz.bliksoft.javautils.app.ui.IStackedComponent;
+import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
 import cz.bliksoft.javautils.context.AbstractContextListener;
 import cz.bliksoft.javautils.context.Context;

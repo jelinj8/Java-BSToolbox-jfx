@@ -1,4 +1,4 @@
-package cz.bliksoft.javautils.app.ui;
+package cz.bliksoft.javautils.app.ui.interfaces;
 
 public interface IStackedComponent {
 	default void afterPush() {

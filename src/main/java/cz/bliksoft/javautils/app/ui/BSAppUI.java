@@ -11,6 +11,7 @@ import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.events.MessageEvent;
 import cz.bliksoft.javautils.app.events.TryCloseEvent;
 import cz.bliksoft.javautils.app.ui.builder.UIComposer;
+import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
 import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
 import cz.bliksoft.javautils.app.ui.utils.state.binders.StageStateBinder;
 import cz.bliksoft.javautils.context.AbstractContextListener;
