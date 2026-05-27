@@ -58,6 +58,22 @@
 		</file>
 	</file>
 	
+	<file name="translations">
+		<file name="Administration.group.framework">
+			<attribute name="default">Framework</attribute>
+			<attribute name="cs">Framework</attribute>
+		</file>
+	</file>
+
+	<file name="core">
+		<file name="administration">
+			<file name="framework" translation="Administration.group.framework">
+				<file name="cz.bliksoft.javautils.app.ui.administration.providers.ModulesAdministrationProvider"/>
+				<file name="cz.bliksoft.javautils.app.ui.administration.providers.PermissionsAdministrationProvider"/>
+			</file>
+		</file>
+	</file>
+
 	<file name="lib_credits">
 		<file name="Freemarker">
 			<attribute name="name">FreeMarker</attribute>

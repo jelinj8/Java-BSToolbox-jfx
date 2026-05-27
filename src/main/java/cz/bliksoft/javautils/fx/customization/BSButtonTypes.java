@@ -15,6 +15,9 @@ public final class BSButtonTypes {
 	public static final ButtonType CLOSE = new ButtonType(BSAppMessages.getString("button.close"),
 			ButtonData.CANCEL_CLOSE);
 	public static final ButtonType APPLY = new ButtonType(BSAppMessages.getString("button.apply"), ButtonData.APPLY);
+	public static final ButtonType SAVE = new ButtonType(BSAppMessages.getString("button.save"), ButtonData.OK_DONE);
+	public static final ButtonType DISCARD = new ButtonType(BSAppMessages.getString("button.discard"),
+			ButtonData.OTHER);
 	public static final ButtonType FINISH = new ButtonType(BSAppMessages.getString("button.finish"), ButtonData.FINISH);
 	public static final ButtonType NEXT = new ButtonType(BSAppMessages.getString("button.next"),
 			ButtonData.NEXT_FORWARD);
