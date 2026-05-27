@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
@@ -57,6 +58,8 @@ public class ListEditor<V> extends VBox {
 	private final ReadOnlyObjectWrapper<V> selectedItem = new ReadOnlyObjectWrapper<>();
 	private TableView<ListEntry<V>> table;
 
+	private Supplier<V> addItemSupplier = null;
+
 	@SuppressWarnings("unchecked")
 	public ListEditor() {
 		this((IValueEditorProvider<V>) ValueEditorFactory.stringProvider());
@@ -75,6 +78,7 @@ public class ListEditor<V> extends VBox {
 		table.setEditable(true);
 		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 		table.setPrefHeight(100);
+		table.setPlaceholder(new Label(""));
 		VBox.setVgrow(table, Priority.ALWAYS);
 		hideTableHeader(table);
 
@@ -115,11 +119,21 @@ public class ListEditor<V> extends VBox {
 		});
 
 		addBtn.setOnAction(e -> {
-			ListEntry<V> entry = new ListEntry<>(null);
-			entries.add(entry);
-			table.getSelectionModel().select(entry);
-			table.scrollTo(entry);
-			javafx.application.Platform.runLater(() -> table.edit(entries.indexOf(entry), valCol));
+			if (addItemSupplier != null) {
+				V item = addItemSupplier.get();
+				if (item == null)
+					return;
+				ListEntry<V> entry = new ListEntry<>(item);
+				entries.add(entry);
+				table.getSelectionModel().select(entry);
+				table.scrollTo(entry);
+			} else {
+				ListEntry<V> entry = new ListEntry<>(null);
+				entries.add(entry);
+				table.getSelectionModel().select(entry);
+				table.scrollTo(entry);
+				javafx.application.Platform.runLater(() -> table.edit(entries.indexOf(entry), valCol));
+			}
 		});
 		delBtn.setOnAction(e -> {
 			ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
@@ -166,6 +180,19 @@ public class ListEditor<V> extends VBox {
 	}
 
 	// ---- Public API ----
+
+	/**
+	 * When set, the add button calls this supplier instead of inserting a null entry.
+	 * Return {@code null} from the supplier to cancel the add (nothing is inserted).
+	 */
+	public void setAddItemSupplier(Supplier<V> supplier) {
+		addItemSupplier = supplier;
+	}
+
+	/** Forces all visible cells to re-render with their current values. */
+	public void refresh() {
+		table.refresh();
+	}
 
 	public void loadFrom(Collection<? extends V> source) {
 		entries.clear();
