@@ -1,4 +1,4 @@
-package cz.bliksoft.javautils.fx.controls.codebooks.providers;
+package cz.bliksoft.javautils.fx.controls.codebooks.providers.basic;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,17 +18,18 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
-public class IconPopupProvider implements ICodebookProvider<String> {
+public class IconCodebookPopupProvider implements ICodebookProvider<String> {
 
 	private static final String FILE_PREFIX = "[F]:";
 	private static final double ICON_SIZE = 16.0;
 
-	private final List<File> rootFolders = new ArrayList<>();
+	public static final List<File> globalRootFolders = new ArrayList<>();
+	private final List<File> rootFolders = new ArrayList<>(globalRootFolders);
 
-	public IconPopupProvider() {
+	public IconCodebookPopupProvider() {
 	}
 
-	public IconPopupProvider(File rootFolder) {
+	public IconCodebookPopupProvider(File rootFolder) {
 		rootFolders.add(rootFolder);
 	}
 
@@ -44,7 +45,7 @@ public class IconPopupProvider implements ICodebookProvider<String> {
 			File f = new File(selectorText.substring(FILE_PREFIX.length()));
 			return (f.exists() && f.isFile() && isIconFile(f)) ? selectorText : null;
 		}
-		return null;
+		return ImageUtils.getImageIfPossible(selectorText, false) != null ? selectorText : null;
 	}
 
 	@Override

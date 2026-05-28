@@ -7,7 +7,6 @@ import cz.bliksoft.javautils.app.permissions.Permission;
 import cz.bliksoft.javautils.app.permissions.Permissions;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
-import cz.bliksoft.javautils.app.ui.actions.interfaces.ISave;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.ISaveAll;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;

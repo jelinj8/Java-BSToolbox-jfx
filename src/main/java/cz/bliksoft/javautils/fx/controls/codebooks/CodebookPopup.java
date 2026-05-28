@@ -53,7 +53,7 @@ public class CodebookPopup extends PopupControl {
 			// }
 			// }
 
-			// Focus: prefer text input, then table, then list, then root
+			// Focus: prefer text input, then table, then list, then tree, then root
 			Platform.runLater(() -> {
 				Node filter = findFirstTextInput(content);
 				if (filter != null) {
@@ -68,6 +68,11 @@ public class CodebookPopup extends PopupControl {
 				ListView<?> lv = findFirstListView(content);
 				if (lv != null) {
 					lv.requestFocus();
+					return;
+				}
+				TreeView<?> trv = findFirstTreeView(content);
+				if (trv != null) {
+					trv.requestFocus();
 					return;
 				}
 				content.requestFocus();
@@ -86,7 +91,7 @@ public class CodebookPopup extends PopupControl {
 			Node focusOwner = scene.getFocusOwner();
 
 			// If focus is in filter input, ENTER should not confirm; move focus to
-			// table/list.
+			// table/list/tree.
 			if (isInTextInput(focusOwner)) {
 				@SuppressWarnings("unchecked")
 				TableView<T> tv = (TableView<T>) findFirstTableView(content);
@@ -101,6 +106,12 @@ public class CodebookPopup extends PopupControl {
 				if (lv != null) {
 					ensureListHasSelection(lv);
 					lv.requestFocus();
+					e.consume();
+					return;
+				}
+				TreeView<?> trv = findFirstTreeView(content);
+				if (trv != null) {
+					trv.requestFocus();
 					e.consume();
 				}
 				return;
@@ -160,6 +171,19 @@ public class CodebookPopup extends PopupControl {
 		if (root instanceof Parent p) {
 			for (Node c : p.getChildrenUnmodifiable()) {
 				ListView<?> found = findFirstListView(c);
+				if (found != null)
+					return found;
+			}
+		}
+		return null;
+	}
+
+	private static TreeView<?> findFirstTreeView(Node root) {
+		if (root instanceof TreeView<?> trv)
+			return trv;
+		if (root instanceof Parent p) {
+			for (Node c : p.getChildrenUnmodifiable()) {
+				TreeView<?> found = findFirstTreeView(c);
 				if (found != null)
 					return found;
 			}

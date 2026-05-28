@@ -1,5 +1,6 @@
 package cz.bliksoft.javautils.fx.controls.images.svg;
 
+import com.kitfox.svg.SVGDiagram;
 import com.kitfox.svg.app.beans.SVGIcon;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
@@ -21,8 +22,16 @@ public class SvgConverter {
 			icon.setAutosize(SVGIcon.AUTOSIZE_BESTFIT);
 		} else if (width != null) {
 			icon.setAutosize(SVGIcon.AUTOSIZE_HORIZ);
+			// compute height from the SVG's natural aspect ratio so the canvas is correct
+			SVGDiagram diagram = icon.getSvgUniverse().getDiagram(icon.getSvgURI());
+			if (diagram != null && diagram.getWidth() > 0)
+				height = width * diagram.getHeight() / diagram.getWidth();
 		} else if (height != null) {
 			icon.setAutosize(SVGIcon.AUTOSIZE_VERT);
+			// compute width from the SVG's natural aspect ratio so the canvas is correct
+			SVGDiagram diagram = icon.getSvgUniverse().getDiagram(icon.getSvgURI());
+			if (diagram != null && diagram.getHeight() > 0)
+				width = height * diagram.getWidth() / diagram.getHeight();
 		} else {
 			icon.setAutosize(SVGIcon.AUTOSIZE_NONE);
 		}
@@ -65,8 +74,11 @@ public class SvgConverter {
 	}
 
 	public static SVGIcon loadSvgIcon(String svgResourcePath) throws URISyntaxException {
+		var url = SvgConverter.class.getResource(svgResourcePath);
+		if (url == null)
+			throw new IllegalArgumentException("SVG resource not found: " + svgResourcePath);
 		SVGIcon icon = new SVGIcon();
-		icon.setSvgURI(SvgConverter.class.getResource(svgResourcePath).toURI());
+		icon.setSvgURI(url.toURI());
 		return icon;
 	}
 
