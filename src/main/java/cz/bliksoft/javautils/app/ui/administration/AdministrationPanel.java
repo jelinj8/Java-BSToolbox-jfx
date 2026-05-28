@@ -8,6 +8,7 @@ import cz.bliksoft.javautils.app.permissions.Permissions;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.ISave;
+import cz.bliksoft.javautils.app.ui.actions.interfaces.ISaveAll;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
 import cz.bliksoft.javautils.app.ui.utils.state.FxStateManager;
@@ -190,21 +191,19 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	// --- Save listener ---
 
 	private void attachSaveListener(IAdministrationProvider provider) {
-		Node component = provider.getAdministrationComponent();
-		if (component instanceof ISave savable) {
+		if (provider instanceof ISaveAll savable) {
 			saveStateListener = (obs, o, n) -> {
 				// hook for future save-state UI feedback (e.g. dirty indicator)
 			};
-			savable.getSaveEnabled().addListener(saveStateListener);
+			savable.getSaveAllEnabled().addListener(saveStateListener);
 		}
 	}
 
 	private void detachSaveListener() {
 		if (activeProvider == null || saveStateListener == null)
 			return;
-		Node component = activeProvider.getAdministrationComponent();
-		if (component instanceof ISave savable)
-			savable.getSaveEnabled().removeListener(saveStateListener);
+		if (activeProvider instanceof ISaveAll savable)
+			savable.getSaveAllEnabled().removeListener(saveStateListener);
 		saveStateListener = null;
 	}
 
@@ -219,10 +218,9 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	private boolean runSaveGuard(boolean allowCancel) {
 		if (activeProvider == null)
 			return true;
-		Node component = activeProvider.getAdministrationComponent();
-		if (!(component instanceof ISave savable))
+		if (!(activeProvider instanceof ISaveAll savable))
 			return true;
-		if (!savable.getSaveEnabled().get())
+		if (!savable.getSaveAllEnabled().get())
 			return true;
 
 		Alert alert = new Alert(AlertType.CONFIRMATION);
@@ -237,7 +235,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		Optional<ButtonType> result = alert.showAndWait();
 
 		if (result.isPresent() && result.get() == BSButtonTypes.SAVE) {
-			savable.save();
+			savable.saveAll();
 			return true;
 		}
 		if (allowCancel && (result.isEmpty() || result.get() == BSButtonTypes.CANCEL))
@@ -269,7 +267,6 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	@Override
 	public void beforePop() {
 		stateManager.persistState(this);
-		runSaveGuard(false);
 		isOpen = false;
 	}
 
