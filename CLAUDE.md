@@ -11,6 +11,7 @@ BSToolbox-jfx is a JavaFX application framework built on top of `../BSToolbox` (
 ```bash
 mvn clean install     # full build
 mvn test              # run tests (JUnit 5 via Surefire)
+mvn formatter:format  # reformat sources — run after every change to Java files
 ```
 
 Java 21, JavaFX 21.0.9. Platform-specific JavaFX natives are activated via Maven profiles (`windows`, `linux`, `mac`).

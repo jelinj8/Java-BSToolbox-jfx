@@ -1,8 +1,12 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
+import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
+import cz.bliksoft.javautils.app.ui.interfaces.IGraphicsProvider;
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.Control;
 import javafx.scene.control.Hyperlink;
@@ -48,14 +52,14 @@ public final class ActionBinder {
 		if (a.textProperty() != null)
 			btn.textProperty().bind(a.textProperty());
 
-		if (a.iconSpecProperty() != null) {
-			IconBinder.bindToolbarIcon(btn, a, 24);
-		} else if (a.graphicProperty() != null) {
-			// Compatibility fallback (NOTE: Node may be shared; clone if you need)
-			a.graphicProperty().addListener((obs, o, n) -> btn.setGraphic(n));
-			btn.setGraphic(a.graphicProperty().get());
+		if (a instanceof IIconSpecPropertyProvider p) {
+			IconBinder.bindToolbarIcon(btn, p, 24);
+		} else if (a instanceof IGraphicsProvider g) {
+			g.graphicsProperty().addListener((obs, o, n) -> btn.setGraphic(n));
+			btn.setGraphic(g.graphicsProperty().getValue());
 		}
 
+		bindCssClasses(btn.getStyleClass(), a);
 		bindHint(btn, a);
 	}
 
@@ -89,16 +93,18 @@ public final class ActionBinder {
 		if (a.textProperty() != null)
 			mi.textProperty().bind(a.textProperty());
 
-		if (a.iconSpecProperty() != null) {
-			IconBinder.bindMenuIcon(mi, a, 16);
-		} else if (a.graphicProperty() != null) {
-			a.graphicProperty().addListener((obs, o, n) -> mi.setGraphic(n));
-			mi.setGraphic(a.graphicProperty().get());
+		if (a instanceof IIconSpecPropertyProvider p) {
+			IconBinder.bindMenuIcon(mi, p, 16);
+		} else if (a instanceof IGraphicsProvider g) {
+			g.graphicsProperty().addListener((obs, o, n) -> mi.setGraphic(n));
+			mi.setGraphic(g.graphicsProperty().getValue());
 		}
 
 		if (a.acceleratorProperty() != null && mi.acceleratorProperty() != null) {
 			mi.acceleratorProperty().bind(a.acceleratorProperty());
 		}
+
+		bindCssClasses(mi.getStyleClass(), a);
 
 		// MenuItem has no native tooltip; bind to the graphic node if it is a Control.
 		if (a.hintProperty() != null && mi.getGraphic() instanceof Control gc) {
@@ -164,10 +170,26 @@ public final class ActionBinder {
 		hl.managedProperty().bind(a.visibleProperty());
 		if (a.textProperty() != null)
 			hl.textProperty().bind(a.textProperty());
-		if (a.iconSpecProperty() != null) {
-			IconBinder.bindIcon(hl.graphicProperty()::setValue, a, 16);
+		if (a instanceof IIconSpecPropertyProvider p) {
+			IconBinder.bindIcon(hl.graphicProperty()::setValue, p, 16);
 		}
+		bindCssClasses(hl.getStyleClass(), a);
 		bindHint(hl, a);
+	}
+
+	private static void bindCssClasses(ObservableList<String> target, IUIAction a) {
+		if (!(a instanceof ICSSClassesProvider cp))
+			return;
+		ObservableList<String> classes = cp.getCssClasses();
+		target.addAll(classes);
+		classes.addListener((ListChangeListener<String>) change -> {
+			while (change.next()) {
+				if (change.wasRemoved())
+					target.removeAll(change.getRemoved());
+				if (change.wasAdded())
+					target.addAll(change.getAddedSubList());
+			}
+		});
 	}
 
 	private static void bindHint(Control c, IUIAction a) {

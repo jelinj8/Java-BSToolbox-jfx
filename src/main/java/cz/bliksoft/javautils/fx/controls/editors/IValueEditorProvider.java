@@ -65,6 +65,18 @@ public interface IValueEditorProvider<V> {
 	}
 
 	/**
+	 * Applies the current editor state to the model object held by {@code prop}.
+	 * Called by the hosting control when the user confirms an edit (e.g. presses
+	 * ENTER). Use this instead of live-mutating the model inside
+	 * {@link #createEditor} so that ESC can cancel cleanly without a revert step.
+	 * The default implementation does nothing (for providers that do live-mutate).
+	 *
+	 * @param prop the property whose value should be updated
+	 */
+	default void applyEdit(ObjectProperty<V> prop) {
+	}
+
+	/**
 	 * Stable key used to detect provider type changes without cross-package
 	 * instanceof. Override when two instances of the same class represent different
 	 * types (e.g. EnumEditorProvider).

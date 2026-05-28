@@ -28,7 +28,7 @@ public class RemoveAction extends BasicContextUIAction<IRemove> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/REMOVE_16.png";
+		return "16/REMOVE.png";
 	}
 
 	@Override

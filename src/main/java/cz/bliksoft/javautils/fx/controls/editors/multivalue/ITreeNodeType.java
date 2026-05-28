@@ -2,8 +2,13 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
 import java.util.List;
 
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
+import javafx.stage.Window;
 
 /**
  * Describes a single logical type of node in a {@link TreeEditor}.
@@ -23,8 +28,21 @@ public interface ITreeNodeType<N> {
 	/** Text rendered in the tree cell for the given node. */
 	String getDisplayText(N node);
 
-	/** Optional icon shown in the tree cell; {@code null} = no icon. */
+	/**
+	 * Optional icon shown in the tree cell; {@code null} = no icon.
+	 *
+	 * <p>
+	 * The default implementation checks whether {@code node} implements
+	 * {@link IIconSpecPropertyProvider} and, if so, resolves its iconSpec via
+	 * {@link ImageUtils#getIconNode}. Override to supply a custom icon or to
+	 * suppress the default behaviour.
+	 */
 	default Node createIcon(N node) {
+		if (node instanceof IIconSpecPropertyProvider p) {
+			String spec = p.iconSpecProperty().getValue();
+			if (spec != null && !spec.isBlank())
+				return ImageUtils.getIconNode(spec);
+		}
 		return null;
 	}
 
@@ -45,20 +63,54 @@ public interface ITreeNodeType<N> {
 
 	/**
 	 * Inline editor for this node type (double-click / ENTER to activate). Return
-	 * {@code null} to make nodes of this type non-editable inline.
+	 * {@code null} for dialog-only types — the tree will call {@link #showDialog}
+	 * instead when the node is activated.
 	 *
 	 * <p>
 	 * The provider type is {@code N}: {@link IValueEditorProvider#createEditor}
 	 * receives an {@code ObjectProperty<N>} holding the node being edited. The
 	 * editor may be a simple text field or any composite panel that binds directly
 	 * to the node's sub-properties.
-	 *
-	 * <p>
-	 * If {@link IValueEditorProvider#supportsDialog()} is {@code true}, a "…"
-	 * button is also shown in the {@link TreeEditor} toolbar for the selected node.
 	 */
 	default IValueEditorProvider<N> inlineEditor() {
 		return null;
+	}
+
+	/**
+	 * Returns {@code true} if this node type supports a full dialog editor (shown
+	 * via the "…" toolbar button, ENTER, or double-click when
+	 * {@link #inlineEditor()} is {@code null}).
+	 *
+	 * <p>
+	 * The default delegates to {@link IValueEditorProvider#supportsDialog()} on the
+	 * inline editor. Override independently to support dialog-only types where
+	 * {@link #inlineEditor()} returns {@code null}.
+	 */
+	default boolean supportsDialog() {
+		IValueEditorProvider<N> ed = inlineEditor();
+		return ed != null && ed.supportsDialog();
+	}
+
+	/**
+	 * Opens the full dialog editor for the given node. Called by the tree when the
+	 * "…" button is pressed, or when ENTER / double-click activates a node whose
+	 * {@link #inlineEditor()} returns {@code null}.
+	 *
+	 * <p>
+	 * The default delegates to {@link IValueEditorProvider#showDialog} on the
+	 * inline editor and then calls {@link #onEditCommitted}. Override for
+	 * dialog-only types.
+	 *
+	 * @param owner owning window for the dialog, may be {@code null}
+	 * @param node  the node to edit
+	 */
+	default void showDialog(Window owner, N node) {
+		IValueEditorProvider<N> ed = inlineEditor();
+		if (ed == null || !ed.supportsDialog())
+			return;
+		ObjectProperty<N> prop = new SimpleObjectProperty<>(node);
+		ed.showDialog(owner, prop);
+		onEditCommitted(prop.get());
 	}
 
 	/**

@@ -241,6 +241,7 @@ public class ImageUtils {
 						return new Image(in);
 					}
 				}
+				log.error("Image file not found: {} (path: {})", spec, f.getAbsolutePath());
 				return null;
 			} else {
 				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath); //$NON-NLS-1$
@@ -248,6 +249,7 @@ public class ImageUtils {
 				if (url != null) {
 					return new Image(url.toExternalForm(), background);
 				}
+				log.error("Image resource not found: {} (resolved: {})", spec, res);
 			}
 		} catch (Exception e) {
 			log.error("Failed to load raster image: {}", spec, e);
@@ -299,7 +301,7 @@ public class ImageUtils {
 		Image i = getImageIfPossible(spec, background);
 		if (i == null) {
 			// fallback kept from your original
-			i = getImageIfPossible("File_16.png#overlay/Error_9.png", false); //$NON-NLS-1$
+			i = getImageIfPossible("16/FILE.png#overlay/9/ERROR.png", false); //$NON-NLS-1$
 			if (i != null) {
 				iconCache.put(spec, i);
 			}
@@ -313,7 +315,7 @@ public class ImageUtils {
 	 * @return the empty/transparent image, or {@code null} if unavailable
 	 */
 	public static Image getEmptyImage() {
-		return getImage("overlay/empty16.png");
+		return getImage("16/EMPTY.png");
 	}
 
 	/**
@@ -561,7 +563,7 @@ public class ImageUtils {
 	 * if not found.
 	 *
 	 * @param iconPath absolute classpath resource path (e.g.
-	 *                 {@code "/icons/save.png"})
+	 *                 {@code "/cz/bliksoft/branding/images/24/SAVE.png"})
 	 *
 	 * @return the URL, or {@code null}
 	 */

@@ -28,7 +28,7 @@ public class PreviewAction extends BasicContextUIAction<IPreview> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/SEARCH_16.png";
+		return "16/SEARCH.png";
 	}
 
 	@Override

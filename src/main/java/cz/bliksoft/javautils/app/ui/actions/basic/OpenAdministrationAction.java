@@ -28,7 +28,7 @@ public class OpenAdministrationAction extends BasicContextUIAction<UserInfo> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/ADMINISTRATION_24.png";
+		return "24/ADMINISTRATION.png";
 	}
 
 	@Override

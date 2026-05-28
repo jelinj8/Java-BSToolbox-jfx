@@ -2,11 +2,19 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
 import java.util.Map;
 
+import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
+import cz.bliksoft.javautils.app.ui.interfaces.IObjectStatusProvider;
+import cz.bliksoft.javautils.fx.binding.ObjectStatus;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -22,6 +30,13 @@ import javafx.stage.Window;
  * Display/edit-mode table cell for the value column. Shows display text in
  * display mode. Double-click or ENTER starts inline edit. Resolves the editor
  * type from the registry based on the row's current key.
+ *
+ * <p>
+ * When the item implements {@link IObjectStatusProvider}, a CSS class of the
+ * form {@code object-status-<name>} is applied and updated on each status
+ * change. When the item implements {@link ICSSClassesProvider}, the returned
+ * list's classes are merged into this cell's style-class list and kept in sync
+ * via a {@code ListChangeListener}.
  */
 final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
@@ -32,6 +47,13 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
 	private KVEntry<V> currentEntry = null;
 	private IValueEditorProvider<V> currentProvider = null;
+
+	// ---- item-listener tracking ----
+	private ObservableValue<ObjectStatus> watchedStatus;
+	private ChangeListener<ObjectStatus> statusListener;
+	private String appliedStatusClass;
+	private ObservableList<String> watchedCssList;
+	private ListChangeListener<String> cssListener;
 
 	ValueTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty,
 			ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty) {
@@ -60,6 +82,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		editorNode.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.ENTER) {
 				e.consume();
+				currentProvider.applyEdit(editorProxy);
 				commitEdit(editorProxy.get());
 			} else if (e.getCode() == KeyCode.ESCAPE) {
 				e.consume();
@@ -67,6 +90,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			} else if (e.getCode() == KeyCode.TAB && e.isShiftDown()) {
 				e.consume();
 				int row = getTableRow() != null ? getTableRow().getIndex() : -1;
+				currentProvider.applyEdit(editorProxy);
 				commitEdit(editorProxy.get());
 				Platform.runLater(() -> {
 					if (getTableView() != null && row >= 0 && !getTableView().getColumns().isEmpty())
@@ -76,7 +100,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		});
 
 		if (currentProvider.supportsDialog()) {
-			Button btn = new Button("\u2026");
+			Button btn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 16));
 			btn.setFocusTraversable(false);
 			btn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;
@@ -115,6 +139,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
 	@Override
 	protected void updateItem(V item, boolean empty) {
+		detachItemListeners();
 		super.updateItem(item, empty);
 		if (isEditing())
 			return;
@@ -128,6 +153,60 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			return;
 		}
 		showDisplayState(item);
+		attachItemListeners(item);
+	}
+
+	// ---- item-listener lifecycle ----
+
+	private void detachItemListeners() {
+		if (watchedStatus != null) {
+			watchedStatus.removeListener(statusListener);
+			watchedStatus = null;
+			statusListener = null;
+		}
+		if (appliedStatusClass != null) {
+			getStyleClass().remove(appliedStatusClass);
+			appliedStatusClass = null;
+		}
+		if (watchedCssList != null) {
+			watchedCssList.removeListener(cssListener);
+			getStyleClass().removeAll(watchedCssList);
+			watchedCssList = null;
+			cssListener = null;
+		}
+	}
+
+	private void attachItemListeners(V item) {
+		if (item instanceof IObjectStatusProvider sp) {
+			watchedStatus = sp.objectStatusProperty();
+			statusListener = (obs, o, n) -> applyStatusClass(n);
+			watchedStatus.addListener(statusListener);
+			applyStatusClass(watchedStatus.getValue());
+		}
+		if (item instanceof ICSSClassesProvider cp) {
+			watchedCssList = cp.getCssClasses();
+			cssListener = change -> {
+				while (change.next()) {
+					if (change.wasRemoved())
+						getStyleClass().removeAll(change.getRemoved());
+					if (change.wasAdded())
+						getStyleClass().addAll(change.getAddedSubList());
+				}
+			};
+			watchedCssList.addListener(cssListener);
+			getStyleClass().addAll(watchedCssList);
+		}
+	}
+
+	private void applyStatusClass(ObjectStatus status) {
+		if (appliedStatusClass != null) {
+			getStyleClass().remove(appliedStatusClass);
+			appliedStatusClass = null;
+		}
+		if (status != null) {
+			appliedStatusClass = "object-status-" + status.name().toLowerCase().replace('_', '-');
+			getStyleClass().add(appliedStatusClass);
+		}
 	}
 
 	private void showDisplayState(V v) {
@@ -142,7 +221,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			Label label = new Label(s);
 			IValueEditorProvider<V> provider = currentProvider;
 			KVEntry<V> entry = currentEntry;
-			Button btn = new Button("\u2026");
+			Button btn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 16));
 			btn.setFocusTraversable(false);
 			btn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;

@@ -3,7 +3,6 @@ package cz.bliksoft.javautils.app.ui.actions;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.value.ObservableBooleanValue;
-import javafx.scene.Node;
 import javafx.scene.input.KeyCombination;
 
 public interface IUIAction {
@@ -37,28 +36,6 @@ public interface IUIAction {
 	 * @return text property, or {@code null} if the action provides no text
 	 */
 	default ReadOnlyStringProperty textProperty() {
-		return null;
-	}
-
-	/**
-	 * Returns a string specification of the action icon, interpreted by
-	 * {@code ImageUtils} (e.g. {@code "res:/icons/save@{scale}x.png"}). Returns
-	 * {@code null} if the action provides no icon spec.
-	 *
-	 * @return icon spec property, or {@code null}
-	 */
-	default ReadOnlyStringProperty iconSpecProperty() {
-		return null;
-	}
-
-	/**
-	 * Returns a property holding a pre-built graphic {@link Node} for this action,
-	 * used as a compatibility fallback when no icon spec is available. Returns
-	 * {@code null} if the action provides no graphic.
-	 *
-	 * @return graphic node property, or {@code null}
-	 */
-	default ReadOnlyObjectProperty<Node> graphicProperty() {
 		return null;
 	}
 

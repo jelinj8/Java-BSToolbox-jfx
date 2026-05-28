@@ -5,6 +5,7 @@ import java.util.Map;
 
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import javafx.beans.Observable;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -17,6 +18,7 @@ import javafx.collections.ObservableMap;
 import javafx.geometry.Pos;
 import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -69,6 +71,7 @@ public class KeyValueEditor<V> extends VBox {
 		setSpacing(4);
 
 		Label titleLabel = new Label();
+		titleLabel.getStyleClass().add("ui-title");
 		titleLabel.textProperty().bind(title);
 		titleLabel.managedProperty().bind(title.isNotEmpty());
 		titleLabel.visibleProperty().bind(title.isNotEmpty());
@@ -94,8 +97,12 @@ public class KeyValueEditor<V> extends VBox {
 
 		table.getColumns().addAll(keyCol, valCol);
 
-		Button addBtn = new Button("+");
-		Button delBtn = new Button("\u2013");
+		Button addBtn = new Button(null, ImageUtils.getIconView("16/ADD.png", 16));
+		addBtn.setFocusTraversable(false);
+		addBtn.setTooltip(new Tooltip("Přidat"));
+		Button delBtn = new Button(null, ImageUtils.getIconView("16/REMOVE.png", 16));
+		delBtn.setFocusTraversable(false);
+		delBtn.setTooltip(new Tooltip("Odebrat"));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		addBtn.setOnAction(e -> {
@@ -103,6 +110,7 @@ public class KeyValueEditor<V> extends VBox {
 			entries.add(entry);
 			table.getSelectionModel().select(entry);
 			table.scrollTo(entry);
+			table.requestFocus();
 			Platform.runLater(() -> table.edit(entries.indexOf(entry), keyCol));
 		});
 
@@ -133,6 +141,7 @@ public class KeyValueEditor<V> extends VBox {
 			KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
 			if (sel != null)
 				entries.remove(sel);
+			table.requestFocus();
 		});
 
 		Region spacer = new Region();

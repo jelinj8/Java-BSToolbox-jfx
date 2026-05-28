@@ -28,7 +28,7 @@ public class CloseAction extends BasicContextUIAction<IClose> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/CLOSE_24.png";
+		return "24/CLOSE.png";
 	}
 
 	@Override

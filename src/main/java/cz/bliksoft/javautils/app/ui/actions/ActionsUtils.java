@@ -4,11 +4,17 @@ import java.lang.reflect.Method;
 
 import org.controlsfx.control.action.Action;
 
+import cz.bliksoft.javautils.app.ui.interfaces.IGraphicsProvider;
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableMap;
 import javafx.scene.Node;
@@ -30,8 +36,9 @@ public final class ActionsUtils {
 	 * <p>
 	 * Icon spec resolution (in order of preference):
 	 * <ol>
-	 * <li>Set {@code a.getProperties().put("iconSpec",
-	 * "res:/icons/save@{scale}x.png")}</li>
+	 * <li>Set {@code a.getProperties().put("iconSpec", "24/SAVE.png")} — any spec
+	 * understood by {@link cz.bliksoft.javautils.fx.tools.ImageUtils} is
+	 * accepted</li>
 	 * <li>Fallback: icon spec derived from {@code Action.graphicProperty()}
 	 * ({@code ImageView} url or {@code SVGPath} content)</li>
 	 * </ol>
@@ -53,65 +60,65 @@ public final class ActionsUtils {
 		wireIconSpecFromGraphicFallback(a, iconSpec);
 
 		final String key = a.getClass().getName();
+		return new ControlsFxAdapter(a, iconSpec, key);
+	}
 
-		return new IUIAction() {
+	private static final class ControlsFxAdapter implements IUIAction, IIconSpecPropertyProvider, IGraphicsProvider {
 
-			@Override
-			public void execute() {
-				// ControlsFX Action implements EventHandler<ActionEvent>
-				a.handle(null);
+		private final Action action;
+		private final ReadOnlyStringWrapper iconSpec;
+		private final String key;
+		private final BooleanProperty visible = new SimpleBooleanProperty(true);
+
+		ControlsFxAdapter(Action action, ReadOnlyStringWrapper iconSpec, String key) {
+			this.action = action;
+			this.iconSpec = iconSpec;
+			this.key = key;
+		}
+
+		@Override
+		public void execute() {
+			action.handle(null);
+		}
+
+		@Override
+		public ObservableBooleanValue enabledProperty() {
+			return action.disabledProperty().not();
+		}
+
+		@Override
+		public ReadOnlyBooleanProperty visibleProperty() {
+			return visible;
+		}
+
+		@Override
+		public ReadOnlyStringProperty textProperty() {
+			return action.textProperty();
+		}
+
+		@Override
+		public Property<String> iconSpecProperty() {
+			return iconSpec;
+		}
+
+		@Override
+		public ObservableValue<Node> graphicsProperty() {
+			return action.graphicProperty();
+		}
+
+		@Override
+		public ReadOnlyObjectProperty<KeyCombination> acceleratorProperty() {
+			try {
+				return action.acceleratorProperty();
+			} catch (Throwable t) {
+				return null;
 			}
+		}
 
-			@Override
-			public ObservableBooleanValue enabledProperty() {
-				// BooleanBinding is fine as ObservableBooleanValue
-				return a.disabledProperty().not();
-			}
-
-			// ControlsFX Action may not have built-in visibility -> keep custom
-			private final javafx.beans.property.BooleanProperty visible = new javafx.beans.property.SimpleBooleanProperty(
-					true);
-
-			@Override
-			public ReadOnlyBooleanProperty visibleProperty() {
-				return visible;
-			}
-
-			@Override
-			public ReadOnlyStringProperty textProperty() {
-				return a.textProperty();
-			}
-
-			@Override
-			public ReadOnlyObjectProperty<Node> graphicProperty() {
-				return a.graphicProperty();
-			}
-
-			@Override
-			public ReadOnlyObjectProperty<KeyCombination> acceleratorProperty() {
-				try {
-					return a.acceleratorProperty();
-				} catch (Throwable t) {
-					return null;
-				}
-			}
-
-			/**
-			 * Icon spec for your ImageUtils binder.
-			 *
-			 * IMPORTANT: Do NOT annotate with @Override unless IUIAction definitely
-			 * declares it. (This keeps the adapter usable even if some projects still
-			 * compile with older IUIAction.)
-			 */
-			public ReadOnlyStringProperty iconSpecProperty() {
-				return iconSpec.getReadOnlyProperty();
-			}
-
-			@Override
-			public String getKey() {
-				return key;
-			}
-		};
+		@Override
+		public String getKey() {
+			return key;
+		}
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })

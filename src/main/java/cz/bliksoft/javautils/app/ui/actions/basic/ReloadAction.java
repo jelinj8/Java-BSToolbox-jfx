@@ -28,7 +28,7 @@ public class ReloadAction extends BasicContextUIAction<IReload> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/REFRESH_24.png";
+		return "24/REFRESH.png";
 	}
 
 	@Override

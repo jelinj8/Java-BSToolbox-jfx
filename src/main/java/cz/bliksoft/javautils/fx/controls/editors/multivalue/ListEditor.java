@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -20,6 +21,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -70,6 +72,7 @@ public class ListEditor<V> extends VBox {
 		setSpacing(4);
 
 		Label titleLabel = new Label();
+		titleLabel.getStyleClass().add("ui-title");
 		titleLabel.textProperty().bind(title);
 		titleLabel.managedProperty().bind(title.isNotEmpty());
 		titleLabel.visibleProperty().bind(title.isNotEmpty());
@@ -93,8 +96,12 @@ public class ListEditor<V> extends VBox {
 		table.getSelectionModel().selectedItemProperty()
 				.addListener((obs, o, n) -> selectedItem.set(n != null ? n.value.get() : null));
 
-		Button addBtn = new Button("+");
-		Button delBtn = new Button("\u2013");
+		Button addBtn = new Button(null, ImageUtils.getIconView("16/ADD.png", 16));
+		addBtn.setFocusTraversable(false);
+		addBtn.setTooltip(new Tooltip("Přidat"));
+		Button delBtn = new Button(null, ImageUtils.getIconView("16/REMOVE.png", 16));
+		delBtn.setFocusTraversable(false);
+		delBtn.setTooltip(new Tooltip("Odebrat"));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
@@ -127,11 +134,13 @@ public class ListEditor<V> extends VBox {
 				entries.add(entry);
 				table.getSelectionModel().select(entry);
 				table.scrollTo(entry);
+				table.requestFocus();
 			} else {
 				ListEntry<V> entry = new ListEntry<>(null);
 				entries.add(entry);
 				table.getSelectionModel().select(entry);
 				table.scrollTo(entry);
+				table.requestFocus();
 				javafx.application.Platform.runLater(() -> table.edit(entries.indexOf(entry), valCol));
 			}
 		});
@@ -139,6 +148,7 @@ public class ListEditor<V> extends VBox {
 			ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
 			if (sel != null)
 				entries.remove(sel);
+			table.requestFocus();
 		});
 
 		Region spacer = new Region();

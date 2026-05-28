@@ -28,7 +28,7 @@ public class PrintAction extends BasicContextUIAction<IPrint> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/PRINT_24.png";
+		return "24/PRINT.png";
 	}
 
 	@Override

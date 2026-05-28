@@ -70,6 +70,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 
 	public AdministrationPanel() {
 		levelContext.addContext(providerContextHolder);
+		levelContext.addValue(this);
 
 		FxStateMeta.key(this, "split");
 
@@ -170,14 +171,19 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	}
 
 	private Node buildHeader(IAdministrationProvider provider) {
+		String panelTitle = provider.getPanelTitle();
+		Node largeIcon = provider.getLargeIcon();
+		if ((panelTitle == null || panelTitle.isBlank()) && largeIcon == null)
+			return null;
 		HBox header = new HBox(8);
 		header.getStyleClass().add("administration-panel-header");
-		Node largeIcon = provider.getLargeIcon();
 		if (largeIcon != null)
 			header.getChildren().add(largeIcon);
-		Label title = new Label(provider.getPanelTitle());
-		title.getStyleClass().add("administration-panel-title");
-		header.getChildren().add(title);
+		if (panelTitle != null && !panelTitle.isBlank()) {
+			Label title = new Label(panelTitle);
+			title.getStyleClass().addAll("administration-panel-title", "ui-title");
+			header.getChildren().add(title);
+		}
 		return header;
 	}
 

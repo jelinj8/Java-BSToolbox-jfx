@@ -23,7 +23,7 @@ public class OpenLocalConfigurationAction extends BasicContextUIAction<IConfigur
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/CONFIGURE_24.png";
+		return "24/CONFIGURE.png";
 	}
 
 	@Override

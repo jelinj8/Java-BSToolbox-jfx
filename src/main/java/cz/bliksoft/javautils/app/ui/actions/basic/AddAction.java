@@ -34,7 +34,7 @@ public class AddAction extends BasicContextUIAction<IAdd> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/ADD_16.png";
+		return "16/ADD.png";
 	}
 
 	@Override

@@ -28,7 +28,7 @@ public class SaveAction extends BasicContextUIAction<ISave> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/SAVE_24.png";
+		return "24/SAVE.png";
 	}
 
 	@Override

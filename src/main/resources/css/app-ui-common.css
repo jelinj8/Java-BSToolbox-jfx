@@ -1,0 +1,29 @@
+/* ---- ui-title: pane / section title ---- */
+.ui-title {
+    -fx-font-size: 1.2em;
+    -fx-font-weight: bold;
+}
+
+/* ---- ui-section-title: subsection header within a panel ---- */
+.ui-section-title {
+    -fx-font-size: 1.05em;
+    -fx-font-weight: bold;
+}
+
+/* ---- ui-field-label: label next to an editor component ---- */
+.ui-field-label {
+    -fx-font-weight: bold;
+}
+
+/* ---- ui-comment: supplementary / explanatory text ---- */
+.ui-comment {
+    -fx-font-size: 0.9em;
+    -fx-font-style: italic;
+    -fx-opacity: 0.75;
+}
+
+/* ---- ui-hint: very small dimmed hint below a field ---- */
+.ui-hint {
+    -fx-font-size: 0.85em;
+    -fx-opacity: 0.6;
+}

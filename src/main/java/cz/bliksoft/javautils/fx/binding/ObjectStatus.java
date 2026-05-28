@@ -51,7 +51,7 @@ public enum ObjectStatus implements IIconNodeProvider {
 	public Node getImageNode() {
 		if (this == ObjectStatus.SAVED)
 			return null;
-		String spec = "icons/overlay/status/" + this.name().toLowerCase().replace('_', '-') + ".png";
+		String spec = "overlay/status/" + this.name().toLowerCase().replace('_', '-') + ".png";
 		return ImageUtils.getIconNode(spec);
 	}
 

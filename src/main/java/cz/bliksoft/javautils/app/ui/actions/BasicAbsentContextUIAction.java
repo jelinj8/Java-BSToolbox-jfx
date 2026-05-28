@@ -1,8 +1,10 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import cz.bliksoft.javautils.context.AbstractContextListener;
 import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.ContextChangedEvent;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -34,7 +36,7 @@ import javafx.beans.value.ObservableBooleanValue;
  *
  * @param <I> the context type whose absence triggers visibility
  */
-public abstract class BasicAbsentContextUIAction<I> implements IUIAction {
+public abstract class BasicAbsentContextUIAction<I> implements IUIAction, IIconSpecPropertyProvider {
 
 	private final SimpleBooleanProperty visible = new SimpleBooleanProperty(false);
 	private final SimpleBooleanProperty enabled = new SimpleBooleanProperty(false);
@@ -86,7 +88,7 @@ public abstract class BasicAbsentContextUIAction<I> implements IUIAction {
 	}
 
 	@Override
-	public ReadOnlyStringProperty iconSpecProperty() {
+	public Property<String> iconSpecProperty() {
 		return iconSpec;
 	}
 

@@ -94,7 +94,7 @@ public class AddSelectAction extends BasicContextUIAction<IAddOptions> implement
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "/icons/base/PLUS_16.png";
+		return "16/PLUS.png";
 	}
 
 	@Override

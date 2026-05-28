@@ -45,6 +45,7 @@ public final class Styling {
 
 		// register here (or do it elsewhere and call install after)
 		// (keep yours)
+		registerCss("/css/app-ui-common.css");
 		registerCss("/css/codebook-field.css");
 		registerCss("/css/icon-text-cell.css");
 		registerCss("/css/validation.css");

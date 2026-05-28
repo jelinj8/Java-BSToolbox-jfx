@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions;
 
 import java.util.function.Consumer;
 
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -16,15 +17,15 @@ public final class IconBinder {
 	private IconBinder() {
 	}
 
-	public static void bindToolbarIcon(ButtonBase btn, IUIAction a, double sizePx) {
+	public static void bindToolbarIcon(ButtonBase btn, IIconSpecPropertyProvider a, double sizePx) {
 		bindIcon(node -> btn.setGraphic(node), a.iconSpecProperty(), sizePx);
 	}
 
-	public static void bindMenuIcon(MenuItem mi, IUIAction a, double sizePx) {
+	public static void bindMenuIcon(MenuItem mi, IIconSpecPropertyProvider a, double sizePx) {
 		bindIcon(node -> mi.setGraphic(node), a.iconSpecProperty(), sizePx);
 	}
 
-	public static void bindIcon(Consumer<Node> setter, IUIAction a, double sizePx) {
+	public static void bindIcon(Consumer<Node> setter, IIconSpecPropertyProvider a, double sizePx) {
 		bindIcon(setter, a.iconSpecProperty(), sizePx);
 	}
 

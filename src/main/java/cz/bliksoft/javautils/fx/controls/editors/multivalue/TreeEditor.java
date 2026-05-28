@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -20,6 +21,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.KeyCode;
@@ -57,37 +59,49 @@ public class TreeEditor<N> extends VBox {
 	private final TreeView<N> treeView = new TreeView<>();
 	private final Map<N, TreeItem<N>> itemMap = new IdentityHashMap<>();
 
-	private final SplitMenuButton addBtn = new SplitMenuButton();
-	private final Button delBtn = new Button("\u2013");
-	private final Button dialogBtn = new Button("\u2026");
+	private final Button addSimpleBtn = new Button(null, ImageUtils.getIconView("16/ADD.png", 16));
+	private final SplitMenuButton addSplitBtn = new SplitMenuButton();
+	private final Button delBtn = new Button(null, ImageUtils.getIconView("16/REMOVE.png", 16));
+	private final Button dialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 16));
 
 	public TreeEditor(Function<N, ITreeNodeType<N>> typeResolver) {
 		this.typeResolver = typeResolver;
 		setSpacing(4);
 
 		Label titleLabel = new Label();
+		titleLabel.getStyleClass().add("ui-title");
 		titleLabel.textProperty().bind(title);
 		titleLabel.managedProperty().bind(title.isNotEmpty());
 		titleLabel.visibleProperty().bind(title.isNotEmpty());
 
 		treeView.setEditable(true);
-		treeView.setCellFactory(tv -> new TreeValueCell<>(typeResolver));
+		treeView.setCellFactory(tv -> new TreeValueCell<>(typeResolver, this::openDialogForSelected));
 		VBox.setVgrow(treeView, Priority.ALWAYS);
 		treeView.setPrefHeight(150);
 
-		addBtn.setVisible(false);
-		addBtn.setManaged(false);
+		addSimpleBtn.setVisible(false);
+		addSimpleBtn.setManaged(false);
+		addSimpleBtn.setFocusTraversable(false);
+		addSimpleBtn.setTooltip(new Tooltip("Přidat"));
+		addSplitBtn.setVisible(false);
+		addSplitBtn.setManaged(false);
+		addSplitBtn.setFocusTraversable(false);
+		addSplitBtn.setGraphic(ImageUtils.getIconView("16/ADD.png", 16));
+		addSplitBtn.setTooltip(new Tooltip("Přidat"));
 
+		delBtn.setFocusTraversable(false);
+		delBtn.setTooltip(new Tooltip("Odebrat"));
 		delBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 
 		dialogBtn.setVisible(false);
 		dialogBtn.setManaged(false);
 		dialogBtn.setFocusTraversable(false);
+		dialogBtn.setTooltip(new Tooltip("Upravit"));
 		dialogBtn.setOnAction(e -> openDialogForSelected());
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		HBox toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, dialogBtn);
+		HBox toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, treeView);
@@ -109,12 +123,32 @@ public class TreeEditor<N> extends VBox {
 
 		treeView.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.ENTER) {
+				if (treeView.getEditingItem() != null)
+					return; // cell is already editing; its own filter handles ENTER
 				e.consume();
 				TreeItem<N> sel = treeView.getSelectionModel().getSelectedItem();
 				if (sel != null && sel.getValue() != null) {
 					ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
 					if (type != null && type.inlineEditor() != null)
 						treeView.edit(sel);
+					else if (type != null && type.supportsDialog())
+						openDialogForSelected();
+				}
+			} else if (treeView.getEditingItem() == null) {
+				if (e.getCode() == KeyCode.INSERT) {
+					TreeItem<N> sel = treeView.getSelectionModel().getSelectedItem();
+					if (sel != null && sel.getValue() != null) {
+						ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
+						List<? extends ITreeNodeType<N>> childTypes = type != null ? type.childTypes(sel.getValue())
+								: List.of();
+						if (childTypes.size() == 1) {
+							e.consume();
+							addChild(sel, childTypes.get(0));
+						}
+					}
+				} else if (e.getCode() == KeyCode.DELETE && !delBtn.isDisabled()) {
+					e.consume();
+					delBtn.fire();
 				}
 			}
 		});
@@ -132,6 +166,7 @@ public class TreeEditor<N> extends VBox {
 			}
 			sel.getParent().getChildren().remove(sel);
 			itemMap.remove(node);
+			treeView.requestFocus();
 		});
 	}
 
@@ -185,32 +220,45 @@ public class TreeEditor<N> extends VBox {
 
 	private void updateAddButton(TreeItem<N> sel) {
 		if (sel == null || sel.getValue() == null) {
-			addBtn.setVisible(false);
-			addBtn.setManaged(false);
+			addSimpleBtn.setVisible(false);
+			addSimpleBtn.setManaged(false);
+			addSplitBtn.setVisible(false);
+			addSplitBtn.setManaged(false);
 			return;
 		}
 		ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
 		List<? extends ITreeNodeType<N>> childTypes = type != null ? type.childTypes(sel.getValue()) : List.of();
 
 		if (childTypes.isEmpty()) {
-			addBtn.setVisible(false);
-			addBtn.setManaged(false);
+			addSimpleBtn.setVisible(false);
+			addSimpleBtn.setManaged(false);
+			addSplitBtn.setVisible(false);
+			addSplitBtn.setManaged(false);
 			return;
 		}
 
-		addBtn.setVisible(true);
-		addBtn.setManaged(true);
-		addBtn.getItems().clear();
-
 		ITreeNodeType<N> firstType = childTypes.get(0);
 		TreeItem<N> selFinal = sel;
-		addBtn.setOnAction(e -> addChild(selFinal, firstType));
-		addBtn.setText(childTypes.size() == 1 ? "+" : "+ " + firstType.getTypeName());
 
-		for (ITreeNodeType<N> ct : childTypes.subList(1, childTypes.size())) {
-			MenuItem item = new MenuItem(ct.getTypeName());
-			item.setOnAction(e -> addChild(selFinal, ct));
-			addBtn.getItems().add(item);
+		if (childTypes.size() == 1) {
+			addSimpleBtn.setOnAction(e -> addChild(selFinal, firstType));
+			addSimpleBtn.setVisible(true);
+			addSimpleBtn.setManaged(true);
+			addSplitBtn.setVisible(false);
+			addSplitBtn.setManaged(false);
+		} else {
+			addSplitBtn.getItems().clear();
+			addSplitBtn.setOnAction(e -> addChild(selFinal, firstType));
+			addSplitBtn.setText(firstType.getTypeName());
+			for (ITreeNodeType<N> ct : childTypes.subList(1, childTypes.size())) {
+				MenuItem item = new MenuItem(ct.getTypeName());
+				item.setOnAction(e -> addChild(selFinal, ct));
+				addSplitBtn.getItems().add(item);
+			}
+			addSplitBtn.setVisible(true);
+			addSplitBtn.setManaged(true);
+			addSimpleBtn.setVisible(false);
+			addSimpleBtn.setManaged(false);
 		}
 	}
 
@@ -218,8 +266,7 @@ public class TreeEditor<N> extends VBox {
 		boolean show = false;
 		if (sel != null && sel.getValue() != null) {
 			ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
-			IValueEditorProvider<N> ed = type != null ? type.inlineEditor() : null;
-			show = ed != null && ed.supportsDialog();
+			show = type != null && type.supportsDialog();
 		}
 		dialogBtn.setVisible(show);
 		dialogBtn.setManaged(show);
@@ -238,24 +285,19 @@ public class TreeEditor<N> extends VBox {
 		parentItem.setExpanded(true);
 		treeView.getSelectionModel().select(childItem);
 		treeView.scrollTo(treeView.getRow(childItem));
+		treeView.requestFocus();
 	}
 
-	private void openDialogForSelected() {
+	void openDialogForSelected() {
 		TreeItem<N> sel = treeView.getSelectionModel().getSelectedItem();
 		if (sel == null || sel.getValue() == null)
 			return;
 		N node = sel.getValue();
 		ITreeNodeType<N> type = typeResolver.apply(node);
-		if (type == null)
+		if (type == null || !type.supportsDialog())
 			return;
-		IValueEditorProvider<N> ed = type.inlineEditor();
-		if (ed == null || !ed.supportsDialog())
-			return;
-
-		ObjectProperty<N> prop = new SimpleObjectProperty<>(node);
 		Window owner = getScene() != null ? getScene().getWindow() : null;
-		ed.showDialog(owner, prop);
-		type.onEditCommitted(prop.get());
+		type.showDialog(owner, node);
 		treeView.refresh();
 	}
 
