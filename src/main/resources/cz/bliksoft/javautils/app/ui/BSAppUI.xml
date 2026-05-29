@@ -48,6 +48,19 @@
 	</file>
 	
 	<file name="core">
+		<file name="key-bindings">
+			<file name="multivalue-editors">
+				<file name="add">
+					<attribute name="keys" value="Insert" />
+				</file>
+				<file name="preview">
+					<attribute name="keys" value="F3" />
+				</file>
+				<file name="remove">
+					<attribute name="keys" value="Delete" />
+				</file>
+			</file>
+		</file>
 		<file name="actions" />
 		<file name="availableActions">
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppCloseAction" />

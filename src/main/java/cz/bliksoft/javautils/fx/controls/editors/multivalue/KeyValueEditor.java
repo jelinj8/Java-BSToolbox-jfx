@@ -3,8 +3,10 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import javafx.beans.Observable;
+import javafx.scene.Node;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -23,6 +25,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -57,7 +61,16 @@ public class KeyValueEditor<V> extends VBox {
 
 	private final Map<KVEntry<V>, ChangeListener<?>[]> entryListeners = new IdentityHashMap<>();
 
+	private Runnable previewAction = null;
+
+	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
+	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
+	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
+	private final Button previewBtn = new Button(null, ImageUtils.getIconView("9/INFO.png", 9));
+
 	private TableView<KVEntry<V>> table;
+	private HBox toolbar;
+	private Node leadingToolbarNode;
 
 	public KeyValueEditor() {
 		this(null);
@@ -97,13 +110,20 @@ public class KeyValueEditor<V> extends VBox {
 
 		table.getColumns().addAll(keyCol, valCol);
 
-		Button addBtn = new Button(null, ImageUtils.getIconView("16/ADD.png", 16));
+		Button addBtn = new Button(null, ImageUtils.getIconView("9/ADD.png", 9));
 		addBtn.setFocusTraversable(false);
 		addBtn.setTooltip(new Tooltip("Přidat"));
-		Button delBtn = new Button(null, ImageUtils.getIconView("16/REMOVE.png", 16));
+		Button delBtn = new Button(null, ImageUtils.getIconView("9/REMOVE.png", 9));
 		delBtn.setFocusTraversable(false);
 		delBtn.setTooltip(new Tooltip("Odebrat"));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+
+		previewBtn.setFocusTraversable(false);
+		previewBtn.setTooltip(new Tooltip("Náhled"));
+		previewBtn.setVisible(false);
+		previewBtn.setManaged(false);
+		previewBtn.setOnAction(e -> firePreview());
+		previewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		addBtn.setOnAction(e -> {
 			KVEntry<V> entry = new KVEntry<>("", null);
@@ -129,12 +149,16 @@ public class KeyValueEditor<V> extends VBox {
 					else
 						table.edit(idx, keyCol);
 				}
-			} else if (e.getCode() == KeyCode.INSERT) {
+			} else if (kcAdd.match(e)) {
 				e.consume();
 				addBtn.fire();
-			} else if (e.getCode() == KeyCode.DELETE) {
+			} else if (kcRemove.match(e)) {
 				e.consume();
 				delBtn.fire();
+			} else if (kcPreview.match(e) && previewAction != null
+					&& table.getSelectionModel().getSelectedItem() != null) {
+				e.consume();
+				firePreview();
 			}
 		});
 		delBtn.setOnAction(e -> {
@@ -146,7 +170,7 @@ public class KeyValueEditor<V> extends VBox {
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		HBox toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, table);
@@ -184,6 +208,30 @@ public class KeyValueEditor<V> extends VBox {
 
 	public void setTitle(String t) {
 		title.set(t);
+	}
+
+	public void setPreviewAction(Runnable action) {
+		previewAction = action;
+		previewBtn.setVisible(action != null);
+		previewBtn.setManaged(action != null);
+	}
+
+	private void firePreview() {
+		if (previewAction != null)
+			previewAction.run();
+	}
+
+	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {
+		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
+		return kc != null ? kc : new KeyCodeCombination(fallback);
+	}
+
+	public void setLeadingToolbarNode(Node node) {
+		if (leadingToolbarNode != null)
+			toolbar.getChildren().remove(leadingToolbarNode);
+		leadingToolbarNode = node;
+		if (node != null)
+			toolbar.getChildren().add(2, node);
 	}
 
 	public ObjectProperty<Map<String, Class<?>>> propertyRegistryProperty() {

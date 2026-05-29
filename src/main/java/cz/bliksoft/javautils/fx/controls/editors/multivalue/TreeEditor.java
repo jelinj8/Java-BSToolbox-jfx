@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -23,6 +24,8 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -57,10 +60,20 @@ public class TreeEditor<N> extends VBox {
 	private final TreeView<N> treeView = new TreeView<>();
 	private final Map<N, TreeItem<N>> itemMap = new IdentityHashMap<>();
 
-	private final Button addSimpleBtn = new Button(null, ImageUtils.getIconView("16/ADD.png", 16));
+	private Runnable previewAction = null;
+
+	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
+	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
+	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
+
+	private HBox toolbar;
+	private Node leadingToolbarNode;
+
+	private final Button addSimpleBtn = new Button(null, ImageUtils.getIconView("9/ADD.png", 9));
 	private final SplitMenuButton addSplitBtn = new SplitMenuButton();
-	private final Button delBtn = new Button(null, ImageUtils.getIconView("16/REMOVE.png", 16));
-	private final Button dialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 16));
+	private final Button delBtn = new Button(null, ImageUtils.getIconView("9/REMOVE.png", 9));
+	private final Button dialogBtn = new Button(null, ImageUtils.getIconView("9/EDIT.png", 9));
+	private final Button previewBtn = new Button(null, ImageUtils.getIconView("9/INFO.png", 9));
 
 	public TreeEditor(Function<N, ITreeNodeType<N>> typeResolver) {
 		this.typeResolver = typeResolver;
@@ -84,7 +97,7 @@ public class TreeEditor<N> extends VBox {
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 		addSplitBtn.setFocusTraversable(false);
-		addSplitBtn.setGraphic(ImageUtils.getIconView("16/ADD.png", 16));
+		addSplitBtn.setGraphic(ImageUtils.getIconView("9/ADD.png", 9));
 		addSplitBtn.setTooltip(new Tooltip("Přidat"));
 
 		delBtn.setFocusTraversable(false);
@@ -97,9 +110,16 @@ public class TreeEditor<N> extends VBox {
 		dialogBtn.setTooltip(new Tooltip("Upravit"));
 		dialogBtn.setOnAction(e -> openDialogForSelected());
 
+		previewBtn.setVisible(false);
+		previewBtn.setManaged(false);
+		previewBtn.setFocusTraversable(false);
+		previewBtn.setTooltip(new Tooltip("Náhled"));
+		previewBtn.setOnAction(e -> firePreview());
+		previewBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
+
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		HBox toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn, previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, treeView);
@@ -133,7 +153,7 @@ public class TreeEditor<N> extends VBox {
 						openDialogForSelected();
 				}
 			} else if (treeView.getEditingItem() == null) {
-				if (e.getCode() == KeyCode.INSERT) {
+				if (kcAdd.match(e)) {
 					TreeItem<N> sel = treeView.getSelectionModel().getSelectedItem();
 					if (sel != null && sel.getValue() != null) {
 						ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
@@ -144,9 +164,13 @@ public class TreeEditor<N> extends VBox {
 							addChild(sel, childTypes.get(0));
 						}
 					}
-				} else if (e.getCode() == KeyCode.DELETE && !delBtn.isDisabled()) {
+				} else if (kcRemove.match(e) && !delBtn.isDisabled()) {
 					e.consume();
 					delBtn.fire();
+				} else if (kcPreview.match(e) && previewAction != null
+						&& treeView.getSelectionModel().getSelectedItem() != null) {
+					e.consume();
+					firePreview();
 				}
 			}
 		});
@@ -185,6 +209,30 @@ public class TreeEditor<N> extends VBox {
 
 	public void setTitle(String t) {
 		title.set(t);
+	}
+
+	public void setPreviewAction(Runnable action) {
+		previewAction = action;
+		previewBtn.setVisible(action != null);
+		previewBtn.setManaged(action != null);
+	}
+
+	private void firePreview() {
+		if (previewAction != null)
+			previewAction.run();
+	}
+
+	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {
+		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
+		return kc != null ? kc : new KeyCodeCombination(fallback);
+	}
+
+	public void setLeadingToolbarNode(Node node) {
+		if (leadingToolbarNode != null)
+			toolbar.getChildren().remove(leadingToolbarNode);
+		leadingToolbarNode = node;
+		if (node != null)
+			toolbar.getChildren().add(2, node);
 	}
 
 	public ReadOnlyObjectProperty<N> selectedItemProperty() {

@@ -301,7 +301,7 @@ public class ImageUtils {
 		Image i = getImageIfPossible(spec, background);
 		if (i == null) {
 			// fallback kept from your original
-			i = getImageIfPossible("16/FILE.png#overlay/9/ERROR.png", false); //$NON-NLS-1$
+			i = getImageIfPossible("16/FILE.png#9/ERROR.png", false); //$NON-NLS-1$
 			if (i != null) {
 				iconCache.put(spec, i);
 			}

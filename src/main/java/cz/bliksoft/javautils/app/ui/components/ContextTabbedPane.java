@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
+import cz.bliksoft.javautils.app.ui.interfaces.ITabTitleProvider;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
 import cz.bliksoft.javautils.context.AbstractContextListener;
 import cz.bliksoft.javautils.context.Context;
@@ -17,6 +18,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Tab;
@@ -43,11 +45,23 @@ import javafx.scene.control.TabPane;
  * parent close handler.
  *
  * <p>
- * A tab's title and graphic can be driven reactively by the tab's context:
+ * A tab's title and graphic are resolved from three sources in descending
+ * priority:
+ * <ol>
+ * <li><b>Explicit context keys</b> — {@link #CTX_TAB_TITLE} and
+ * {@link #CTX_TAB_GRAPHIC} placed in the tab's context</li>
+ * <li><b>{@link ITabTitleProvider}</b> — registered in the tab's context under
+ * {@code ITabTitleProvider.class}; automatically wired when the content node
+ * implements the interface</li>
+ * <li><b>Defaults</b> — the {@code defaultTitle} string passed to
+ * {@code addContextTab}, {@code null} graphic</li>
+ * </ol>
+ *
+ * <p>
+ * Supported value types per key:
  * <ul>
  * <li>{@link #CTX_TAB_TITLE} — {@code String} (static) or
- * {@code StringProperty} (reactive); falls back to the default title passed to
- * {@code addContextTab}</li>
+ * {@code StringProperty} (reactive)</li>
  * <li>{@link #CTX_TAB_GRAPHIC} — {@code Node}, {@code ObjectProperty<Node>},
  * {@code String} (icon spec), or {@code StringProperty} (reactive spec)</li>
  * </ul>
@@ -140,6 +154,9 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 		}
 
 		tabCtx.put(CTX_TAB_CONTENT, content);
+		if (content instanceof ITabTitleProvider provider) {
+			tabCtx.put(ITabTitleProvider.class, provider);
+		}
 		contextHolder.put(tab, tabCtx);
 		setupTabListeners(tab, tabCtx, defaultTitle);
 		getTabs().add(tab);
@@ -166,29 +183,116 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 	@SuppressWarnings("unchecked")
 	private void setupTabListeners(Tab tab, Context tabCtx, String defaultTitle) {
 
-		// Title: String (static) or StringProperty (reactive)
+		// --- Shared state (final arrays for lambda capture) ---
+
+		final ITabTitleProvider[] provider = { null };
+
+		// Whether an explicit CTX_TAB_TITLE / CTX_TAB_GRAPHIC value is active
+		final boolean[] hasExplicitTitle = { false };
+		final boolean[] hasExplicitGraphic = { false };
+
+		// Provider-title binding tracking
+		final boolean[] providerTitleBound = { false };
+
+		// Provider-graphic listener tracking
+		final ChangeListener<Node>[] providerGraphicListener = new ChangeListener[1];
+		final ObservableValue<Node>[] providerGraphicObs = new ObservableValue[1];
+
+		// --- Provider-title helpers ---
+
+		Runnable applyProviderTitle = () -> {
+			if (providerTitleBound[0]) {
+				tab.textProperty().unbind();
+				providerTitleBound[0] = false;
+			}
+			if (provider[0] != null) {
+				var p = provider[0].tabTitleProperty();
+				if (p != null) {
+					tab.textProperty().bind(p);
+					providerTitleBound[0] = true;
+					return;
+				}
+			}
+			tab.setText(defaultTitle);
+		};
+
+		// --- Provider-graphic helpers ---
+
+		Runnable cleanupProviderGraphic = () -> {
+			if (providerGraphicListener[0] != null) {
+				providerGraphicObs[0].removeListener(providerGraphicListener[0]);
+				providerGraphicListener[0] = null;
+				providerGraphicObs[0] = null;
+			}
+		};
+
+		Runnable applyProviderGraphic = () -> {
+			cleanupProviderGraphic.run();
+			if (provider[0] != null) {
+				ObservableValue<Node> g = provider[0].tabGraphicProperty();
+				if (g != null) {
+					ChangeListener<Node> l = (obs, o, n) -> tab.setGraphic(n);
+					g.addListener(l);
+					tab.setGraphic(g.getValue());
+					providerGraphicListener[0] = l;
+					providerGraphicObs[0] = g;
+					return;
+				}
+			}
+			tab.setGraphic(null);
+		};
+
+		// --- Listener 1: ITabTitleProvider ---
+
+		tabCtx.addContextListener(new AbstractContextListener<ITabTitleProvider>(ITabTitleProvider.class,
+				"tab provider: " + defaultTitle) {
+			@Override
+			public void fired(ContextChangedEvent<ITabTitleProvider> event) {
+				provider[0] = event.getNewValue();
+				if (!hasExplicitTitle[0])
+					applyProviderTitle.run();
+				if (!hasExplicitGraphic[0])
+					applyProviderGraphic.run();
+			}
+		}, true);
+
+		// --- Listener 2: CTX_TAB_TITLE (String or StringProperty) ---
+
 		tabCtx.addContextListener(new AbstractContextListener<Object>(CTX_TAB_TITLE, "tab title: " + defaultTitle) {
 			private StringProperty boundProp = null;
 
 			@Override
 			public void fired(ContextChangedEvent<Object> event) {
+				// Unbind any previous explicit binding
 				if (boundProp != null) {
 					tab.textProperty().unbind();
 					boundProp = null;
 				}
+				// Also release any provider-title binding we may have applied
+				if (providerTitleBound[0]) {
+					tab.textProperty().unbind();
+					providerTitleBound[0] = false;
+				}
+
 				Object value = event.getNewValue();
 				if (value instanceof StringProperty sp) {
+					hasExplicitTitle[0] = true;
 					tab.textProperty().bind(sp);
 					boundProp = sp;
 				} else if (value instanceof String s) {
+					hasExplicitTitle[0] = true;
 					tab.setText(s);
 				} else {
-					tab.setText(defaultTitle);
+					// No explicit title — fall back to provider or defaultTitle
+					hasExplicitTitle[0] = false;
+					applyProviderTitle.run();
 				}
 			}
 		}, true);
 
-		// Graphic: Node, ObjectProperty<Node>, String spec, or StringProperty spec
+		// --- Listener 3: CTX_TAB_GRAPHIC (Node, ObjectProperty<Node>, String,
+		// StringProperty) ---
+
 		tabCtx.addContextListener(new AbstractContextListener<Object>(CTX_TAB_GRAPHIC, "tab graphic: " + defaultTitle) {
 			private boolean graphicBound = false;
 			private ChangeListener<String> specListener = null;
@@ -196,6 +300,7 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 
 			@Override
 			public void fired(ContextChangedEvent<Object> event) {
+				// Cleanup previous explicit graphic state
 				if (graphicBound) {
 					tab.graphicProperty().unbind();
 					graphicBound = false;
@@ -208,21 +313,32 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 
 				Object value = event.getNewValue();
 				if (value == null) {
-					tab.setGraphic(null);
+					hasExplicitGraphic[0] = false;
+					applyProviderGraphic.run();
 				} else if (value instanceof Node node) {
+					hasExplicitGraphic[0] = true;
+					cleanupProviderGraphic.run();
 					tab.setGraphic(node);
 				} else if (value instanceof ObjectProperty) {
+					hasExplicitGraphic[0] = true;
+					cleanupProviderGraphic.run();
 					tab.graphicProperty().bind((ObjectProperty<Node>) value);
 					graphicBound = true;
 				} else if (value instanceof StringProperty sp) {
+					hasExplicitGraphic[0] = true;
+					cleanupProviderGraphic.run();
 					tab.setGraphic(ImageUtils.getIconView(sp.get()));
 					specProperty = sp;
 					specListener = (obs, o, n) -> tab.setGraphic(ImageUtils.getIconView(n));
 					sp.addListener(specListener);
 				} else if (value instanceof String s) {
+					hasExplicitGraphic[0] = true;
+					cleanupProviderGraphic.run();
 					tab.setGraphic(ImageUtils.getIconView(s));
 				} else {
+					hasExplicitGraphic[0] = false;
 					log.warn("Unsupported {} value type: {}", CTX_TAB_GRAPHIC, value.getClass().getSimpleName());
+					applyProviderGraphic.run();
 				}
 			}
 		}, true);

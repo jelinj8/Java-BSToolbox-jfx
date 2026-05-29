@@ -77,7 +77,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 		});
 
 		if (provider.supportsDialog()) {
-			Button editDialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 16));
+			Button editDialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 9));
 			editDialogBtn.setFocusTraversable(false);
 			editDialogBtn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;
@@ -88,7 +88,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 			editCellGraphic = editBox;
 
 			displayLabel = new Label();
-			Button displayDialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 16));
+			Button displayDialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 9));
 			displayDialogBtn.setFocusTraversable(false);
 			displayDialogBtn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;
