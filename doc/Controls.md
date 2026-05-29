@@ -119,7 +119,10 @@ editor.setAddItemSupplier(() -> {
 });
 ```
 
-Keyboard: Insert to add, Delete to remove, Enter to start/commit edit.
+Keyboard: Insert to add, Delete to remove, Enter to start/commit edit. The
+Insert and Delete shortcuts are loaded from `core/key-bindings/multivalue-editors/add`
+and `core/key-bindings/multivalue-editors/remove` respectively and can be
+overridden per application (see **[UIActions.md — Key Bindings](UIActions.md#key-bindings)**).
 
 ### KeyValueEditor\<V\>
 
@@ -149,6 +152,16 @@ editor.propertyRegistryProperty().set(registry);
 When a registry is set, the key column uses a codebook popup to restrict keys to
 the defined names, and the value editor is switched automatically to match the
 key's declared type.
+
+Keyboard: Insert to add, Delete to remove, F3 to preview (when a preview action is set),
+Enter to start/commit edit. Shortcuts are loaded from `core/key-bindings/multivalue-editors/`
+and can be overridden per application (see **[UIActions.md — Key Bindings](UIActions.md#key-bindings)**).
+
+### TreeEditor\<V\>
+
+Hierarchical tree editor. Nodes are added, removed, and previewed using the same
+`multivalue-editors/add`, `multivalue-editors/remove`, and `multivalue-editors/preview`
+key-binding paths as `ListEditor` and `KeyValueEditor`.
 
 ---
 

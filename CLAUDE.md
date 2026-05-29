@@ -38,6 +38,41 @@ Events (app close, user info change, messages) flow through a shared event bus.
 
 `BasicAbsentContextUIAction` provides a ready-to-use base for actions that disable themselves when context is absent.
 
+### Key Bindings
+
+Keyboard shortcuts are loaded from the XML filesystem and applied to actions and controls at startup. There are two complementary mechanisms:
+
+**1. Action shortcuts via `core/actions`**
+
+When `UIActions` loads an action file from `core/actions`, it calls `ShortcutFileLoader.load(f)` on that file object. If the file (or a `<shortcut>` child) carries a `keys` attribute, the parsed `KeyCombination` is set on the action via `UIActionBase.setAccelerator(kc)`. Example file attribute:
+
+```xml
+<file name="com.example.MyAction" keys="Ctrl+S" />
+```
+
+**2. Standalone shortcut files via `core/key-bindings`**
+
+Any code can look up an optional shortcut from `core/key-bindings/{subpath}` by calling `ShortcutFileLoader.loadFromKeyBindings(subpath)`. The file at that path must have a `keys` attribute. If the file is absent the method returns `null` and logs a `DEBUG` message. This is used by:
+
+- `UIActionBase.of(key, text, iconSpec, shortcutFolder, runnable)` — looks up `shortcutFolder + "/" + key`
+- Multivalue editors (`ListEditor`, `KeyValueEditor`, `TreeEditor`) — look up paths under `multivalue-editors/` with hardcoded fallback key codes
+
+Built-in defaults (defined in `BSAppUI.xml`):
+
+| Path | Default key |
+|---|---|
+| `multivalue-editors/add` | `Insert` |
+| `multivalue-editors/preview` | `F3` |
+| `multivalue-editors/remove` | `Delete` |
+
+**3. Shortcut syntax**
+
+Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"Ctrl+S"`, `"Shortcut+N"`, `"Ctrl+Shift+Delete"`, `"F3"`, `"Insert"`. `Shortcut` is the platform-native modifier (Ctrl on Windows/Linux, Cmd on macOS). Key sequences (chord bindings) are not supported — each binding is a single key combination.
+
+**4. Runtime wiring — `AcceleratorManager`**
+
+`AcceleratorManager` installs action accelerators into a JavaFX `Scene.getAccelerators()` map. It tracks `acceleratorProperty()` changes live, and gates execution on both `enabledProperty()` and `visibleProperty()` — a shortcut only fires when the action is both visible and enabled. Bind an action with `AcceleratorManager.bind(action)` after calling `attach(scene)`. Accelerators on `MenuItem` bindings are handled separately via `ActionBinder.bind(MenuItem, IUIAction)`, which binds `mi.acceleratorProperty()` directly to the action's property.
+
 ### UI Builder
 
 `FileLoader` (from BSToolbox xmlfilesystem) is extended for each JavaFX control type. Loaders exist for: standard controls (Button, Label, TextArea, ComboBox, etc.), layout panes (HBox, VBox, BorderPane, GridPane, AnchorPane, etc.), menus (MenuBar, MenuItem, ContextMenu), and FXML (delegates to `FXMLLoader` with optional controller override). UI structure is described in XML and assembled via these loaders.

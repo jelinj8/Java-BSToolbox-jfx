@@ -90,6 +90,144 @@ What `bind` does:
 
 ---
 
+## UIActionBase
+
+`UIActionBase` is the recommended abstract base class for action implementations.
+It adds lazy, zero-overhead support for a keyboard accelerator, label text, and
+icon spec on top of `IUIAction`:
+
+```java
+public class MyAction extends UIActionBase {
+
+    @Override public String getKey() { return "MyKey"; }
+
+    @Override
+    public void execute() { doSomething(); }
+}
+```
+
+Set properties programmatically:
+
+```java
+action.setAccelerator(KeyCombination.keyCombination("Ctrl+M"));
+action.setText("My Action");
+action.setIconSpec("/icons/my.svg");
+```
+
+Properties are lazy — `acceleratorProperty()` / `textProperty()` / `iconSpecProperty()`
+return `null` (not a null-valued property) until the corresponding setter is called,
+so unused properties carry zero overhead.
+
+### Factory method
+
+For simple in-place actions use the static factory:
+
+```java
+UIActionBase action = UIActionBase.of(
+    "my-key",           // registry key
+    "My Action",        // label (null = no text property)
+    "/icons/my.svg",    // icon spec (null = no icon)
+    "my-module",        // shortcut folder under core/key-bindings (null = no shortcut)
+    () -> doSomething() // runnable
+);
+```
+
+When `shortcutFolder` is non-null the accelerator is loaded from
+`core/key-bindings/{shortcutFolder}/{key}` via `ShortcutFileLoader`.
+
+---
+
+## Key Bindings
+
+### ShortcutFileLoader
+
+`cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader` reads keyboard
+shortcuts from the XML filesystem. Two entry points:
+
+**From an arbitrary `FileObject`** (used by `UIActions` when loading action files):
+
+```java
+KeyCombination kc = ShortcutFileLoader.load(fileObject);
+// reads the "keys" attribute on the FileObject
+```
+
+**From the `core/key-bindings` folder** (used by controls and `UIActionBase.of`):
+
+```java
+KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings("my-module/save");
+// loads /core/key-bindings/my-module/save; returns null if absent
+```
+
+Both methods return `null` on missing or unparsable input and never throw.
+
+#### Shortcut syntax
+
+Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`:
+
+| Example | Meaning |
+|---|---|
+| `"Ctrl+S"` | Control + S |
+| `"Shortcut+N"` | Platform modifier + N (Cmd on macOS, Ctrl elsewhere) |
+| `"Ctrl+Shift+Delete"` | Three-key combination |
+| `"F3"` | Function key alone |
+| `"Insert"` | Named key alone |
+
+Key sequences (chord bindings, e.g. `Ctrl+N, T`) are not supported — each
+binding is a single combination.
+
+#### Defining a binding in XML
+
+Add a `keys` attribute to the file node in your module's XML:
+
+```xml
+<!-- in core/actions — shortcut on an action file -->
+<file name="com.example.MyAction" keys="Ctrl+M" />
+
+<!-- in core/key-bindings — standalone lookup node -->
+<file name="core">
+    <file name="key-bindings">
+        <file name="my-module">
+            <file name="save">
+                <attribute name="keys" value="Ctrl+S" />
+            </file>
+        </file>
+    </file>
+</file>
+```
+
+#### Built-in framework defaults
+
+| Path | Default key | Used by |
+|---|---|---|
+| `multivalue-editors/add` | `Insert` | `ListEditor`, `KeyValueEditor`, `TreeEditor` |
+| `multivalue-editors/preview` | `F3` | `ListEditor`, `KeyValueEditor`, `TreeEditor` |
+| `multivalue-editors/remove` | `Delete` | `ListEditor`, `KeyValueEditor`, `TreeEditor` |
+
+Override any of these by providing the same path in your module's XML.
+
+### AcceleratorManager
+
+`AcceleratorManager` installs action accelerators into `Scene.getAccelerators()`
+so they fire regardless of which control has focus.
+
+```java
+AcceleratorManager mgr = new AcceleratorManager();
+mgr.attach(scene);       // call once the scene is ready
+
+mgr.bind(myAction);      // installs accelerator, respects enabled + visible
+mgr.unbind(myAction);    // removes accelerator and all listeners
+```
+
+The shortcut only fires when both `enabledProperty()` and `visibleProperty()` are
+`true`. Accelerator changes on the action are tracked live.
+
+**Note:** `MenuItem` accelerators are handled separately by `ActionBinder.bind(MenuItem,
+IUIAction)`, which binds `mi.acceleratorProperty()` directly to the action's property.
+`AcceleratorManager` is for scene-level shortcuts that should fire regardless of
+menu state.
+
+---
+
 ## Context-aware base classes
 
 ### BasicContextUIAction\<I\>
