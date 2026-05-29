@@ -35,7 +35,7 @@ import javafx.beans.value.ObservableBooleanValue;
  *
  * @param <I> the context type whose absence triggers visibility
  */
-public abstract class BasicAbsentContextUIAction<I> implements IUIAction, IIconSpecPropertyProvider {
+public abstract class BasicAbsentContextUIAction<I> extends UIActionBase implements IIconSpecPropertyProvider {
 
 	private final SimpleBooleanProperty visible = new SimpleBooleanProperty(false);
 	private final SimpleBooleanProperty enabled = new SimpleBooleanProperty(false);

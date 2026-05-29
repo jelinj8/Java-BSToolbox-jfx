@@ -48,7 +48,7 @@ import javafx.beans.value.ObservableBooleanValue;
  * @param <I> marker interface that must be implemented by context objects
  *            triggering this action
  */
-public abstract class BasicContextUIAction<I> implements IUIAction, IIconSpecPropertyProvider {
+public abstract class BasicContextUIAction<I> extends UIActionBase implements IIconSpecPropertyProvider {
 
 	private static final Logger log = LogManager.getLogger(BasicContextUIAction.class);
 

@@ -77,6 +77,7 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 	 */
 	public static final String CTX_TAB_CONTENT = "TabContent";
 
+	private final Context paneContext = new Context("ContextTabbedPane");
 	private final MapContextHolder<Tab, Context> contextHolder = new MapContextHolder<>("ContextTabbedPane");
 
 	private final BooleanProperty closeEnabled = new SimpleBooleanProperty(false);
@@ -96,7 +97,8 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 	};
 
 	public ContextTabbedPane() {
-		contextHolder.put(IClose.class, tabClose);
+		paneContext.addContext(contextHolder);
+		paneContext.put(IClose.class, tabClose);
 
 		getSelectionModel().selectedItemProperty().addListener((obs, old, now) -> {
 			if (now != null)
@@ -156,7 +158,7 @@ public class ContextTabbedPane extends TabPane implements IContextProvider, ISta
 
 	@Override
 	public Context getItemContext() {
-		return contextHolder;
+		return paneContext;
 	}
 
 	// -------------------------------------------------------------------------

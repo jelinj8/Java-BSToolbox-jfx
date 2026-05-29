@@ -40,7 +40,6 @@ import javafx.scene.input.KeyEvent;
 final class TreeValueCell<N> extends TreeCell<N> {
 
 	private final Function<N, ITreeNodeType<N>> typeResolver;
-	private final Runnable dialogOpener;
 
 	private final ObjectProperty<N> editProxy = new SimpleObjectProperty<>();
 	private N originalItem;
@@ -55,7 +54,6 @@ final class TreeValueCell<N> extends TreeCell<N> {
 
 	TreeValueCell(Function<N, ITreeNodeType<N>> typeResolver, Runnable dialogOpener) {
 		this.typeResolver = typeResolver;
-		this.dialogOpener = dialogOpener;
 
 		setOnMouseClicked(e -> {
 			if (e.getClickCount() == 2 && !isEmpty() && getItem() != null) {
