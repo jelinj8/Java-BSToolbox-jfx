@@ -403,7 +403,7 @@ public class ImageUtils {
 	public static Image overlayImages(int align, String... args) {
 		Image[] icons = new Image[args.length];
 		for (int i = 0; i < args.length; i++) {
-			icons[i] = (args[i] != null ? getImage(args[i]) : null);
+			icons[i] = (args[i] != null ? getImage(args[i], false) : null);
 		}
 		return overlayImages(align, icons);
 	}
