@@ -55,6 +55,7 @@ public abstract class BasicContextUIAction<I> extends UIActionBase implements II
 	private final SimpleBooleanProperty visible = new SimpleBooleanProperty(false);
 	private final SimpleBooleanProperty enabled = new SimpleBooleanProperty(false);
 	private final SimpleStringProperty iconSpec = new SimpleStringProperty();
+	private final SimpleStringProperty menuIconSpec = new SimpleStringProperty();
 
 	private I currentValue = null;
 	private ChangeListener<String> iconChangeListener = null;
@@ -114,7 +115,10 @@ public abstract class BasicContextUIAction<I> extends UIActionBase implements II
 		} else {
 			enabled.unbind();
 			enabled.set(false);
-			iconSpec.set(getBaseIconSpec());
+			String base = getBaseIconSpec();
+			iconSpec.set(base);
+			String menuBase = getBaseMenuIconSpec();
+			menuIconSpec.set(menuBase != null ? menuBase : base);
 		}
 
 		onValueChanged(oldValue, newValue);
@@ -156,13 +160,22 @@ public abstract class BasicContextUIAction<I> extends UIActionBase implements II
 	}
 
 	private void updateIconSpec(I value) {
-		String base = getBaseIconSpec();
 		StringProperty iconProp = getIconOverlay(value);
 		String overlay = (iconProp != null) ? iconProp.get() : null;
+
+		String base = getBaseIconSpec();
 		if (base != null && overlay != null && !overlay.isBlank()) {
-			iconSpec.set(base + "#" + overlay);
+			iconSpec.set(base + "#" + overlay); //$NON-NLS-1$
 		} else {
 			iconSpec.set(base);
+		}
+
+		String menuBase = getBaseMenuIconSpec();
+		if (menuBase != null) {
+			menuIconSpec.set(menuBase != null && overlay != null && !overlay.isBlank() ? menuBase + "#" + overlay //$NON-NLS-1$
+					: menuBase);
+		} else {
+			menuIconSpec.set(iconSpec.get());
 		}
 	}
 
@@ -192,6 +205,11 @@ public abstract class BasicContextUIAction<I> extends UIActionBase implements II
 		return iconSpec;
 	}
 
+	@Override
+	public Property<String> menuIconSpecProperty() {
+		return menuIconSpec;
+	}
+
 	// =========================================================================
 	// Abstract / overridable API for subclasses
 	// =========================================================================
@@ -212,6 +230,14 @@ public abstract class BasicContextUIAction<I> extends UIActionBase implements II
 	 * @return icon spec string, or {@code null}
 	 */
 	protected abstract String getBaseIconSpec();
+
+	/**
+	 * Returns the menu-specific icon spec string, or {@code null} to fall back to
+	 * {@link #getBaseIconSpec()}.
+	 */
+	protected String getBaseMenuIconSpec() {
+		return null;
+	}
 
 	/**
 	 * Extracts the enabled {@link BooleanProperty} from the given context value.

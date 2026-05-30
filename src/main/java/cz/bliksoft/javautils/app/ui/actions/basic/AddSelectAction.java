@@ -7,6 +7,7 @@ import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.IUIActionWithSubactions;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IAddOptions;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -94,7 +95,12 @@ public class AddSelectAction extends BasicContextUIAction<IAddOptions> implement
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "16/PLUS.png";
+		return IconspecUtils.getIconspec("action/add-select"); //$NON-NLS-1$
+	}
+
+	@Override
+	protected String getBaseMenuIconSpec() {
+		return IconspecUtils.getMenuIconspec("action/add-select"); //$NON-NLS-1$
 	}
 
 	@Override

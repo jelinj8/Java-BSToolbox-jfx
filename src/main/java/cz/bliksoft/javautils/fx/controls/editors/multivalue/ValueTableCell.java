@@ -6,6 +6,7 @@ import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IObjectStatusProvider;
 import cz.bliksoft.javautils.fx.binding.ObjectStatus;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import javafx.application.Platform;
@@ -100,7 +101,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		});
 
 		if (currentProvider.supportsDialog()) {
-			Button btn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 9));
+			Button btn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			btn.setFocusTraversable(false);
 			btn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;
@@ -221,7 +222,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			Label label = new Label(s);
 			IValueEditorProvider<V> provider = currentProvider;
 			KVEntry<V> entry = currentEntry;
-			Button btn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 9));
+			Button btn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			btn.setFocusTraversable(false);
 			btn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;

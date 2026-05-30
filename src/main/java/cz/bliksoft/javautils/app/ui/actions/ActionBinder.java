@@ -3,6 +3,8 @@ package cz.bliksoft.javautils.app.ui.actions;
 import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IGraphicsProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
+import javafx.beans.property.Property;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.ListChangeListener;
@@ -53,7 +55,7 @@ public final class ActionBinder {
 			btn.textProperty().bind(a.textProperty());
 
 		if (a instanceof IIconSpecPropertyProvider p) {
-			IconBinder.bindToolbarIcon(btn, p, 24);
+			IconBinder.bindToolbarIcon(btn, p, IconspecUtils.getIconspecSize("toolbar-size", 24)); //$NON-NLS-1$
 		} else if (a instanceof IGraphicsProvider g) {
 			g.graphicsProperty().addListener((obs, o, n) -> btn.setGraphic(n));
 			btn.setGraphic(g.graphicsProperty().getValue());
@@ -94,7 +96,12 @@ public final class ActionBinder {
 			mi.textProperty().bind(a.textProperty());
 
 		if (a instanceof IIconSpecPropertyProvider p) {
-			IconBinder.bindMenuIcon(mi, p, 16);
+			double menuSize = IconspecUtils.getIconspecSize("menu-icon-size", 16); //$NON-NLS-1$
+			Property<String> menuSpec = p.menuIconSpecProperty();
+			if (menuSpec != null)
+				IconBinder.bindIcon(node -> mi.setGraphic(node), menuSpec, menuSize);
+			else
+				IconBinder.bindMenuIcon(mi, p, menuSize);
 		} else if (a instanceof IGraphicsProvider g) {
 			g.graphicsProperty().addListener((obs, o, n) -> mi.setGraphic(n));
 			mi.setGraphic(g.graphicsProperty().getValue());
@@ -171,7 +178,7 @@ public final class ActionBinder {
 		if (a.textProperty() != null)
 			hl.textProperty().bind(a.textProperty());
 		if (a instanceof IIconSpecPropertyProvider p) {
-			IconBinder.bindIcon(hl.graphicProperty()::setValue, p, 16);
+			IconBinder.bindIcon(hl.graphicProperty()::setValue, p, IconspecUtils.getIconspecSize("tab-icon-size", 16)); //$NON-NLS-1$
 		}
 		bindCssClasses(hl.getStyleClass(), a);
 		bindHint(hl, a);

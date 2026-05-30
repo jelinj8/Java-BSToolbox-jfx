@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IPrint;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
 
@@ -28,7 +29,7 @@ public class PrintAction extends BasicContextUIAction<IPrint> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "24/PRINT.png";
+		return IconspecUtils.getIconspec("action/print"); //$NON-NLS-1$
 	}
 
 	@Override

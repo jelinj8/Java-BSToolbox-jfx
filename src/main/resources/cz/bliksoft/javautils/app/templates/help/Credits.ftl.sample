@@ -1,0 +1,19 @@
+<HTML>
+<BODY>
+V této aplikaci jsou použity následující knihovny a zdroje:<br />
+<#list data["credits"].getAllChildren() as credit>
+	<#assign url = credit.getLocalizedAttribute("url", "-")>
+	<#assign name = credit.getLocalizedAttribute("name", "-")>
+	<#assign comment = credit.getLocalizedAttribute("comment", "-")>
+	<#assign licence = credit.getAttribute("licence", "-")>
+	
+	<p><B><#if url?matches('-')>${name}<#else><a href="${url}">${name}</a></#if></B><br /> ${comment}
+	<#if !licence?matches('-')>
+		<#assign licence_file = data["licences"].getFile(licence)>
+		<#assign licence_url = licence_file.getLocalizedAttribute("url", "-")>
+		<br /><i>Licence: </i><#if licence_url?matches('-')>${licence_file.getLocalizedAttribute("name", "-")}<#else><a href="${licence_url}">${licence_file.getLocalizedAttribute("name", "-")}</a></#if>
+	</#if>
+	</p>
+</#list>
+</BODY>
+</HTML>

@@ -4,6 +4,7 @@ import cz.bliksoft.javautils.app.permissions.UserInfo;
 import cz.bliksoft.javautils.app.permissions.basic.PermissionOpenAdministration;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.app.ui.administration.AdministrationPanel;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -28,7 +29,12 @@ public class OpenAdministrationAction extends BasicContextUIAction<UserInfo> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "24/ADMINISTRATION.png";
+		return IconspecUtils.getIconspec("action/administration"); //$NON-NLS-1$
+	}
+
+	@Override
+	protected String getBaseMenuIconSpec() {
+		return IconspecUtils.getMenuIconspec("action/administration"); //$NON-NLS-1$
 	}
 
 	@Override

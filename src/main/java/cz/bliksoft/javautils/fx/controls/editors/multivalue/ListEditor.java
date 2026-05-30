@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
@@ -71,8 +72,9 @@ public class ListEditor<V> extends VBox {
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
 	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
-	private final Button editBtn = new Button(null, ImageUtils.getIconView("9/EDIT.png", 9));
-	private final Button previewBtn = new Button(null, ImageUtils.getIconView("9/INFO.png", 9));
+	private final Button editBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
+	private final Button previewBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
 
 	private HBox toolbar;
 	private Node leadingToolbarNode;
@@ -111,10 +113,10 @@ public class ListEditor<V> extends VBox {
 		table.getSelectionModel().selectedItemProperty()
 				.addListener((obs, o, n) -> selectedItem.set(n != null ? n.value.get() : null));
 
-		Button addBtn = new Button(null, ImageUtils.getIconView("9/ADD.png", 9));
+		Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addBtn.setFocusTraversable(false);
 		addBtn.setTooltip(new Tooltip("Přidat"));
-		Button delBtn = new Button(null, ImageUtils.getIconView("9/REMOVE.png", 9));
+		Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 		delBtn.setFocusTraversable(false);
 		delBtn.setTooltip(new Tooltip("Odebrat"));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());

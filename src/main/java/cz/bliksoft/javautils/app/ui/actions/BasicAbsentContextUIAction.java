@@ -40,6 +40,7 @@ public abstract class BasicAbsentContextUIAction<I> extends UIActionBase impleme
 	private final SimpleBooleanProperty visible = new SimpleBooleanProperty(false);
 	private final SimpleBooleanProperty enabled = new SimpleBooleanProperty(false);
 	private final SimpleStringProperty iconSpec = new SimpleStringProperty();
+	private final SimpleStringProperty menuIconSpec = new SimpleStringProperty();
 
 	/**
 	 * Creates a new action that watches the current context for {@code I} objects.
@@ -62,7 +63,10 @@ public abstract class BasicAbsentContextUIAction<I> extends UIActionBase impleme
 		boolean absent = (newValue == null);
 		visible.set(absent);
 		enabled.set(absent);
-		iconSpec.set(getBaseIconSpec());
+		String base = getBaseIconSpec();
+		iconSpec.set(base);
+		String menuBase = getBaseMenuIconSpec();
+		menuIconSpec.set(menuBase != null ? menuBase : base);
 	}
 
 	// =========================================================================
@@ -91,6 +95,11 @@ public abstract class BasicAbsentContextUIAction<I> extends UIActionBase impleme
 		return iconSpec;
 	}
 
+	@Override
+	public Property<String> menuIconSpecProperty() {
+		return menuIconSpec;
+	}
+
 	// =========================================================================
 	// Abstract / overridable API for subclasses
 	// =========================================================================
@@ -107,4 +116,12 @@ public abstract class BasicAbsentContextUIAction<I> extends UIActionBase impleme
 	 * @return icon spec string, or {@code null}
 	 */
 	protected abstract String getBaseIconSpec();
+
+	/**
+	 * Returns the menu-specific icon spec string, or {@code null} to fall back to
+	 * {@link #getBaseIconSpec()}.
+	 */
+	protected String getBaseMenuIconSpec() {
+		return null;
+	}
 }

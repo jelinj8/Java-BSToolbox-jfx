@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IAdd;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
 
@@ -34,7 +35,12 @@ public class AddAction extends BasicContextUIAction<IAdd> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "16/ADD.png";
+		return IconspecUtils.getIconspec("action/add"); //$NON-NLS-1$
+	}
+
+	@Override
+	protected String getBaseMenuIconSpec() {
+		return IconspecUtils.getMenuIconspec("action/add"); //$NON-NLS-1$
 	}
 
 	@Override

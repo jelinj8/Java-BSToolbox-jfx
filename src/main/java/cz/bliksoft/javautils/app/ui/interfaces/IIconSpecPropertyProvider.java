@@ -29,4 +29,12 @@ public interface IIconSpecPropertyProvider {
 	 * @return the icon spec property; never {@code null} itself
 	 */
 	Property<String> iconSpecProperty();
+
+	/**
+	 * Returns the menu-specific icon spec property, or {@code null} to fall back to
+	 * {@link #iconSpecProperty()}.
+	 */
+	default Property<String> menuIconSpecProperty() {
+		return null;
+	}
 }

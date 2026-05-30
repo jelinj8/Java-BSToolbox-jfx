@@ -1,0 +1,11 @@
+<HTML>
+<BODY>
+<H1>BSApp framework application</H1>
+<i>Jakub Jelínek, &copy; 2026</i><br />
+<table>
+<#list data as plugin>
+	<tr><td align="right">${plugin.getModuleName()}</td><td>${plugin.getVersionInfo()}</td></tr>
+</#list>
+</table>
+</BODY>
+</HTML>

@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IDelete;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
 
@@ -28,7 +29,12 @@ public class DeleteAction extends BasicContextUIAction<IDelete> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "16/REMOVE.png";
+		return IconspecUtils.getIconspec("action/delete"); //$NON-NLS-1$
+	}
+
+	@Override
+	protected String getBaseMenuIconSpec() {
+		return IconspecUtils.getMenuIconspec("action/delete"); //$NON-NLS-1$
 	}
 
 	@Override

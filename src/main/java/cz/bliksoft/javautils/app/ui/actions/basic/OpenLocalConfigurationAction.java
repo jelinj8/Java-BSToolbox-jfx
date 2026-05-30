@@ -1,6 +1,7 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.app.ui.interfaces.IConfigurable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -23,7 +24,12 @@ public class OpenLocalConfigurationAction extends BasicContextUIAction<IConfigur
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "24/CONFIGURE.png";
+		return IconspecUtils.getIconspec("action/local-settings"); //$NON-NLS-1$
+	}
+
+	@Override
+	protected String getBaseMenuIconSpec() {
+		return IconspecUtils.getMenuIconspec("action/local-settings"); //$NON-NLS-1$
 	}
 
 	@Override

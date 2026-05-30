@@ -9,6 +9,7 @@ import java.util.function.Function;
 
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -69,11 +70,13 @@ public class TreeEditor<N> extends VBox {
 	private HBox toolbar;
 	private Node leadingToolbarNode;
 
-	private final Button addSimpleBtn = new Button(null, ImageUtils.getIconView("9/ADD.png", 9));
+	private final Button addSimpleBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 	private final SplitMenuButton addSplitBtn = new SplitMenuButton();
-	private final Button delBtn = new Button(null, ImageUtils.getIconView("9/REMOVE.png", 9));
-	private final Button dialogBtn = new Button(null, ImageUtils.getIconView("9/EDIT.png", 9));
-	private final Button previewBtn = new Button(null, ImageUtils.getIconView("9/INFO.png", 9));
+	private final Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
+	private final Button dialogBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
+	private final Button previewBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
 
 	public TreeEditor(Function<N, ITreeNodeType<N>> typeResolver) {
 		this.typeResolver = typeResolver;
@@ -97,7 +100,7 @@ public class TreeEditor<N> extends VBox {
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 		addSplitBtn.setFocusTraversable(false);
-		addSplitBtn.setGraphic(ImageUtils.getIconView("9/ADD.png", 9));
+		addSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addSplitBtn.setTooltip(new Tooltip("Přidat"));
 
 		delBtn.setFocusTraversable(false);

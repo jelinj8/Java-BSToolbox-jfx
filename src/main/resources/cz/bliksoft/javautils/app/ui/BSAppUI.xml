@@ -61,7 +61,115 @@
 				</file>
 			</file>
 		</file>
-		<file name="actions" />
+		<file name="actions" id="registered-actions"/>
+		
+		<file name="iconspec">
+			<!-- Named size variables -->
+			<attribute name="toolbar-size" value="24" />
+			<attribute name="toolbar-small" value="16" />
+			<attribute name="toolbar-large" value="32" />
+			<attribute name="tab-icon-size" value="16" />
+			<attribute name="menu-icon-size" value="16" />
+			<attribute name="main-title-icon-size" value="24" />
+			<attribute name="edit-button-size" value="12" />
+			<attribute name="overlay-size" value="9" />
+
+			<!-- Colour variables (theme-agnostic defaults, finetuned later) -->
+			<attribute name="fill" value="" />
+			<attribute name="stroke-add" value="2b8a3e" />
+			<attribute name="stroke-remove" value="c0392b" />
+			<attribute name="stroke-delete" value="c0392b" />
+			<attribute name="stroke-edit" value="1971c2" />
+			<attribute name="stroke-info" value="1971c2" />
+			<attribute name="stroke-warning" value="e67700" />
+			<attribute name="stroke-error" value="c0392b" />
+			<attribute name="stroke-button" value="c0c0c0" />
+
+			<!-- Framework action iconspecs.
+			     iconspec      = toolbar (primary)
+			     menu-iconspec = menu variant; if absent, ActionBinder falls back to iconspec -->
+			<file name="action">
+				<file name="add">
+					<attribute name="iconspec">svg/plus.svg|${toolbar-size}||||${stroke-add}</attribute>
+					<attribute name="menu-iconspec">svg/plus.svg|${menu-icon-size}||||${stroke-add}</attribute>
+				</file>
+				<file name="add-select">
+					<attribute name="iconspec">svg/plus.svg|${toolbar-size}||||${stroke-add}</attribute>
+					<attribute name="menu-iconspec">svg/plus.svg|${menu-icon-size}||||${stroke-add}</attribute>
+				</file>
+				<file name="delete">
+					<attribute name="iconspec">svg/minus.svg|${toolbar-size}||||${stroke-delete}</attribute>
+					<attribute name="menu-iconspec">svg/minus.svg|${menu-icon-size}||||${stroke-delete}</attribute>
+				</file>
+				<file name="remove">
+					<attribute name="iconspec">svg/minus.svg|${toolbar-size}||||${stroke-remove}</attribute>
+					<attribute name="menu-iconspec">svg/minus.svg|${menu-icon-size}||||${stroke-remove}</attribute>
+				</file>
+				<file name="context-help">
+					<attribute name="iconspec">svg/help.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/help.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="administration">
+					<attribute name="iconspec">svg/settings.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/settings.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="local-settings">
+					<attribute name="iconspec">svg/settings-bolt.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/settings-bolt.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="save">
+					<attribute name="iconspec">24/SAVE.png</attribute>
+				</file>
+				<file name="save-all">
+					<attribute name="iconspec">24/SAVE_ALL.png</attribute>
+				</file>
+				<file name="close">
+					<attribute name="iconspec">24/CLOSE.png</attribute>
+				</file>
+				<file name="close-all">
+					<attribute name="iconspec">24/CLOSE.png</attribute>
+				</file>
+				<file name="preview">
+					<attribute name="iconspec">svg/search.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/search.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="print">
+					<attribute name="iconspec">svg/printer.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/printer.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="refresh">
+					<attribute name="iconspec">svg/refresh.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/refresh.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="reload">
+					<attribute name="iconspec">svg/refresh-dot.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/refresh-dot.svg|${menu-icon-size}</attribute>
+				</file>
+			</file>
+
+			<!-- Inline editor button iconspecs (edit-button-size = 12) -->
+			<file name="editor">
+				<file name="add">
+					<attribute name="iconspec">svg/plus.svg|${edit-button-size}||||${stroke-add}</attribute>
+				</file>
+				<file name="remove">
+					<attribute name="iconspec">svg/minus.svg|${edit-button-size}||||${stroke-remove}</attribute>
+				</file>
+				<file name="edit">
+					<attribute name="iconspec">svg/edit.svg|${edit-button-size}||||${stroke-edit}</attribute>
+				</file>
+				<file name="preview">
+					<attribute name="iconspec">svg/info-circle.svg|${edit-button-size}||||${stroke-info}</attribute>
+				</file>
+			</file>
+
+			<!-- Codebook selector -->
+			<file name="codebook">
+				<file name="open">
+					<attribute name="iconspec">svg/list.svg|${edit-button-size}||||${stroke-button}</attribute>
+				</file>
+			</file>
+		</file>
 		<file name="availableActions">
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.AppCloseAction" />
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAction" />
@@ -79,6 +187,14 @@
 		</file>
 		<file name="ui">
 			<file name="help" />
+			<file name="themes">
+				<file name="light">
+					<!-- light-theme iconspec variable overrides — finetuned later -->
+				</file>
+				<file name="dark">
+					<!-- dark-theme iconspec variable overrides — finetuned later -->
+				</file>
+			</file>
 		</file>
 	</file>
 </root>

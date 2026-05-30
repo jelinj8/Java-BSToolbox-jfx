@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.StringProperty;
 
@@ -28,7 +29,7 @@ public class CloseAction extends BasicContextUIAction<IClose> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "24/CLOSE.png";
+		return IconspecUtils.getIconspec("action/close"); //$NON-NLS-1$
 	}
 
 	@Override

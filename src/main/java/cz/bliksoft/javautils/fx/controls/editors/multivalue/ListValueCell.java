@@ -4,6 +4,7 @@ import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IObjectStatusProvider;
 import cz.bliksoft.javautils.fx.binding.ObjectStatus;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -77,7 +78,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 		});
 
 		if (provider.supportsDialog()) {
-			Button editDialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 9));
+			Button editDialogBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			editDialogBtn.setFocusTraversable(false);
 			editDialogBtn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;
@@ -88,7 +89,8 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 			editCellGraphic = editBox;
 
 			displayLabel = new Label();
-			Button displayDialogBtn = new Button(null, ImageUtils.getIconView("16/EDIT.png", 9));
+			Button displayDialogBtn = new Button(null,
+					ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			displayDialogBtn.setFocusTraversable(false);
 			displayDialogBtn.setOnAction(e -> {
 				Window owner = getScene() != null ? getScene().getWindow() : null;

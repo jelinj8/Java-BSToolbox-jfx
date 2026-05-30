@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.fx.controls.codebooks;
 
 import java.util.Objects;
 
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -47,7 +48,7 @@ public class CodebookField<T> extends HBox {
 		selectButton.getStyleClass().add("select-button");
 		selectButton.setFocusTraversable(false);
 
-		selectButton.setGraphic(ImageUtils.getIconView("codebook/Codebook_16.png"));
+		selectButton.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("codebook/open"))); //$NON-NLS-1$
 
 		getChildren().addAll(/* iconPane, */textField, selectButton/* , clearButton */);
 

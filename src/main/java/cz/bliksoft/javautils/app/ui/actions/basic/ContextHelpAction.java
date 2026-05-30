@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IContextHelp;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.app.ui.help.BSAppHelpMessages;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -28,7 +29,12 @@ public class ContextHelpAction extends BasicContextUIAction<IContextHelp> {
 
 	@Override
 	protected String getBaseIconSpec() {
-		return "24/HELP.png"; //$NON-NLS-1$
+		return IconspecUtils.getIconspec("action/context-help"); //$NON-NLS-1$
+	}
+
+	@Override
+	protected String getBaseMenuIconSpec() {
+		return IconspecUtils.getMenuIconspec("action/context-help"); //$NON-NLS-1$
 	}
 
 	@Override
