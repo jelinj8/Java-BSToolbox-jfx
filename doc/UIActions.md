@@ -311,6 +311,9 @@ ServiceLoader (or `core/actions` in the XML filesystem).
 | `AppClose` | _(static)_ | Fires `TryCloseEvent` to close the application |
 | `OpenAdministration` | `UserInfo` | Opens `AdministrationPanel`; enabled by `PermissionOpenAdministration` |
 | `OpenLocalConfiguration` | `IConfigurable` | Calls `configure()`; enabled by `isConfigurable()` |
+| `ShowAbout` | _(static)_ | Opens the About dialog (module versions + credits) |
+| `ShowHelp` | _(static)_ | Opens the help URL in the browser; hidden when no URL is configured |
+| `ContextHelp` | `IContextHelp` | Calls `openHelp()` on the current context object |
 
 ---
 
@@ -335,3 +338,15 @@ public class OrderView extends BorderPane implements ISave, IDelete, IClose {
 
 Place an `OrderView` instance into context and the `Save`, `Delete`, `Close`
 toolbar buttons automatically become enabled/visible without any glue code.
+
+### `IContextHelp`
+
+```java
+public interface IContextHelp {
+    void openHelp();
+}
+```
+
+Implement on any view that wants to provide context-sensitive help. While that
+view is in context the `ContextHelp` action becomes visible. See **Help.md** for
+the full help system overview.
