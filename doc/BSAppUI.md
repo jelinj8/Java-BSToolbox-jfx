@@ -101,6 +101,59 @@ Declared via the `theme` attribute on the scene node (`LIGHT`, `DARK`, `SYSTEM`,
 `NONE`). Overridden at runtime by the `ui.theme` property in local/global
 properties. `Styling.installGlobalCss()` applies the framework CSS.
 
+### Stage icons (`iconBase`)
+
+The `iconBase` attribute on the scene node sets the window/taskbar icons.
+
+**PNG variant** — append size + `.png` suffix to a base path:
+```xml
+<attribute name="iconBase" value="/icons/app/Home_" />
+<!-- loads: /icons/app/Home_16.png, _32.png, _48.png, _256.png -->
+```
+
+**SVG variant** — use any ImageUtils spec with `${size}` placeholder:
+```xml
+<attribute name="iconBase" value="[F]:icons/app/Home.svg|${size}" />
+<!-- renders: [F]:icons/app/Home.svg|16, |32, |48, |256 via SvgConverter -->
+```
+
+Sizes tried in both cases: `16`, `32`, `48`, `256`. Missing sizes are skipped.
+
+### SVG default colors
+
+`currentColor` in SVG files is not supported by SVG Salamander and must be
+replaced at render time. Theme-aware defaults can be declared under
+`/AppUI/colors/themes/light` and `/AppUI/colors/themes/dark`:
+
+```xml
+<file name="AppUI">
+    …
+    <file name="colors">
+        <file name="themes">
+            <file name="light">
+                <attribute name="stroke" value="#222222" />
+                <!-- <attribute name="fill" value="#222222" /> -->
+            </file>
+            <file name="dark">
+                <attribute name="stroke" value="#e8e8e8" />
+            </file>
+        </file>
+    </file>
+</file>
+```
+
+`BSAppUI` reads the active theme's node after resolving the theme mode and sets
+`SvgConverter.setDefaultStrokeColor` / `setDefaultFillColor`. The defaults apply
+**only** when the SVG content actually contains `currentColor` (stroke) or
+`fill="currentColor"` (fill) — explicit colors in the SVG are never touched.
+
+Priority (highest → lowest):
+1. Iconspec params[5]/[6] — `icon.svg|size||scale||strokeColor|fillColor`
+2. Theme defaults from `/AppUI/colors/themes/<light|dark>`
+3. Hard fallback `black` for stroke (so SVG Salamander never sees `currentColor`)
+
+Bare hex values (`222222`) are accepted in addition to `#`-prefixed ones.
+
 ---
 
 ## UI stack

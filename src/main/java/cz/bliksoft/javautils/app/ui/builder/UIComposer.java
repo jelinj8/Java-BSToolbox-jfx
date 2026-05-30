@@ -175,7 +175,8 @@ public final class UIComposer {
 	private static void setStageIcons(Stage stage, String basePath) {
 		int[] sizes = { 16, 32, 48, 256 };
 		for (int s : sizes) {
-			String path = String.format("%s%d.png", basePath, s);
+			String path = basePath.contains("${size}") ? basePath.replace("${size}", String.valueOf(s))
+					: String.format("%s%d.png", basePath, s);
 			Image i = ImageUtils.getImageIfPossible(path, false);
 			if (i != null)
 				stage.getIcons().add(i);

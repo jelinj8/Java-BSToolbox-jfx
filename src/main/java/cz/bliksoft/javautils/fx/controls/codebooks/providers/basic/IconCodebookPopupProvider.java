@@ -42,7 +42,10 @@ public class IconCodebookPopupProvider implements ICodebookProvider<String> {
 		if (selectorText == null || selectorText.isBlank())
 			return null;
 		if (selectorText.startsWith(FILE_PREFIX)) {
-			File f = new File(selectorText.substring(FILE_PREFIX.length()));
+			String spec = selectorText.substring(FILE_PREFIX.length());
+			int pipe = spec.indexOf('|');
+			String path = pipe >= 0 ? spec.substring(0, pipe) : spec;
+			File f = new File(path);
 			return (f.exists() && f.isFile() && isIconFile(f)) ? selectorText : null;
 		}
 		return ImageUtils.getImageIfPossible(selectorText, false) != null ? selectorText : null;
@@ -50,16 +53,12 @@ public class IconCodebookPopupProvider implements ICodebookProvider<String> {
 
 	@Override
 	public String toDisplayString(String value) {
-		if (value == null)
-			return "";
-		if (value.startsWith(FILE_PREFIX))
-			return new File(value.substring(FILE_PREFIX.length())).getName();
-		return value;
+		return value == null ? "" : value;
 	}
 
 	@Override
 	public String toEditString(String value) {
-		return toDisplayString(value);
+		return value == null ? "" : value;
 	}
 
 	@Override

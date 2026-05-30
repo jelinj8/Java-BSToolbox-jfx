@@ -236,18 +236,28 @@ public class ImageUtils {
 			if (params.length > 3 && StringUtils.hasLength(params[3]))
 				svgScale = Float.valueOf(params[3]);
 
+			String strokeColor = null;
+			String fillColor = null;
+			if (params.length > 5 && StringUtils.hasLength(params[5]))
+				strokeColor = resolveSpecColor(params[5]);
+			if (params.length > 6 && StringUtils.hasLength(params[6]))
+				fillColor = resolveSpecColor(params[6]);
+
 			try {
 				if (filePath.startsWith(PREFIX_FILE)) {
 					File f = new File(filePath.substring(4));
 					if (f.exists() && f.isFile()) {
-						return SvgConverter.createImageFromSVG(f, w, h, svgScale);
+						return SvgConverter.createImageFromSVG(f, w, h, svgScale, strokeColor, fillColor);
 					}
 					return null;
 				}
 
 				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath);
-				return SvgConverter.createImageFromSVGResource(res, w, h, svgScale);
+				return SvgConverter.createImageFromSVGResource(res, w, h, svgScale, strokeColor, fillColor);
 
+			} catch (IllegalArgumentException e) {
+				log.error("Failed to load SVG image: {} - {}", spec, e.getMessage());
+				return null;
 			} catch (Exception e) {
 				log.error("Failed to load SVG image: {}", spec, e);
 				return null;
@@ -678,8 +688,17 @@ public class ImageUtils {
 
 		String[] p = spec.split("\\|", -1);
 		if (p.length >= 5 && p[0].toLowerCase().endsWith(".svg")) {
-			// keep only first 4 parts for image caching/loading
-			return p[0] + "|" + p[1] + "|" + p[2] + "|" + p[3];
+			// Strip slot 4 (viewStyle — ImageView only) but preserve slots 5/6 (stroke/fill
+			// — affect image content)
+			StringBuilder sb = new StringBuilder();
+			sb.append(p[0]).append("|").append(p[1]).append("|").append(p[2]).append("|").append(p[3]);
+			if (p.length > 5) {
+				sb.append("||").append(p[5]); // slot 4 forced empty, slot 5 = stroke
+			}
+			if (p.length > 6) {
+				sb.append("|").append(p[6]); // slot 6 = fill
+			}
+			return sb.toString();
 		}
 		return spec;
 	}
@@ -785,6 +804,26 @@ public class ImageUtils {
 		iv.setFitWidth(size);
 		iv.setFitHeight(size);
 		return iv;
+	}
+
+	/**
+	 * Converts a spec color token (which cannot contain {@code #}) to a CSS color
+	 * string usable in SVG attributes.
+	 * <ul>
+	 * <li>3 or 6 hex chars (e.g. {@code 333333}) → {@code #333333}</li>
+	 * <li>{@code 0xRRGGBB} → {@code #RRGGBB}</li>
+	 * <li>CSS named colors, {@code none}, {@code rgb(...)} etc. → returned
+	 * as-is</li>
+	 * </ul>
+	 */
+	private static String resolveSpecColor(String s) {
+		if (s == null || s.isBlank())
+			return null;
+		if (s.startsWith("0x") || s.startsWith("0X"))
+			return "#" + s.substring(2);
+		if (s.matches("[0-9a-fA-F]{3,6}"))
+			return "#" + s;
+		return s;
 	}
 
 	private static final String PREFIX_FILE = "[F]:";

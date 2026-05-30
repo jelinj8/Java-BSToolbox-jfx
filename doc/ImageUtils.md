@@ -39,7 +39,7 @@ All methods that accept a `String spec` understand the following formats.
 
 ```
 filename.svg
-filename.svg|w|h|scale|style
+filename.svg|w|h|scale|style|stroke|fill
 ```
 
 Parameters after `|` are all optional (leave blank to skip):
@@ -47,6 +47,23 @@ Parameters after `|` are all optional (leave blank to skip):
 - **h** — render height in pixels
 - **scale** — extra scale multiplier applied after w/h
 - **style** — inline CSS applied to the wrapping `ImageView` (not the SVG itself)
+- **stroke** — sets the SVG `color` CSS property on the root element; all `currentColor` references throughout the SVG (typically `stroke="currentColor"`) resolve to this value via CSS inheritance
+- **fill** — overrides the `fill` attribute on the root SVG element (replaces any existing value, e.g. `none`)
+
+Because `#` is the overlay-chain separator, hex colors in **stroke**/**fill** are written without it:
+
+| Notation | Example | Resolved to |
+|---|---|---|
+| 3 or 6 hex chars | `333` / `4A90D9` | `#333` / `#4A90D9` |
+| `0xRRGGBB` | `0xFFFFFF` | `#FFFFFF` |
+| CSS named color | `white`, `none` | used as-is |
+
+```
+search.svg|16|16|||333333        # 16 px, stroke #333333
+arrow.svg|24|24|||FFFFFF         # white stroke
+tag.svg|16|16|||4A90D9|none      # blue stroke, fill none
+home.svg|24|24                   # no colour injection
+```
 
 Paths follow the same relative / absolute / `[F]:` rules as raster images.
 

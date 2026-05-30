@@ -179,6 +179,10 @@ public final class Styling {
 		themeMode = Objects.requireNonNull(mode, "mode");
 	}
 
+	public static ThemeMode getThemeMode() {
+		return themeMode;
+	}
+
 	private static void installThemePseudoClass(Scene scene) {
 		Objects.requireNonNull(scene, "scene");
 

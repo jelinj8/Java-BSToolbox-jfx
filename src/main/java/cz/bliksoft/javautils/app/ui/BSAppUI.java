@@ -21,6 +21,7 @@ import cz.bliksoft.javautils.context.ContextSearchResult;
 import cz.bliksoft.javautils.context.IContextProvider;
 import cz.bliksoft.javautils.context.holders.StackedContextHolder;
 import cz.bliksoft.javautils.fx.VersionInfo;
+import cz.bliksoft.javautils.fx.controls.images.svg.SvgConverter;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.fx.tools.Styling;
 import cz.bliksoft.javautils.modules.ModuleBase;
@@ -43,7 +44,7 @@ public class BSAppUI extends ModuleBase {
 
 	public static final String CTX_MAIN_COMPONENT = "MainDesktopComponent"; //$NON-NLS-1$
 
-	public static final String FS_UI_ROOT = "/AppUI"; //$NON-NLS-1$
+	public static final String FS_UI_ROOT = "/core/ui"; //$NON-NLS-1$
 
 	public static final String PROP_THEME = "ui.theme"; //$NON-NLS-1$
 
@@ -101,49 +102,60 @@ public class BSAppUI extends ModuleBase {
 
 		FileObject f = FileSystem.getRoot().getFile(FS_UI_ROOT);
 		if (f != null) {
-			String rootName = f.getAttribute("root", null);
-			if (StringUtils.hasLength(rootName)) {
-				f = f.getFile(rootName);
-
-				if (f != null) {
-					String theme = f.getAttribute("theme");
-					if (theme != null) {
-						switch (theme.toUpperCase()) {
-						case "LIGHT":
-							Styling.setThemeMode(Styling.ThemeMode.LIGHT);
-							break;
-						case "DARK":
-							Styling.setThemeMode(Styling.ThemeMode.DARK);
-							break;
-						case "SYSTEM":
-							Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
-							break;
-						}
-
-					} else {
-
+			String mainName = f.getAttribute("main", "main");
+			FileObject mainNode = mainName.startsWith("/") ? FileSystem.getRoot().getFile(mainName)
+					: f.getFile(mainName);
+			if (mainNode != null) {
+				f = mainNode;
+				String theme = f.getAttribute("theme");
+				if (theme != null) {
+					switch (theme.toUpperCase()) {
+					case "LIGHT":
+						Styling.setThemeMode(Styling.ThemeMode.LIGHT);
+						break;
+					case "DARK":
+						Styling.setThemeMode(Styling.ThemeMode.DARK);
+						break;
+					case "SYSTEM":
+						Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
+						break;
 					}
-					Object localThemeObj = BSApp.getProperty(PROP_THEME);
-					if (localThemeObj != null) {
-						switch (localThemeObj.toString().toUpperCase()) {
-						case "LIGHT":
-							Styling.setThemeMode(Styling.ThemeMode.LIGHT);
-							break;
-						case "DARK":
-							Styling.setThemeMode(Styling.ThemeMode.DARK);
-							break;
-						case "SYSTEM":
-							Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
-							break;
-						case "NONE":
-							Styling.setThemeMode(Styling.ThemeMode.NONE);
-							break;
-						}
-					}
-					Styling.installGlobalCss();
-					UIComposer.buildUI(f, mainStage);
-					StageAutoSizer.install(mainStage);
 				}
+				Object localThemeObj = BSApp.getProperty(PROP_THEME);
+				if (localThemeObj != null) {
+					switch (localThemeObj.toString().toUpperCase()) {
+					case "LIGHT":
+						Styling.setThemeMode(Styling.ThemeMode.LIGHT);
+						break;
+					case "DARK":
+						Styling.setThemeMode(Styling.ThemeMode.DARK);
+						break;
+					case "SYSTEM":
+						Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
+						break;
+					case "NONE":
+						Styling.setThemeMode(Styling.ThemeMode.NONE);
+						break;
+					}
+				}
+				Styling.installGlobalCss();
+
+				FileObject colorsNode = FileSystem.getRoot().getFile(FS_UI_ROOT + "/colors/themes");
+				if (colorsNode != null) {
+					String themeName = Styling.getThemeMode() == Styling.ThemeMode.DARK ? "dark" : "light";
+					FileObject themeColors = colorsNode.getFile(themeName);
+					if (themeColors != null) {
+						String stroke = themeColors.getAttribute("stroke");
+						String fill = themeColors.getAttribute("fill");
+						if (StringUtils.hasLength(stroke))
+							SvgConverter.setDefaultStrokeColor(stroke);
+						if (StringUtils.hasLength(fill))
+							SvgConverter.setDefaultFillColor(fill);
+					}
+				}
+
+				UIComposer.buildUI(f, mainStage);
+				StageAutoSizer.install(mainStage);
 			}
 		}
 

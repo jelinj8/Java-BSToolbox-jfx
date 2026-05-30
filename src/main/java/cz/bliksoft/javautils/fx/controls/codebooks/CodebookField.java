@@ -78,9 +78,20 @@ public class CodebookField<T> extends HBox {
 				return;
 
 			switch (e.getCode()) {
-			case F4, DOWN -> {
+			case DOWN -> {
 				if (!locked) {
 					identifyOrSelect();
+					e.consume();
+				}
+			}
+			case ENTER -> {
+				if (!locked) {
+					String text = textField.getText();
+					if (text != null && !text.isBlank()) {
+						T identified = provider.identify(text, true);
+						if (identified != null)
+							acceptValue(identified);
+					}
 					e.consume();
 				}
 			}
