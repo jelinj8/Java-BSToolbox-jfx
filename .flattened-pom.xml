@@ -139,6 +139,11 @@
 		</dependency>
 		<dependency>
 			<groupId>cz.bliksoft.java</groupId>
+			<artifactId>dependency-management-freemarker</artifactId>
+			<type>pom</type>
+		</dependency>
+		<dependency>
+			<groupId>cz.bliksoft.java</groupId>
 			<artifactId>dependency-management-junit</artifactId>
 			<type>pom</type>
 		</dependency>

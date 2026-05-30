@@ -73,6 +73,12 @@
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAction" />
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.PreviewAction" />
 			<file name="cz.bliksoft.javautils.app.ui.actions.basic.PrintAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.ShowAboutAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.ShowHelpAction" />
+			<file name="cz.bliksoft.javautils.app.ui.actions.basic.ContextHelpAction" />
+		</file>
+		<file name="ui">
+			<file name="help" />
 		</file>
 	</file>
 </root>
