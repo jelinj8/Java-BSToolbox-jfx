@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.ui.UiScale;
+import cz.bliksoft.javautils.fx.controls.images.ico.IcoReader;
 import cz.bliksoft.javautils.fx.controls.images.svg.SvgConverter;
 import javafx.geometry.Bounds;
 import javafx.scene.image.Image;
@@ -252,6 +253,35 @@ public class ImageUtils {
 				return null;
 			}
 		}
+		// ICO handling
+		if (filePath.toLowerCase().endsWith(".ico")) {
+			Integer icoW = null;
+			Integer icoH = null;
+
+			if (params.length > 1 && StringUtils.hasLength(params[1]))
+				icoW = Integer.valueOf(params[1]);
+			if (params.length > 2 && StringUtils.hasLength(params[2]))
+				icoH = Integer.valueOf(params[2]);
+			if (icoW != null && icoH == null)
+				icoH = icoW;
+			if (icoH != null && icoW == null)
+				icoW = icoH;
+
+			try {
+				if (filePath.startsWith(PREFIX_FILE)) {
+					File f = new File(filePath.substring(4));
+					if (f.exists() && f.isFile())
+						return IcoReader.loadFromFile(f, icoW, icoH);
+					return null;
+				}
+				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath);
+				return IcoReader.loadFromResource(res, icoW, icoH);
+			} catch (Exception e) {
+				log.error("Failed to load ICO image: {}", spec, e);
+				return null;
+			}
+		}
+
 		// Raster images
 		try {
 			if (filePath.startsWith(PREFIX_FILE)) {

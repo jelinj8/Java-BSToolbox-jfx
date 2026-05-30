@@ -50,6 +50,21 @@ Parameters after `|` are all optional (leave blank to skip):
 
 Paths follow the same relative / absolute / `[F]:` rules as raster images.
 
+### ICO files
+
+```
+filename.ico
+filename.ico|size
+filename.ico|w|h
+```
+
+Selects the best-matching frame from a multi-image ICO file:
+- **no size** — returns the largest available frame
+- **`|size`** — picks the frame closest to `size × size`; prefers exact match, then next-larger, then largest
+- **`|w|h`** — same logic using `min(w, h)` as the target
+
+Paths follow the same relative / absolute / `[F]:` rules as raster images. Supported frame formats: PNG-in-ICO, 32-bpp BGRA DIB, 24-bpp BGR DIB, and indexed (≤8-bpp) DIB.
+
 ### Inline SVG path data
 
 | Prefix | Result | Retrieve via |
