@@ -39,17 +39,10 @@ public final class IconBinder {
 				return;
 			}
 
-			if (newSpec.contains(ImageUtils.SCALE_PLACEHOLDER)) {
-				Node icon = ImageUtils.getIconNode(newSpec);
-				setter.accept(icon);
-			} else {
-				// IMPORTANT: must be a NEW node instance each time
-				Node icon = ImageUtils.getIconNode(newSpec.trim());
-
-				// Optional: enforce size at binder level (best-effort)
-				enforceIconSize(icon, sizePx);
-				setter.accept(icon);
-			}
+			// IMPORTANT: must be a NEW node instance each time
+			Node icon = ImageUtils.getIconNode(newSpec.trim());
+			enforceIconSize(icon, sizePx);
+			setter.accept(icon);
 		};
 
 		// initial + updates

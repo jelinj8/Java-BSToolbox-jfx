@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
@@ -94,6 +95,7 @@ public class ImageUtils {
 	}
 
 	private static final Map<String, Image> iconCache = new HashMap<>();
+	private static final Map<String, String> tokenMap = new LinkedHashMap<>();
 
 	/** Overlay alignment: source image is centered over the base. */
 	public static final int ALIGN_CENTER = 0;
@@ -114,6 +116,24 @@ public class ImageUtils {
 	 * UI-scale bucket string before image lookup.
 	 */
 	public static final String SCALE_PLACEHOLDER = "${scale}";
+
+	/**
+	 * Registers a custom token for substitution in icon spec strings. The token
+	 * {@code ${key}} will be replaced with {@code value} in every spec passed to
+	 * {@link #getImageIfPossible}. Passing {@code null} as value removes a
+	 * previously registered token.
+	 */
+	public static void registerToken(String key, String value) {
+		if (value == null)
+			tokenMap.remove(key);
+		else
+			tokenMap.put(key, value);
+	}
+
+	/** Bulk-registers tokens; see {@link #registerToken}. */
+	public static void registerTokens(Map<String, String> tokens) {
+		tokenMap.putAll(tokens);
+	}
 
 	private static Integer parseAlignToken(String s) {
 		return switch (s) {
@@ -272,11 +292,10 @@ public class ImageUtils {
 		if (spec == null)
 			return null;
 
-		String nSpec;
-		if (spec.contains(SCALE_PLACEHOLDER))
-			nSpec = spec.replace(SCALE_PLACEHOLDER, UiScale.bucketedScaleString());
-		else
-			nSpec = spec;
+		String nSpec = spec.contains(SCALE_PLACEHOLDER) ? spec.replace(SCALE_PLACEHOLDER, UiScale.bucketedScaleString())
+				: spec;
+		for (Map.Entry<String, String> e : tokenMap.entrySet())
+			nSpec = nSpec.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
 
 		Image i = iconCache.get(nSpec);
 		if (i == null) {

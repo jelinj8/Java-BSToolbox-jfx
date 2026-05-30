@@ -60,15 +60,28 @@ Paths follow the same relative / absolute / `[F]:` rules as raster images.
 
 `[P]:` and `[PS]:` return a `Node`, not an `Image`, so `getIconView` will throw for `[P]:` specs — use `getIconNode` instead.
 
-### Scale placeholder
+### Token substitution
 
-The token `${scale}` in any spec is replaced with the current DPI bucket string (e.g. `1`, `2`, `1.5`) before lookup:
+Before lookup, every spec is passed through a two-step token replacement:
 
-```
-icon_${scale}x.png   →   icon_2x.png   (on a 200 % DPI screen)
-```
+1. **`${scale}`** — built-in, dynamic. Replaced with the current DPI bucket string (e.g. `1`, `2`, `1.5`) computed by `UiScale.bucketedScaleString()`.
 
-Bucket strings are computed by `UiScale.bucketedScaleString()`.
+   ```
+   icon_${scale}x.png   →   icon_2x.png   (on a 200 % DPI screen)
+   ```
+
+2. **Custom tokens** — registered via `registerToken` / `registerTokens` at startup. Any `${key}` in the spec is replaced with the corresponding value.
+
+   ```java
+   ImageUtils.registerTokens(Map.of(
+       "smallIcon",  "16",
+       "normalIcon", "24",
+       "largeIcon",  "32"
+   ));
+   // spec "${normalIcon}/SAVE.png"  →  "24/SAVE.png"
+   ```
+
+   Tokens are applied in insertion order. Passing `null` as value to `registerToken` removes that token.
 
 ### Overlay chain — `#`
 
@@ -191,9 +204,14 @@ ImageUtils.setBrandingImagesRoot("/com/example/myapp/images/");
 // Scale factor used by getScaledSvgIcon and ${scale} substitution
 // Default: 1.0 — set this once at startup from UiScale.outputScale()
 ImageUtils.setScale((float) UiScale.outputScale());
+
+// Register custom tokens for spec substitution (call at app init, before any image loading)
+ImageUtils.registerToken("normalIcon", "24");   // ${normalIcon} → "24"
+ImageUtils.registerToken("normalIcon", null);   // removes the token
+ImageUtils.registerTokens(Map.of("smallIcon", "16", "largeIcon", "32"));
 ```
 
-Both values are global and shared across all callers.
+All values are global and shared across all callers.
 
 ---
 
@@ -214,7 +232,7 @@ After installation, relative names, overlays, SVG, and scale substitution all wo
 
 ## Caching behaviour
 
-- The cache is keyed by the **resolved** spec string (after `${scale}` substitution).
+- The cache is keyed by the **resolved** spec string (after all token substitutions).
 - Cache is never invalidated at runtime — suitable for static icons; not for dynamically generated specs that encode runtime state.
 - `createImage` is not cached; `getImageIfPossible` / `getImage` are.
 - `null` results are not cached — a failed load is retried on the next call.
