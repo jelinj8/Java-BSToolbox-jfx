@@ -9,8 +9,8 @@ Central utility for loading, compositing, and caching JavaFX `Image` objects and
 ## Quick start
 
 ```java
-// Image with fallback to error icon if loading fails
-Image img = ImageUtils.getImage("save_16.png");
+// Image; falls back to an error-indicator icon on failure
+Image img = ImageUtils.getImage("save_16.png", false);
 
 // ImageView, possibly sized
 ImageView iv = ImageUtils.getIconView("save_16.png");
@@ -86,6 +86,22 @@ Selects the best-matching frame from a multi-image ICO file:
 
 Paths follow the same relative / absolute / `[F]:` rules as raster images. Supported frame formats: PNG-in-ICO, 32-bpp BGRA DIB, 24-bpp BGR DIB, and indexed (≤8-bpp) DIB.
 
+### Solid-colour canvas
+
+```
+EMPTY|size
+EMPTY|w|h
+EMPTY|w|h|color
+```
+
+Creates a synthetic transparent canvas useful as a base layer. `h` may be left blank to default to `w`. `color` uses the same notation as SVG stroke/fill.
+
+```
+EMPTY|24               # 24×24 transparent canvas
+EMPTY|32|16            # 32×16 transparent canvas
+EMPTY|24|24|4A90D9     # 24×24 solid blue canvas
+```
+
 ### Inline SVG path data
 
 | Prefix | Result | Retrieve via |
@@ -121,22 +137,71 @@ Before lookup, every spec is passed through a two-step token replacement:
 
 ### Overlay chain — `#`
 
-Multiple specs separated by `#` are alpha-composited into a single image. An optional alignment token as the **first** `#`-separated element controls where each subsequent image lands on the base:
+Multiple specs separated by `#` are alpha-composited left-to-right into a single image. The canvas is sized to fit the largest image; the first image effectively becomes the background.
+
+An optional **alignment token** as the first `#`-separated element controls where every image in the chain is positioned on that canvas:
 
 ```
 base_16.png#overlay/lock_9.png           # lock badge at bottom-right (default)
 TL#base_16.png#overlay/badge_9.png       # badge at top-left
+BR#EMPTY|24#save.svg|16|||||00ff00       # green icon inside 24-px canvas, at bottom-right
 ```
 
-Alignment tokens: `TL`, `TR`, `BL`, `BR`, `C`. If the first element is not a token it is treated as the first image.
+Alignment tokens: `TL`, `TR`, `BL`, `BR`, `C`. If the first element is not a recognised token it is treated as the first image.
+
+For the alignment to have a visible effect on an overlay, the overlay image must be smaller than the largest image (which defines the canvas). All images — including the base — are positioned with the same alignment, but the largest image lands at (0, 0) regardless of alignment.
+
+#### Subtract mode (`-`)
+
+Append `-` to the alignment token to switch all overlay images to **subtract mode** (DST_OUT compositing): each image after the first cuts its opaque pixels out of the accumulated result instead of painting over it. The first image is always the additive base.
+
+```
+C-#base_32.png#svg/mask/circle.svg|32     # mask subtracts a centred circular hole from base
+TL-#base_16.png#shadow_mask.png           # mask subtracts from base, placed at top-left
+-#base_16.png#mask.png                    # subtract at default BR alignment
+```
+
+Subtraction formula per pixel: `outA = dstA × (1 − srcA)` — fully opaque mask pixels produce fully transparent output; fully transparent mask pixels leave the destination unchanged.
 
 ### Processing chain — `##`
 
-Specs separated by `##` are each resolved independently (via `createImage`, so each segment may itself be an overlay chain), then composited in one pass. An optional alignment token as the very first `##`-element sets the composite alignment:
+Specs separated by `##` are each resolved independently via `createImage` (so each segment may itself be a full overlay chain), then alpha-composited in one pass. This lets you chain independently-built images together.
+
+An optional **global alignment token** as the very first element sets the default placement and subtract mode for all segments:
 
 ```
 base_16.png##overlay/Warning_9.png##overlay/lock_9.png
-BR##step1.png#badge.png##step2.png
+BR##step1.png##step2.png
+```
+
+#### Per-segment alignment and subtract
+
+A `##` segment that starts with an alignment token (with or without `-`) **before the first `#`** overrides both the placement and the subtract mode for that segment only, while the rest of the segment is still resolved normally.
+
+This token is parsed twice — once by the `##` compositor for outer placement, and once by `createImage` for inner `#` chain compositing — so it controls the full chain at both levels.
+
+```
+# Green 16-px icon at top-left inside a 24-px canvas, then a red badge at bottom-right:
+TL#EMPTY|24#save.svg|16|||||00ff00##BR#badge.svg|9|||||ff0000
+
+# Solid blue square, circular cutout at centre, badge at bottom-right:
+EMPTY|32|32|blue##C-#svg/mask/circle.svg|32##badge.svg
+
+# Photo with top-left corner faded, badge added:
+photo.png##TL-#svg/mask/fade_tl.svg|64##badge.svg
+```
+
+To subtract a segment that is a plain image (not a `#` chain), wrap it with a bare `-`:
+
+```
+base.png##-#mask.svg        # subtracts mask.svg at default BR alignment
+base.png##C-#mask.svg       # subtracts mask.svg at centre
+```
+
+A global alignment token with `-` makes **all** subsequent segments subtract:
+
+```
+C-##photo.png##mask1.svg##mask2.svg     # both masks subtract from photo, all centred
 ```
 
 ---
@@ -166,10 +231,10 @@ Image ImageUtils.getImage(String iconNameBase, int size)
 ```java
 // ImageView; throws for [P]: specs (use getIconNode instead)
 ImageView ImageUtils.getIconView(String spec)
-ImageView ImageUtils.getIconView(String spec, String style)  // inline CSS override
-ImageView ImageUtils.getIconView(String spec, double size)   // fitWidth/fitHeight, preserveRatio
+ImageView ImageUtils.getIconView(String spec, String style)       // inline CSS override
+ImageView ImageUtils.getIconView(String spec, double size)        // fitWidth/fitHeight, preserveRatio
 ImageView ImageUtils.getIconView(String spec, double size, String style)
-ImageView ImageUtils.getIconView(Object input)               // polymorphic (Image or String)
+ImageView ImageUtils.getIconView(Object input)                    // polymorphic (Image or String)
 
 // Best-fit node: SVGPath/Shape for [P]:/[PS]: specs, ImageView otherwise
 Node ImageUtils.getIconNode(String spec)
@@ -178,14 +243,11 @@ Node ImageUtils.getIconNode(String spec)
 ### SVG helpers
 
 ```java
-// SVG at current UI scale (natural size)
-Image ImageUtils.getScaledSvgIcon(String iconName, null)
+// SVG at current UI scale, optionally constrained to size pixels (null = natural size)
+Image ImageUtils.getScaledSvgIcon(String iconName, Integer size)
 
-// SVG at current UI scale, constrained to `size` pixels
-Image ImageUtils.getScaledSvgIcon(String iconName, int size)
-
-// SVG at fixed pixel size regardless of DPI
-Image ImageUtils.getSvgIcon(String iconName, int size)
+// SVG at a fixed pixel size regardless of DPI
+Image ImageUtils.getSvgIcon(String iconName, Integer size)
 ```
 
 `iconName` is without the `.svg` extension; resolved via the branding root.
@@ -208,11 +270,38 @@ Alignment constants:
 
 | Constant | Value | Meaning |
 |---|---|---|
+| `ALIGN_CENTER` | 0 | Centred |
 | `ALIGN_BOTTOM_RIGHT` | 1 | Bottom-right of the canvas (default for badges) |
 | `ALIGN_TOP_LEFT` | 2 | Top-left |
 | `ALIGN_BOTTOM_LEFT` | 3 | Bottom-left |
 | `ALIGN_TOP_RIGHT` | 4 | Top-right |
-| `ALIGN_CENTER` | 0 | Centered |
+
+### Saving images
+
+```java
+// Render iconspec(s) and write to a file — format determined by extension
+void ImageUtils.saveImage(File target, String... iconspecs) throws IOException
+```
+
+- **`.png`** target — all specs are resolved and alpha-composited (bottom-right alignment) into a single image, then written as PNG. A single spec is saved as-is without compositing.
+- **`.ico`** target — each spec is rendered independently and stored as a separate frame in a multi-frame Windows ICO file (PNG-in-ICO encoding, Vista+ compatible). Typical use: pass the same icon at 16, 32, 48, and 256 px to produce a standard icon set.
+
+```java
+// Save a single image
+ImageUtils.saveImage(new File("out.png"), "16/SAVE.png");
+
+// Save a composed image (specs overlaid at bottom-right)
+ImageUtils.saveImage(new File("composed.png"), "24/FOLDER.png", "9/LOCK.png");
+
+// Batch-create a multi-size icon set
+ImageUtils.saveImage(new File("app.ico"),
+    "16/APP.png",
+    "32/APP.png",
+    "48/APP.png",
+    "256/APP.png");
+```
+
+Throws `IOException` if any spec cannot be resolved or if writing fails. Throws `IllegalArgumentException` for unsupported extensions or an empty spec list. ICO writing is handled by `IcoWriter`.
 
 ### Utilities
 
@@ -248,6 +337,60 @@ ImageUtils.registerTokens(Map.of("smallIcon", "16", "largeIcon", "32"));
 ```
 
 All values are global and shared across all callers.
+
+---
+
+## Built-in mask SVGs
+
+Transparency mask files are provided under `svg/mask/` relative to the branding images root. They are designed for use with subtract mode so that their alpha channel cuts away the corresponding part of a base image.
+
+When subtracted, pixels where the mask is fully opaque become fully transparent in the result; pixels where the mask is transparent are unchanged.
+
+### Radial masks
+
+All radial masks are square-viewbox SVGs. `circle.*` uses a radial gradient that reaches full transparency at the midpoint of each side (so the corners are already transparent at that point). `square.*` uses a gradient radius scaled by √2, which reaches full transparency at the corners — the sides retain more opacity, giving more rectangular coverage.
+
+| File | Center | Edge | When subtracted |
+|---|---|---|---|
+| `svg/mask/circle.svg` | opaque | transparent | soft circular cutout |
+| `svg/mask/circle_steep.svg` | opaque | transparent, steep falloff | sharp circular cutout |
+| `svg/mask/circle_in.svg` | transparent | opaque | preserves centre, cuts border ring |
+| `svg/mask/circle_in_steep.svg` | transparent | opaque, steep onset | preserves centre with sharp ring |
+| `svg/mask/square.svg` | opaque | transparent | soft square/vignette cutout |
+| `svg/mask/square_steep.svg` | opaque | transparent, steep falloff | sharp square cutout |
+| `svg/mask/square_in.svg` | transparent | opaque | preserves centre, cuts square border |
+| `svg/mask/square_in_steep.svg` | transparent | opaque, steep onset | preserves centre, sharp square border |
+
+### Linear edge fades
+
+Each fade runs from one edge or corner (opaque) to the opposite (transparent). When subtracted, the opaque side is cut away and the transparent side is preserved.
+
+| File | Opaque end | Transparent end | When subtracted |
+|---|---|---|---|
+| `svg/mask/fade_up.svg` | top | bottom | removes top edge |
+| `svg/mask/fade_down.svg` | bottom | top | removes bottom edge |
+| `svg/mask/fade_left.svg` | left | right | removes left edge |
+| `svg/mask/fade_right.svg` | right | left | removes right edge |
+| `svg/mask/fade_tl.svg` | top-left | bottom-right | removes top-left corner |
+| `svg/mask/fade_tr.svg` | top-right | bottom-left | removes top-right corner |
+| `svg/mask/fade_bl.svg` | bottom-left | top-right | removes bottom-left corner |
+| `svg/mask/fade_br.svg` | bottom-right | top-left | removes bottom-right corner |
+
+### Usage examples
+
+```
+# Circular cutout in a solid square, then a badge at bottom-right:
+EMPTY|32|32|blue##C-#svg/mask/circle.svg|32##badge.svg
+
+# Photo with the top edge faded out:
+photo.png##-#svg/mask/fade_up.svg|64
+
+# Photo with the top-left corner cut away, badge at bottom-right:
+photo.png##TL-#svg/mask/fade_tl.svg|64##badge.svg
+
+# Two masks both subtracted from a photo (global subtract mode):
+C-##photo.png##svg/mask/circle.svg|32##svg/mask/circle_in.svg|32
+```
 
 ---
 

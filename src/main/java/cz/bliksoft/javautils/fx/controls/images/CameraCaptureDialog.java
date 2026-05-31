@@ -15,6 +15,8 @@ import com.github.sarxos.webcam.Webcam;
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
@@ -54,7 +56,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 
 	// ---- Controls ----
 	private final ComboBox<Webcam> sourceCombo = new ComboBox<>();
-	private final Button captureBtn = new Button("Nasnímat");
+	private final Button captureBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
 	private final ImageCropPane cropPane = new ImageCropPane();
 	private final Label statusLabel = new Label();
 

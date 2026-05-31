@@ -1,12 +1,18 @@
 package cz.bliksoft.javautils.fx.tools;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,7 +20,9 @@ import org.apache.logging.log4j.Logger;
 import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.ui.UiScale;
 import cz.bliksoft.javautils.fx.controls.images.ico.IcoReader;
+import cz.bliksoft.javautils.fx.controls.images.ico.IcoWriter;
 import cz.bliksoft.javautils.fx.controls.images.svg.SvgConverter;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Bounds;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -70,14 +78,19 @@ import javafx.scene.shape.SVGPath;
  * (first = background, last = foreground) at bottom-right alignment by default;
  * an optional alignment token ({@code TL}, {@code TR}, {@code BL}, {@code BR},
  * {@code C}) as the first {@code #}-separated element overrides the alignment
- * for the whole chain</li>
+ * for the whole chain. Append {@code -} to the alignment token (e.g.
+ * {@code C-}, {@code TL-}, or bare {@code -}) to switch to <em>subtract
+ * mode</em>: each image after the first cuts its opaque pixels out of the
+ * accumulated result (DST_OUT compositing) instead of painting over it</li>
  * <li>{@code seg1##seg2##...} — processing chain: each {@code ##}-separated
  * segment is resolved independently (a segment may itself be an overlay chain
  * with its own alignment token), then all results are composited in a single
  * pass at bottom-right alignment by default; an optional alignment token as the
- * very first {@code ##}-part overrides that alignment. Example — green icon at
- * top-left, red badge at bottom-right of a 24-px canvas:
- * {@code TL#EMPTY|24#save.svg|16|||||00ff00##BR#badge.svg|9|||||ff0000}</li>
+ * very first {@code ##}-part overrides that alignment. A segment may begin with
+ * its own alignment token to override positioning and/or subtract mode for that
+ * segment only (e.g. {@code C-#mask.svg} subtracts a centered mask). Example —
+ * blue square with a circular cutout and a badge:
+ * {@code EMPTY|32|32|blue##C-#svg/mask/circle.svg|32##badge.svg}</li>
  * <li>The token {@value #SCALE_PLACEHOLDER} in any spec is replaced with the
  * current UI-scale bucket string before lookup</li>
  * </ul>
@@ -136,6 +149,9 @@ public class ImageUtils {
 	/** Overlay alignment: source image is placed at the top-right corner. */
 	public static final int ALIGN_TOP_RIGHT = 4;
 
+	private record AlignMode(int align, boolean subtract) {
+	}
+
 	/**
 	 * Placeholder token in icon spec strings that is replaced with the current
 	 * UI-scale bucket string before image lookup.
@@ -160,7 +176,7 @@ public class ImageUtils {
 		tokenMap.putAll(tokens);
 	}
 
-	private static Integer parseAlignToken(String s) {
+	private static Integer parseAlignTokenBase(String s) {
 		return switch (s) {
 		case "TL" -> ALIGN_TOP_LEFT; //$NON-NLS-1$
 		case "TR" -> ALIGN_TOP_RIGHT; //$NON-NLS-1$
@@ -169,6 +185,33 @@ public class ImageUtils {
 		case "C" -> ALIGN_CENTER; //$NON-NLS-1$
 		default -> null;
 		};
+	}
+
+	/**
+	 * Parses an alignment token with an optional {@code -} suffix that signals
+	 * subtract (DST_OUT) compositing mode. Returns {@code null} if {@code s} is not
+	 * a recognised alignment token (with or without the suffix).
+	 *
+	 * <p>
+	 * Examples: {@code "TL"} → add/TL, {@code "C-"} → subtract/C, {@code "-"} →
+	 * subtract/BR (default alignment).
+	 */
+	private static AlignMode parseAlignMode(String s) {
+		if (s.endsWith("-")) { //$NON-NLS-1$
+			String base = s.substring(0, s.length() - 1);
+			int align;
+			if (base.isEmpty()) {
+				align = ALIGN_BOTTOM_RIGHT;
+			} else {
+				Integer a = parseAlignTokenBase(base);
+				if (a == null)
+					return null;
+				align = a;
+			}
+			return new AlignMode(align, true);
+		}
+		Integer a = parseAlignTokenBase(s);
+		return a != null ? new AlignMode(a, false) : null;
 	}
 
 	/**
@@ -190,35 +233,70 @@ public class ImageUtils {
 		}
 
 		// Processing chain: "step1##step2##..." — each segment resolved via
-		// createImage, then composited once
+		// createImage, then composited once. An optional leading alignment token (with
+		// optional "-" suffix for subtract mode) controls global alignment and whether
+		// all segments subtract. Each segment may itself begin with an alignment+mode
+		// token (e.g. "C-#mask.svg") which overrides its individual alignment and
+		// subtract flag.
 		if (spec.contains("##")) { //$NON-NLS-1$
 			String[] parts = spec.split("##", -1); //$NON-NLS-1$
-			int align = ALIGN_BOTTOM_RIGHT;
+			int globalAlign = ALIGN_BOTTOM_RIGHT;
+			boolean globalSubtract = false;
 			int startIdx = 0;
-			Integer tokenAlign = parseAlignToken(parts[0]);
-			if (tokenAlign != null) {
-				align = tokenAlign;
+			AlignMode globalAm = parseAlignMode(parts[0]);
+			if (globalAm != null) {
+				globalAlign = globalAm.align();
+				globalSubtract = globalAm.subtract();
 				startIdx = 1;
 			}
-			Image[] images = new Image[parts.length - startIdx];
-			for (int i = 0; i < images.length; i++) {
-				images[i] = createImage(parts[startIdx + i], background);
+			int count = parts.length - startIdx;
+			Image[] images = new Image[count];
+			int[] aligns = new int[count];
+			boolean[] subtracts = new boolean[count];
+			for (int i = 0; i < count; i++) {
+				String part = parts[startIdx + i];
+				int segAlign = globalAlign;
+				boolean segSubtract = globalSubtract;
+				if (part.contains("#")) { //$NON-NLS-1$
+					String firstToken = part.substring(0, part.indexOf('#'));
+					AlignMode segAm = parseAlignMode(firstToken);
+					if (segAm != null) {
+						segAlign = segAm.align();
+						segSubtract |= segAm.subtract();
+					}
+				}
+				aligns[i] = segAlign;
+				subtracts[i] = i > 0 && segSubtract;
+				images[i] = createImage(part, background);
 			}
-			return overlayImages(align, images);
+			return overlayImagesImpl(images, aligns, subtracts);
 		}
 
 		// Overlay chain: "a#b#c" — optional leading alignment token (TL/TR/BL/BR/C)
+		// with optional "-" suffix for subtract (DST_OUT) mode on all layers after
+		// the first.
 		if (spec.contains("#")) { //$NON-NLS-1$
 			String[] parts = spec.split("#", -1); //$NON-NLS-1$
 			int align = ALIGN_BOTTOM_RIGHT;
+			boolean subtract = false;
 			int startIdx = 0;
-			Integer tokenAlign = parseAlignToken(parts[0]);
-			if (tokenAlign != null) {
-				align = tokenAlign;
+			AlignMode am = parseAlignMode(parts[0]);
+			if (am != null) {
+				align = am.align();
+				subtract = am.subtract();
 				startIdx = 1;
 			}
 			String[] imageParts = java.util.Arrays.copyOfRange(parts, startIdx, parts.length);
-			return overlayImages(align, imageParts);
+			Image[] images = new Image[imageParts.length];
+			for (int i = 0; i < imageParts.length; i++) {
+				images[i] = imageParts[i] != null ? getImage(imageParts[i], false) : null;
+			}
+			int[] aligns = new int[images.length];
+			java.util.Arrays.fill(aligns, align);
+			boolean[] subtracts = new boolean[images.length];
+			if (subtract)
+				java.util.Arrays.fill(subtracts, 1, subtracts.length, true);
+			return overlayImagesImpl(images, aligns, subtracts);
 		}
 
 		// Inline SVGPath rasterized into Image
@@ -536,6 +614,20 @@ public class ImageUtils {
 	 *         are empty
 	 */
 	public static Image overlayImages(int align, Image... icons) {
+		int[] aligns = new int[icons.length];
+		java.util.Arrays.fill(aligns, align);
+		return overlayImagesImpl(icons, aligns, null);
+	}
+
+	/**
+	 * Canonical compositing implementation. {@code aligns[i]} controls the
+	 * placement of each image; {@code subtracts[i] == true} applies DST_OUT
+	 * (alpha-subtract) compositing instead of the normal SRC_OVER for that image.
+	 * Index 0 is always the base (composited normally regardless of
+	 * {@code subtracts[0]}). Either array may be {@code null} to use defaults
+	 * (global align / add-only).
+	 */
+	private static Image overlayImagesImpl(Image[] icons, int[] aligns, boolean[] subtracts) {
 		int maxW = 0;
 		int maxH = 0;
 
@@ -563,7 +655,8 @@ public class ImageUtils {
 			pw.setPixels(0, y, maxW, 1, PixelFormat.getIntArgbInstance(), clear, 0, maxW);
 		}
 
-		for (Image icon : icons) {
+		for (int i = 0; i < icons.length; i++) {
+			Image icon = icons[i];
 			if (icon == null)
 				continue;
 			PixelReader pr = icon.getPixelReader();
@@ -573,6 +666,7 @@ public class ImageUtils {
 			int w = (int) Math.ceil(icon.getWidth());
 			int h = (int) Math.ceil(icon.getHeight());
 
+			int align = (aligns != null && i < aligns.length) ? aligns[i] : ALIGN_BOTTOM_RIGHT;
 			int dx = 0;
 			int dy = 0;
 
@@ -599,7 +693,12 @@ public class ImageUtils {
 			}
 			}
 
-			alphaCompositeInto(out, pr, dx, dy, w, h);
+			boolean doSubtract = i > 0 && subtracts != null && i < subtracts.length && subtracts[i];
+			if (doSubtract) {
+				alphaSubtractInto(out, pr, dx, dy, w, h);
+			} else {
+				alphaCompositeInto(out, pr, dx, dy, w, h);
+			}
 		}
 
 		return out;
@@ -667,6 +766,59 @@ public class ImageUtils {
 				int outB = (sb * sa + db * da * invSa / 255 + 127) / 255;
 
 				dstRow[x] = (outA << 24) | (outR << 16) | (outG << 8) | outB;
+			}
+
+			dstWriter.setPixels(tx0, ty, len, 1, PixelFormat.getIntArgbInstance(), dstRow, 0, len);
+		}
+	}
+
+	/**
+	 * DST_OUT compositing: source alpha subtracts from destination alpha; RGB
+	 * unchanged.
+	 */
+	private static void alphaSubtractInto(WritableImage dst, PixelReader src, int dx, int dy, int w, int h) {
+		PixelReader dstReader = dst.getPixelReader();
+		PixelWriter dstWriter = dst.getPixelWriter();
+
+		int[] srcRow = new int[w];
+		int[] dstRow = new int[w];
+
+		int dstW = (int) dst.getWidth();
+		int dstH = (int) dst.getHeight();
+
+		for (int y = 0; y < h; y++) {
+			int ty = dy + y;
+			if (ty < 0 || ty >= dstH)
+				continue;
+
+			int sx0 = 0;
+			int tx0 = dx;
+			int len = w;
+
+			if (tx0 < 0) {
+				sx0 = -tx0;
+				len -= sx0;
+				tx0 = 0;
+			}
+			if (tx0 + len > dstW) {
+				len = dstW - tx0;
+			}
+			if (len <= 0)
+				continue;
+
+			src.getPixels(sx0, y, len, 1, PixelFormat.getIntArgbInstance(), srcRow, 0, len);
+			dstReader.getPixels(tx0, ty, len, 1, PixelFormat.getIntArgbInstance(), dstRow, 0, len);
+
+			for (int x = 0; x < len; x++) {
+				int sa = (srcRow[x] >>> 24) & 0xFF;
+				if (sa == 0)
+					continue;
+				int d = dstRow[x];
+				int da = (d >>> 24) & 0xFF;
+				if (da == 0)
+					continue;
+				int outA = sa == 255 ? 0 : (da * (255 - sa) + 127) / 255;
+				dstRow[x] = (outA << 24) | (d & 0x00FFFFFF);
 			}
 
 			dstWriter.setPixels(tx0, ty, len, 1, PixelFormat.getIntArgbInstance(), dstRow, 0, len);
@@ -1049,6 +1201,65 @@ public class ImageUtils {
 		path.setPickOnBounds(true);
 
 		return path;
+	}
+
+	// ---- Save ----
+
+	/**
+	 * Saves one or more iconspec images to a file. The output format is determined
+	 * by the file extension:
+	 * <ul>
+	 * <li>{@code .png} — all specs are composited (overlaid at bottom-right) into a
+	 * single PNG; if only one spec is given it is saved as-is.</li>
+	 * <li>{@code .ico} — each spec is rendered as an independent frame in a
+	 * multi-frame Windows ICO file (PNG-in-ICO encoding, Vista+ compatible).</li>
+	 * </ul>
+	 *
+	 * @param target    the destination file ({@code .png} or {@code .ico})
+	 * @param iconspecs one or more icon spec strings; see class Javadoc for the
+	 *                  spec format
+	 *
+	 * @throws IllegalArgumentException if no specs are given or the file extension
+	 *                                  is not {@code .png} / {@code .ico}
+	 * @throws IOException              if any spec cannot be resolved or file
+	 *                                  writing fails
+	 */
+	public static void saveImage(File target, String... iconspecs) throws IOException {
+		if (iconspecs == null || iconspecs.length == 0)
+			throw new IllegalArgumentException("At least one iconspec is required");
+
+		String name = target.getName().toLowerCase(java.util.Locale.ROOT);
+
+		if (name.endsWith(".png")) { //$NON-NLS-1$
+			Image img;
+			if (iconspecs.length == 1) {
+				img = getImageIfPossible(iconspecs[0], false);
+			} else {
+				Image[] images = new Image[iconspecs.length];
+				for (int i = 0; i < iconspecs.length; i++) {
+					images[i] = getImageIfPossible(iconspecs[i], false);
+				}
+				img = overlayImages(ALIGN_BOTTOM_RIGHT, images);
+			}
+			if (img == null)
+				throw new IOException("Could not render iconspec: " + iconspecs[0]);
+			BufferedImage bi = SwingFXUtils.fromFXImage(img, null);
+			if (!ImageIO.write(bi, "png", target)) //$NON-NLS-1$
+				throw new IOException("No PNG ImageIO writer available");
+
+		} else if (name.endsWith(".ico")) { //$NON-NLS-1$
+			List<BufferedImage> frames = new ArrayList<>(iconspecs.length);
+			for (String spec : iconspecs) {
+				Image img = getImageIfPossible(spec, false);
+				if (img == null)
+					throw new IOException("Could not render iconspec: " + spec);
+				frames.add(SwingFXUtils.fromFXImage(img, null));
+			}
+			IcoWriter.write(target, frames);
+
+		} else {
+			throw new IllegalArgumentException("Unsupported format (expected .png or .ico): " + target.getName());
+		}
 	}
 
 }

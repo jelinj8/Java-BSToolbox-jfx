@@ -1,5 +1,7 @@
 package cz.bliksoft.javautils.app.ui.help;
 
+import java.awt.Desktop;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,6 +17,7 @@ import cz.bliksoft.javautils.modules.IModule;
 import cz.bliksoft.javautils.modules.Modules;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 import freemarker.cache.ClassTemplateLoader;
+import javafx.application.Platform;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.web.WebView;
@@ -54,27 +57,44 @@ public class HelpAboutPane extends TabPane {
 	}
 
 	private Tab buildAboutTab(FreemarkerGenerator gen) {
-		WebView view = new WebView();
 		try {
 			List<IModule> modules = new ArrayList<>(Modules.getModules().values());
 			modules.sort(Comparator.comparing(IModule::getModuleName, String.CASE_INSENSITIVE_ORDER));
-			view.getEngine().loadContent(gen.generate("About.ftl", modules)); //$NON-NLS-1$
+			return new Tab(BSAppHelpMessages.getString("HelpAboutPane.tab.about"), //$NON-NLS-1$
+					buildWebView(gen.generate("About.ftl", modules))); //$NON-NLS-1$
 		} catch (Exception e) {
 			log.error("Failed to render About.ftl", e);
+			return new Tab(BSAppHelpMessages.getString("HelpAboutPane.tab.about"), new WebView()); //$NON-NLS-1$
 		}
-		return new Tab(BSAppHelpMessages.getString("HelpAboutPane.tab.about"), view); //$NON-NLS-1$
 	}
 
 	private Tab buildCreditsTab(FreemarkerGenerator gen) {
-		WebView view = new WebView();
 		try {
 			Map<String, Object> data = new HashMap<>();
 			data.put("credits", FileSystem.getFile("lib_credits")); //$NON-NLS-1$ //$NON-NLS-2$
 			data.put("licences", FileSystem.getFile("licences")); //$NON-NLS-1$ //$NON-NLS-2$
-			view.getEngine().loadContent(gen.generate("Credits.ftl", data)); //$NON-NLS-1$
+			return new Tab(BSAppHelpMessages.getString("HelpAboutPane.tab.credits"), //$NON-NLS-1$
+					buildWebView(gen.generate("Credits.ftl", data))); //$NON-NLS-1$
 		} catch (Exception e) {
 			log.error("Failed to render Credits.ftl", e);
+			return new Tab(BSAppHelpMessages.getString("HelpAboutPane.tab.credits"), new WebView()); //$NON-NLS-1$
 		}
-		return new Tab(BSAppHelpMessages.getString("HelpAboutPane.tab.credits"), view); //$NON-NLS-1$
+	}
+
+	private WebView buildWebView(String html) {
+		WebView view = new WebView();
+		view.getEngine().loadContent(html);
+		view.getEngine().locationProperty().addListener((obs, oldLoc, newLoc) -> {
+			if (newLoc != null && !newLoc.isBlank()
+					&& (newLoc.startsWith("http://") || newLoc.startsWith("https://"))) { //$NON-NLS-1$ //$NON-NLS-2$
+				Platform.runLater(() -> view.getEngine().loadContent(html));
+				try {
+					Desktop.getDesktop().browse(new URI(newLoc));
+				} catch (Exception e) {
+					log.error("Failed to open URL in browser: {}", newLoc, e); //$NON-NLS-1$
+				}
+			}
+		});
+		return view;
 	}
 }
