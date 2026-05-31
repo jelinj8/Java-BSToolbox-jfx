@@ -89,7 +89,7 @@ Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"C
 
 - **CodebookField**: dropdown/search field backed by a provider framework for fetching codebook data
 - **Editors**: basic object editors, collection editors, properties editors (under `fx.controls.editors`)
-- **Images**: SVG-aware image loading (SVG Salamander), QR code support (ZXing)
+- **Images**: SVG-aware image loading (JSVG), QR code support (ZXing)
 - **Validation**: form validation support integrated with controls
 
 ## Key Dependencies
@@ -98,7 +98,7 @@ Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"C
 |---|---|
 | `common-java-utils` (BSToolbox) | Base utilities, xmlfilesystem, modules, events |
 | ControlsFX 11.2.3 | Extended JavaFX controls |
-| SVG Salamander | SVG rendering for icons/status badges |
+| JSVG | SVG rendering for icons/status badges |
 | ZXing | QR code generation |
 | Log4j2 | Logging |
 | JAXB | XML serialization |

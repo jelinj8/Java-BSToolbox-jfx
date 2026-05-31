@@ -1,12 +1,13 @@
 package cz.bliksoft.javautils.fx.controls.images.svg;
 
-import com.kitfox.svg.SVGDiagram;
-import com.kitfox.svg.SVGUniverse;
-import com.kitfox.svg.app.beans.SVGIcon;
+import com.github.weisj.jsvg.SVGDocument;
+import com.github.weisj.jsvg.parser.LoaderContext;
+import com.github.weisj.jsvg.parser.SVGLoader;
+import com.github.weisj.jsvg.view.FloatSize;
+import com.github.weisj.jsvg.view.ViewBox;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 
-import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -16,10 +17,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,43 +56,71 @@ public class SvgConverter {
 		return defaultFillColor;
 	}
 
-	public static Image createImageFromSVG(SVGIcon icon, Float width, Float height, Float scale) throws Exception {
-		icon.setAntiAlias(true);
-		icon.setInterpolation(SVGIcon.INTERP_BICUBIC);
+	/**
+	 * Loads an SVG from a file as a {@link SVGDocument}.
+	 */
+	public static SVGDocument loadSvgDocument(File svg) throws IOException {
+		try (InputStream is = new FileInputStream(svg)) {
+			SVGDocument doc = new SVGLoader().load(is, svg.toURI(), LoaderContext.createDefault());
+			if (doc == null)
+				throw new IOException("Failed to parse SVG: " + svg);
+			return doc;
+		}
+	}
 
-		if ((width != null) && (height != null)) {
-			icon.setAutosize(SVGIcon.AUTOSIZE_BESTFIT);
+	/**
+	 * Loads an SVG from a classpath resource as a {@link SVGDocument}.
+	 */
+	public static SVGDocument loadSvgDocument(String resourcePath) throws IOException {
+		var url = SvgConverter.class.getResource(resourcePath);
+		if (url == null)
+			throw new IllegalArgumentException("SVG resource not found: " + resourcePath);
+		SVGDocument doc = new SVGLoader().load(url, LoaderContext.createDefault());
+		if (doc == null)
+			throw new IOException("Failed to parse SVG resource: " + resourcePath);
+		return doc;
+	}
+
+	/**
+	 * Renders a pre-loaded {@link SVGDocument} to a JavaFX {@link Image}.
+	 * <p>
+	 * Sizing rules (before applying {@code scale}):
+	 * <ul>
+	 * <li>Both {@code width} and {@code height} supplied — canvas is
+	 * {@code width × height}; the SVG fits within it via its own
+	 * {@code preserveAspectRatio}.</li>
+	 * <li>Only {@code width} — height is derived from the SVG's aspect ratio.</li>
+	 * <li>Only {@code height} — width is derived from the SVG's aspect ratio.</li>
+	 * <li>Neither — natural SVG size.</li>
+	 * </ul>
+	 */
+	public static Image createImageFromSVG(SVGDocument doc, Float width, Float height, Float scale) {
+		FloatSize nat = doc.size();
+		float natW = nat.width;
+		float natH = nat.height;
+
+		float targetW;
+		float targetH;
+		if (width != null && height != null) {
+			targetW = width;
+			targetH = height;
 		} else if (width != null) {
-			icon.setAutosize(SVGIcon.AUTOSIZE_HORIZ);
-			// compute height from the SVG's natural aspect ratio so the canvas is correct
-			SVGDiagram diagram = icon.getSvgUniverse().getDiagram(icon.getSvgURI());
-			if (diagram != null && diagram.getWidth() > 0)
-				height = width * diagram.getHeight() / diagram.getWidth();
+			targetW = width;
+			targetH = (natW > 0) ? (width * natH / natW) : width;
 		} else if (height != null) {
-			icon.setAutosize(SVGIcon.AUTOSIZE_VERT);
-			// compute width from the SVG's natural aspect ratio so the canvas is correct
-			SVGDiagram diagram = icon.getSvgUniverse().getDiagram(icon.getSvgURI());
-			if (diagram != null && diagram.getHeight() > 0)
-				width = height * diagram.getWidth() / diagram.getHeight();
+			targetH = height;
+			targetW = (natH > 0) ? (height * natW / natH) : height;
 		} else {
-			icon.setAutosize(SVGIcon.AUTOSIZE_NONE);
+			targetW = natW;
+			targetH = natH;
 		}
 
-		if (height == null)
-			height = 0f;
-		if (width == null)
-			width = 0f;
-
-		int w = (scale != null) ? (int) (width * scale) : (int) Math.floor(width);
-		int h = (scale != null) ? (int) (height * scale) : (int) Math.floor(height);
-
-		// Avoid 0x0 raster targets
+		int w = (scale != null) ? (int) (targetW * scale) : (int) Math.floor(targetW);
+		int h = (scale != null) ? (int) (targetH * scale) : (int) Math.floor(targetH);
 		if (w <= 0)
 			w = 1;
 		if (h <= 0)
 			h = 1;
-
-		icon.setPreferredSize(new Dimension(w, h));
 
 		BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = bi.createGraphics();
@@ -102,28 +128,12 @@ public class SvgConverter {
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 			g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-			icon.paintIcon(null, g, 0, 0);
+			doc.render(null, g, new ViewBox(w, h));
 		} finally {
 			g.dispose();
 		}
 
 		return SwingFXUtils.toFXImage(bi, null);
-	}
-
-	public static SVGIcon loadSvgIcon(File svg) {
-		SVGIcon icon = new SVGIcon();
-		icon.setSvgURI(svg.toURI());
-		return icon;
-	}
-
-	public static SVGIcon loadSvgIcon(String svgResourcePath) throws URISyntaxException {
-		var url = SvgConverter.class.getResource(svgResourcePath);
-		if (url == null)
-			throw new IllegalArgumentException("SVG resource not found: " + svgResourcePath);
-		SVGIcon icon = new SVGIcon();
-		icon.setSvgURI(url.toURI());
-		return icon;
 	}
 
 	public static Image createImageFromSVG(File svg, Float width, Float height, Float scale) throws Exception {
@@ -136,15 +146,14 @@ public class SvgConverter {
 		try (var is = new FileInputStream(svg)) {
 			svgContent = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
-		svgContent = expandCssClassColors(svgContent);
 		String effectiveStroke = strokeColor != null ? strokeColor
 				: (svgContent.contains("currentColor") ? (defaultStrokeColor != null ? defaultStrokeColor : "black")
 						: null);
 		String effectiveFill = fillColor != null ? fillColor
 				: (svgContent.contains("fill=\"currentColor\"") && effectiveStroke == null ? defaultFillColor : null);
 		svgContent = applyColorSubstitutions(svgContent, effectiveStroke, effectiveFill);
-		SVGIcon icon = loadSvgIconFromString(svgContent, svg.toURI().toString());
-		return createImageFromSVG(icon, width, height, scale);
+		SVGDocument doc = loadSvgDocumentFromString(svgContent, svg.toURI());
+		return createImageFromSVG(doc, width, height, scale);
 	}
 
 	public static Image createImageFromSVG(File svg, Float width, Float height) throws Exception {
@@ -177,13 +186,14 @@ public class SvgConverter {
 	}
 
 	/**
-	 * Loads an SVG from classpath, replaces {@code currentColor} in stroke/fill
-	 * attributes with the given colors, then renders to an image.
+	 * Loads an SVG from classpath, substitutes {@code currentColor} and explicit
+	 * stroke/fill attributes with the given colors, then renders to an image.
 	 *
-	 * @param strokeColor CSS color string (no {@code #}) for stroke, or
-	 *                    {@code null} to leave unchanged
-	 * @param fillColor   CSS color string (no {@code #}) for fill, or {@code null}
+	 * @param strokeColor CSS color string for stroke substitution, or {@code null}
 	 *                    to leave unchanged
+	 * @param fillColor   CSS color string injected as {@code fill} on all shape
+	 *                    elements (except {@code fill="none"}), or {@code null} to
+	 *                    leave unchanged
 	 */
 	public static Image createImageFromSVGResource(String path, Float width, Float height, Float scale,
 			String strokeColor, String fillColor) throws Exception {
@@ -196,90 +206,33 @@ public class SvgConverter {
 			svgContent = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 
-		svgContent = expandCssClassColors(svgContent);
 		String effectiveStroke = strokeColor != null ? strokeColor
 				: (svgContent.contains("currentColor") ? (defaultStrokeColor != null ? defaultStrokeColor : "black")
 						: null);
 		String effectiveFill = fillColor != null ? fillColor
 				: (svgContent.contains("fill=\"currentColor\"") && effectiveStroke == null ? defaultFillColor : null);
 		svgContent = applyColorSubstitutions(svgContent, effectiveStroke, effectiveFill);
-		SVGIcon icon = loadSvgIconFromString(svgContent, path);
-		return createImageFromSVG(icon, width, height, scale);
+		SVGDocument doc = loadSvgDocumentFromString(svgContent, null);
+		return createImageFromSVG(doc, width, height, scale);
 	}
 
 	/**
 	 * Matches shape elements that have no explicit {@code fill} attribute, used to
-	 * inject fill directly so SVG Salamander doesn't need to inherit from root.
+	 * inject a theme fill color on elements that would otherwise inherit or
+	 * default.
 	 */
 	private static final Pattern SHAPE_NO_FILL = Pattern
 			.compile("<(path|rect|circle|ellipse|polygon|polyline|line)(?![^>]*\\bfill=)");
 
-	private static final Pattern STYLE_BLOCK = Pattern.compile("<style[^>]*>(.*?)</style>",
-			Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
-	private static final Pattern CSS_CLASS_RULE = Pattern.compile("\\.([-\\w]+)\\s*\\{([^}]*)\\}");
-
 	/**
-	 * Expands CSS class-based fill/stroke rules from embedded {@code <style>}
-	 * blocks into inline presentation attributes on matching shape elements. SVG
-	 * Salamander does not support CSS class selectors, so without this step any
-	 * element that relies on a {@code .className { fill: ... }} rule renders black.
-	 */
-	static String expandCssClassColors(String svg) {
-		Matcher styleM = STYLE_BLOCK.matcher(svg);
-		Map<String, String> classFills = new LinkedHashMap<>();
-		Map<String, String> classStrokes = new LinkedHashMap<>();
-
-		while (styleM.find()) {
-			Matcher ruleM = CSS_CLASS_RULE.matcher(styleM.group(1));
-			while (ruleM.find()) {
-				String cls = ruleM.group(1);
-				String body = ruleM.group(2);
-				for (String decl : body.split(";")) {
-					int colon = decl.indexOf(':');
-					if (colon < 0)
-						continue;
-					String prop = decl.substring(0, colon).trim();
-					String val = decl.substring(colon + 1).trim();
-					if (val.isEmpty())
-						continue;
-					if ("fill".equals(prop))
-						classFills.put(cls, val);
-					else if ("stroke".equals(prop))
-						classStrokes.put(cls, val);
-				}
-			}
-		}
-
-		if (classFills.isEmpty() && classStrokes.isEmpty())
-			return svg;
-
-		for (Map.Entry<String, String> e : classFills.entrySet()) {
-			Pattern p = Pattern.compile(
-					"<(path|rect|circle|ellipse|polygon|polyline|line|text|tspan|g)" + "(?=[^>]*\\bclass=\"[^\"]*\\b"
-							+ Pattern.quote(e.getKey()) + "\\b[^\"]*\")" + "(?![^>]*\\bfill=)");
-			svg = p.matcher(svg).replaceAll("<$1 fill=\"" + Matcher.quoteReplacement(e.getValue()) + "\"");
-		}
-
-		for (Map.Entry<String, String> e : classStrokes.entrySet()) {
-			Pattern p = Pattern.compile(
-					"<(path|rect|circle|ellipse|polygon|polyline|line|text|tspan|g)" + "(?=[^>]*\\bclass=\"[^\"]*\\b"
-							+ Pattern.quote(e.getKey()) + "\\b[^\"]*\")" + "(?![^>]*\\bstroke=)");
-			svg = p.matcher(svg).replaceAll("<$1 stroke=\"" + Matcher.quoteReplacement(e.getValue()) + "\"");
-		}
-
-		return svg;
-	}
-
-	/**
-	 * Overrides stroke and fill colors in SVG source text.
+	 * Substitutes stroke and fill colors in SVG source text.
 	 * <ul>
-	 * <li>{@code strokeColor}: replaces every {@code currentColor} occurrence (SVG
-	 * Salamander does not support the keyword) and overrides all explicit
-	 * {@code stroke="..."} attributes except {@code stroke="none"}.</li>
+	 * <li>{@code strokeColor}: replaces every {@code currentColor} occurrence and
+	 * overrides all explicit {@code stroke="..."} attributes except
+	 * {@code stroke="none"}.</li>
 	 * <li>{@code fillColor}: overrides all {@code fill="..."} attributes except
 	 * {@code fill="none"}, and injects {@code fill} directly onto shape elements
-	 * that lack it — SVG Salamander does not reliably inherit fill from the root.
-	 * </li>
+	 * that lack it.</li>
 	 * </ul>
 	 */
 	static String applyColorSubstitutions(String svg, String strokeColor, String fillColor) {
@@ -300,13 +253,11 @@ public class SvgConverter {
 		return svg;
 	}
 
-	private static SVGIcon loadSvgIconFromString(String svgContent, String baseUri) throws IOException {
-		SVGUniverse universe = new SVGUniverse();
+	private static SVGDocument loadSvgDocumentFromString(String svgContent, URI baseUri) throws IOException {
 		byte[] bytes = svgContent.getBytes(StandardCharsets.UTF_8);
-		URI svgUri = universe.loadSVG(new ByteArrayInputStream(bytes), baseUri);
-		SVGIcon icon = new SVGIcon();
-		icon.setSvgUniverse(universe);
-		icon.setSvgURI(svgUri);
-		return icon;
+		SVGDocument doc = new SVGLoader().load(new ByteArrayInputStream(bytes), baseUri, LoaderContext.createDefault());
+		if (doc == null)
+			throw new IOException("Failed to parse SVG" + (baseUri != null ? ": " + baseUri : ""));
+		return doc;
 	}
 }

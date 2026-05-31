@@ -47,8 +47,8 @@ Parameters after `|` are all optional (leave blank to skip):
 - **h** — render height in pixels
 - **scale** — extra scale multiplier applied after w/h
 - **style** — inline CSS applied to the wrapping `ImageView` (not the SVG itself)
-- **stroke** — sets the SVG `color` CSS property on the root element; all `currentColor` references throughout the SVG (typically `stroke="currentColor"`) resolve to this value via CSS inheritance
-- **fill** — overrides the `fill` attribute on the root SVG element (replaces any existing value, e.g. `none`)
+- **stroke** — replaces every `currentColor` keyword in the SVG source and overrides all explicit `stroke="…"` attributes (except `stroke="none"`) with this color
+- **fill** — overrides all explicit `fill="…"` attributes (except `fill="none"`) and injects `fill` onto shape elements that carry no inline fill attribute
 
 Because `#` is the overlay-chain separator, hex colors in **stroke**/**fill** are written without it:
 

@@ -29,6 +29,12 @@
 			<file name="CreativeCommons_NAME">
 				<attribute name="default">Creative Commons</attribute>
 			</file>
+			<file name="MIT_NAME">
+				<attribute name="default">MIT License</attribute>
+			</file>
+			<file name="MIT_URL">
+				<attribute name="default">https://opensource.org/licenses/MIT</attribute>
+			</file>
 			<file name="commercial_NAME">
 				<attribute name="default">commercial licence</attribute>
 				<attribute name="cs">komerční licence</attribute>
@@ -55,6 +61,10 @@
 		<file name="CreativeCommons">
 			<attribute name="name" translation="licences/CreativeCommons_NAME">licences/CreativeCommons_NAME</attribute>
 			<attribute name="url" translation="licences/CreativeCommons_URL">licences/CreativeCommons_URL</attribute>
+		</file>
+		<file name="MIT">
+			<attribute name="name" translation="licences/MIT_NAME">licences/MIT_NAME</attribute>
+			<attribute name="url" translation="licences/MIT_URL">licences/MIT_URL</attribute>
 		</file>
 	</file>
 	
@@ -97,11 +107,17 @@
 			<attribute name="comment">Vlajky z WikiMediaCommons</attribute>
 			<attribute name="licence">CreativeCommons</attribute>
 		</file>
-		<file name="SVGSalamander">
-			<attribute name="url">https://github.com/blackears/svgSalamander</attribute>
-			<attribute name="name">SVG Salamander</attribute>
+		<file name="JSVG">
+			<attribute name="url">https://github.com/weisJ/jsvg</attribute>
+			<attribute name="name">JSVG</attribute>
 			<attribute name="comment">SVG rendering library</attribute>
-			<attribute name="licence">LGPL3</attribute>
+			<attribute name="licence">MIT</attribute>
+		</file>
+		<file name="Tabler Icons">
+			<attribute name="url">https://tabler.io/icons</attribute>
+			<attribute name="name">Tabler Icons</attribute>
+			<attribute name="comment">SVG icon set</attribute>
+			<attribute name="licence">MIT</attribute>
 		</file>
 	</file>
 

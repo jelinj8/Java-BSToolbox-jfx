@@ -121,8 +121,8 @@ Sizes tried in both cases: `16`, `32`, `48`, `256`. Missing sizes are skipped.
 
 ### SVG default colors
 
-`currentColor` in SVG files is not supported by SVG Salamander and must be
-replaced at render time. Theme-aware defaults can be declared under
+`currentColor` in SVG files is replaced at render time so that theme-aware icon
+colors work without a live CSS context. Theme-aware defaults can be declared under
 `/AppUI/colors/themes/light` and `/AppUI/colors/themes/dark`:
 
 ```xml
@@ -150,7 +150,7 @@ replaced at render time. Theme-aware defaults can be declared under
 Priority (highest → lowest):
 1. Iconspec params[5]/[6] — `icon.svg|size||scale||strokeColor|fillColor`
 2. Theme defaults from `/AppUI/colors/themes/<light|dark>`
-3. Hard fallback `black` for stroke (so SVG Salamander never sees `currentColor`)
+3. Hard fallback `black` for stroke (so the renderer never receives an unresolved `currentColor`)
 
 Bare hex values (`222222`) are accepted in addition to `#`-prefixed ones.
 
