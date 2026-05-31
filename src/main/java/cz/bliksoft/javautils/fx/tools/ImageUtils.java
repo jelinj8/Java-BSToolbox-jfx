@@ -671,7 +671,7 @@ public class ImageUtils {
 	}
 
 	private static String extractViewStyle(String spec) {
-		if (spec == null)
+		if (spec == null || spec.contains("#")) //$NON-NLS-1$
 			return null;
 
 		String[] p = spec.split("\\|", -1);
@@ -683,8 +683,8 @@ public class ImageUtils {
 	}
 
 	private static String stripViewStyleFromSpec(String spec) {
-		if (spec == null)
-			return null;
+		if (spec == null || spec.contains("#")) //$NON-NLS-1$
+			return spec;
 
 		String[] p = spec.split("\\|", -1);
 		if (p.length >= 5 && p[0].toLowerCase().endsWith(".svg")) {

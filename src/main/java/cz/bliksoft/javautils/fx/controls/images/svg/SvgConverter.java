@@ -141,7 +141,7 @@ public class SvgConverter {
 				: (svgContent.contains("currentColor") ? (defaultStrokeColor != null ? defaultStrokeColor : "black")
 						: null);
 		String effectiveFill = fillColor != null ? fillColor
-				: (svgContent.contains("fill=\"currentColor\"") ? defaultFillColor : null);
+				: (svgContent.contains("fill=\"currentColor\"") && effectiveStroke == null ? defaultFillColor : null);
 		svgContent = applyColorSubstitutions(svgContent, effectiveStroke, effectiveFill);
 		SVGIcon icon = loadSvgIconFromString(svgContent, svg.toURI().toString());
 		return createImageFromSVG(icon, width, height, scale);
@@ -203,45 +203,44 @@ public class SvgConverter {
 				: (svgContent.contains("currentColor") ? (defaultStrokeColor != null ? defaultStrokeColor : "black")
 						: null);
 		String effectiveFill = fillColor != null ? fillColor
-				: (svgContent.contains("fill=\"currentColor\"") ? defaultFillColor : null);
+				: (svgContent.contains("fill=\"currentColor\"") && effectiveStroke == null ? defaultFillColor : null);
 		svgContent = applyColorSubstitutions(svgContent, effectiveStroke, effectiveFill);
 		SVGIcon icon = loadSvgIconFromString(svgContent, path);
 		return createImageFromSVG(icon, width, height, scale);
 	}
 
-	private static final Pattern SVG_OPEN_TAG = Pattern.compile("<svg\\b[^>]*>");
-	private static final Pattern FILL_ATTR = Pattern.compile("fill=\"[^\"]*\"");
+	/**
+	 * Matches shape elements that have no explicit {@code fill} attribute, used to
+	 * inject fill directly so SVG Salamander doesn't need to inherit from root.
+	 */
+	private static final Pattern SHAPE_NO_FILL = Pattern
+			.compile("<(path|rect|circle|ellipse|polygon|polyline|line)(?![^>]*\\bfill=)");
 
 	/**
-	 * Replaces color references in SVG content.
+	 * Overrides stroke and fill colors in SVG source text.
 	 * <ul>
-	 * <li>{@code strokeColor}: replaces every {@code currentColor} occurrence — SVG
-	 * Salamander does not support the CSS keyword and misinterprets it as a file
-	 * URL.</li>
-	 * <li>{@code fillColor}: replaces the {@code fill="..."} attribute in the
-	 * opening {@code <svg>} tag, or injects it if absent.</li>
+	 * <li>{@code strokeColor}: replaces every {@code currentColor} occurrence (SVG
+	 * Salamander does not support the keyword) and overrides all explicit
+	 * {@code stroke="..."} attributes except {@code stroke="none"}.</li>
+	 * <li>{@code fillColor}: overrides all {@code fill="..."} attributes except
+	 * {@code fill="none"}, and injects {@code fill} directly onto shape elements
+	 * that lack it — SVG Salamander does not reliably inherit fill from the root.
+	 * </li>
 	 * </ul>
 	 */
 	static String applyColorSubstitutions(String svg, String strokeColor, String fillColor) {
 		if (strokeColor == null && fillColor == null)
 			return svg;
 
-		if (strokeColor != null)
+		if (strokeColor != null) {
 			svg = svg.replace("currentColor", strokeColor);
+			svg = svg.replaceAll("stroke=\"(?!none\")[^\"]*\"",
+					"stroke=\"" + Matcher.quoteReplacement(strokeColor) + "\"");
+		}
 
 		if (fillColor != null) {
-			Matcher m = SVG_OPEN_TAG.matcher(svg);
-			if (!m.find())
-				return svg;
-			String tag = m.group();
-			Matcher fillMatcher = FILL_ATTR.matcher(tag);
-			String newTag;
-			if (fillMatcher.find()) {
-				newTag = fillMatcher.replaceFirst("fill=\"" + Matcher.quoteReplacement(fillColor) + "\"");
-			} else {
-				newTag = tag.substring(0, tag.length() - 1) + " fill=\"" + fillColor + "\">";
-			}
-			svg = svg.substring(0, m.start()) + newTag + svg.substring(m.end());
+			svg = svg.replaceAll("fill=\"(?!none\")[^\"]*\"", "fill=\"" + Matcher.quoteReplacement(fillColor) + "\"");
+			svg = SHAPE_NO_FILL.matcher(svg).replaceAll("<$1 fill=\"" + Matcher.quoteReplacement(fillColor) + "\"");
 		}
 
 		return svg;
