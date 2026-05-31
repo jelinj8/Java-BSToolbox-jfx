@@ -56,7 +56,8 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 
 	// ---- Controls ----
 	private final ComboBox<Webcam> sourceCombo = new ComboBox<>();
-	private final Button captureBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
+	private final Button captureBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
 	private final ImageCropPane cropPane = new ImageCropPane();
 	private final Label statusLabel = new Label();
 

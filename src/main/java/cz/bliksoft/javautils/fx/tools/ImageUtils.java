@@ -6,7 +6,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.MessageFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,14 +45,12 @@ import javafx.scene.shape.SVGPath;
  * <li>{@code /absolute/path.png} — absolute classpath resource</li>
  * <li>{@code [F]:/filesystem/path.png} — explicit file-system path (also
  * supported for SVG)</li>
- * <li>{@code name.svg|w|h|scale|viewStyle|stroke|fill} — SVG with optional
- * parameters (all may be left blank):
+ * <li>{@code name.svg|w|h|scale|stroke|fill} — SVG with optional parameters
+ * (all may be left blank):
  * <ul>
  * <li>{@code w}, {@code h} — pixel width/height; omit either to derive from the
  * SVG's natural aspect ratio</li>
  * <li>{@code scale} — extra scale multiplier applied on top of w/h</li>
- * <li>{@code viewStyle} — CSS applied to the
- * {@link javafx.scene.image.ImageView} only (not baked into the image)</li>
  * <li>{@code stroke} — color that replaces every {@code currentColor}
  * occurrence in the SVG source and overrides explicit {@code stroke}
  * attributes; accepts bare hex ({@code ff0000}, {@code ff000080} with alpha),
@@ -74,23 +74,20 @@ import javafx.scene.shape.SVGPath;
  * <li>{@code [PS]:svgPathData|w|h|scale|style} — inline SVG path as a
  * layoutable {@link javafx.scene.shape.Shape} node; use {@link #getIconNode} to
  * retrieve it</li>
- * <li>{@code img1#img2#...} — overlay chain: images composited left-to-right
- * (first = background, last = foreground) at bottom-right alignment by default;
- * an optional alignment token ({@code TL}, {@code TR}, {@code BL}, {@code BR},
- * {@code C}) as the first {@code #}-separated element overrides the alignment
- * for the whole chain. Append {@code -} to the alignment token (e.g.
- * {@code C-}, {@code TL-}, or bare {@code -}) to switch to <em>subtract
- * mode</em>: each image after the first cuts its opaque pixels out of the
- * accumulated result (DST_OUT compositing) instead of painting over it</li>
- * <li>{@code seg1##seg2##...} — processing chain: each {@code ##}-separated
- * segment is resolved independently (a segment may itself be an overlay chain
- * with its own alignment token), then all results are composited in a single
- * pass at bottom-right alignment by default; an optional alignment token as the
- * very first {@code ##}-part overrides that alignment. A segment may begin with
- * its own alignment token to override positioning and/or subtract mode for that
- * segment only (e.g. {@code C-#mask.svg} subtracts a centered mask). Example —
- * blue square with a circular cutout and a badge:
- * {@code EMPTY|32|32|blue##C-#svg/mask/circle.svg|32##badge.svg}</li>
+ * <li>Postfix composition — {@code #}-separated tokens where non-{@code *}
+ * tokens are file specs pushed onto a stack and {@code *}-prefixed tokens are
+ * commands operating on the stack. The result is the top of the stack. Example
+ * — badge overlay at BR: {@code base.svg|24#badge.svg|12#*+}. Example —
+ * green/red dual badges:
+ * {@code *EMPTY|24#save.svg|16|||00ff00#*TL#*+#save.svg|16|||ff0000#*BR#*+}.
+ * Commands: {@code *+} / {@code *-} (SRC_OVER / DST_OUT compose); alignment
+ * {@code *TL|x|y} etc.; {@code *EMPTY|w|h|color}; {@code *MIRROR|H/V};
+ * {@code *ROTATE|deg}; {@code *CROP|w|h}; {@code *JFXSTYLE|css};
+ * {@code *TEXT|value|color|size|font}; {@code *DUPLICATE}, {@code *COPY},
+ * {@code *PASTE}, {@code *POP}, {@code *RESET}; {@code *GET_CACHE|key} /
+ * {@code *PUT_CACHE|key} — explicit cache: GET pushes the cached image and
+ * skips to the matching PUT_CACHE (inclusive) when the key is present,
+ * otherwise does nothing; PUT stores stack top under key.</li>
  * <li>The token {@value #SCALE_PLACEHOLDER} in any spec is replaced with the
  * current UI-scale bucket string before lookup</li>
  * </ul>
@@ -134,6 +131,13 @@ public class ImageUtils {
 
 	private static final Map<String, Image> iconCache = new HashMap<>();
 	private static final Map<String, String> tokenMap = new LinkedHashMap<>();
+	private static final Map<String, String> jfxStyleCache = new HashMap<>();
+
+	/**
+	 * Thread-local storage for the last {@code *JFXSTYLE} value encountered during
+	 * postfix evaluation.
+	 */
+	private static final ThreadLocal<String> jfxStyleTL = new ThreadLocal<>();
 
 	/** Overlay alignment: source image is centered over the base. */
 	public static final int ALIGN_CENTER = 0;
@@ -148,9 +152,6 @@ public class ImageUtils {
 	public static final int ALIGN_BOTTOM_LEFT = 3;
 	/** Overlay alignment: source image is placed at the top-right corner. */
 	public static final int ALIGN_TOP_RIGHT = 4;
-
-	private record AlignMode(int align, boolean subtract) {
-	}
 
 	/**
 	 * Placeholder token in icon spec strings that is replaced with the current
@@ -176,54 +177,15 @@ public class ImageUtils {
 		tokenMap.putAll(tokens);
 	}
 
-	private static Integer parseAlignTokenBase(String s) {
-		return switch (s) {
-		case "TL" -> ALIGN_TOP_LEFT; //$NON-NLS-1$
-		case "TR" -> ALIGN_TOP_RIGHT; //$NON-NLS-1$
-		case "BL" -> ALIGN_BOTTOM_LEFT; //$NON-NLS-1$
-		case "BR" -> ALIGN_BOTTOM_RIGHT; //$NON-NLS-1$
-		case "C" -> ALIGN_CENTER; //$NON-NLS-1$
-		default -> null;
-		};
-	}
-
 	/**
-	 * Parses an alignment token with an optional {@code -} suffix that signals
-	 * subtract (DST_OUT) compositing mode. Returns {@code null} if {@code s} is not
-	 * a recognised alignment token (with or without the suffix).
-	 *
-	 * <p>
-	 * Examples: {@code "TL"} → add/TL, {@code "C-"} → subtract/C, {@code "-"} →
-	 * subtract/BR (default alignment).
-	 */
-	private static AlignMode parseAlignMode(String s) {
-		if (s.endsWith("-")) { //$NON-NLS-1$
-			String base = s.substring(0, s.length() - 1);
-			int align;
-			if (base.isEmpty()) {
-				align = ALIGN_BOTTOM_RIGHT;
-			} else {
-				Integer a = parseAlignTokenBase(base);
-				if (a == null)
-					return null;
-				align = a;
-			}
-			return new AlignMode(align, true);
-		}
-		Integer a = parseAlignTokenBase(s);
-		return a != null ? new AlignMode(a, false) : null;
-	}
-
-	/**
-	 * Creates an image from a raw spec string (no cache look-up; no scale
-	 * substitution). Handles overlay chains, inline SVG paths, SVG files, and
-	 * raster images.
+	 * Creates an image from a raw spec string (no cache look-up; no token
+	 * substitution). If the spec contains {@code #}, it is evaluated as a postfix
+	 * expression; otherwise it is treated as a single file spec.
 	 *
 	 * @param spec       the icon spec string; may be {@code null}
-	 * @param background if {@code true}, raster images are loaded asynchronously in
-	 *                   the background
+	 * @param background if {@code true}, raster images are loaded asynchronously
 	 *
-	 * @return the loaded image, or {@code null} if the spec is {@code null} or
+	 * @return the composed image, or {@code null} if the spec is {@code null} or
 	 *         loading fails
 	 */
 	protected static Image createImage(String spec, boolean background) {
@@ -231,74 +193,51 @@ public class ImageUtils {
 			log.debug("NULL image spec requested");
 			return null;
 		}
+		if (!spec.contains("#")) //$NON-NLS-1$
+			return createSingleImage(spec, background);
 
-		// Processing chain: "step1##step2##..." — each segment resolved via
-		// createImage, then composited once. An optional leading alignment token (with
-		// optional "-" suffix for subtract mode) controls global alignment and whether
-		// all segments subtract. Each segment may itself begin with an alignment+mode
-		// token (e.g. "C-#mask.svg") which overrides its individual alignment and
-		// subtract flag.
-		if (spec.contains("##")) { //$NON-NLS-1$
-			String[] parts = spec.split("##", -1); //$NON-NLS-1$
-			int globalAlign = ALIGN_BOTTOM_RIGHT;
-			boolean globalSubtract = false;
-			int startIdx = 0;
-			AlignMode globalAm = parseAlignMode(parts[0]);
-			if (globalAm != null) {
-				globalAlign = globalAm.align();
-				globalSubtract = globalAm.subtract();
-				startIdx = 1;
-			}
-			int count = parts.length - startIdx;
-			Image[] images = new Image[count];
-			int[] aligns = new int[count];
-			boolean[] subtracts = new boolean[count];
-			for (int i = 0; i < count; i++) {
-				String part = parts[startIdx + i];
-				int segAlign = globalAlign;
-				boolean segSubtract = globalSubtract;
-				if (part.contains("#")) { //$NON-NLS-1$
-					String firstToken = part.substring(0, part.indexOf('#'));
-					AlignMode segAm = parseAlignMode(firstToken);
-					if (segAm != null) {
-						segAlign = segAm.align();
-						segSubtract |= segAm.subtract();
-					}
+		Deque<Image> stack = new ArrayDeque<>();
+		Map<String, Object> mode = new HashMap<>();
+		String skipUntilPutCacheKey = null; // non-null = skip tokens until matching *PUT_CACHE
+
+		for (String token : spec.split("#", -1)) { //$NON-NLS-1$
+			// Skip mode: bypass all tokens until the matching *PUT_CACHE|key is seen
+			if (skipUntilPutCacheKey != null) {
+				if (token.startsWith("*PUT_CACHE")) { //$NON-NLS-1$
+					String[] p = token.split("\\|", -1); //$NON-NLS-1$
+					if (skipUntilPutCacheKey.equals(p.length > 1 ? p[1] : "")) //$NON-NLS-1$
+						skipUntilPutCacheKey = null;
 				}
-				aligns[i] = segAlign;
-				subtracts[i] = i > 0 && segSubtract;
-				images[i] = createImage(part, background);
+				continue;
 			}
-			return overlayImagesImpl(images, aligns, subtracts);
-		}
 
-		// Overlay chain: "a#b#c" — optional leading alignment token (TL/TR/BL/BR/C)
-		// with optional "-" suffix for subtract (DST_OUT) mode on all layers after
-		// the first.
-		if (spec.contains("#")) { //$NON-NLS-1$
-			String[] parts = spec.split("#", -1); //$NON-NLS-1$
-			int align = ALIGN_BOTTOM_RIGHT;
-			boolean subtract = false;
-			int startIdx = 0;
-			AlignMode am = parseAlignMode(parts[0]);
-			if (am != null) {
-				align = am.align();
-				subtract = am.subtract();
-				startIdx = 1;
+			if (token.startsWith("*GET_CACHE")) { //$NON-NLS-1$
+				String[] p = token.split("\\|", -1); //$NON-NLS-1$
+				String key = p.length > 1 ? p[1] : ""; //$NON-NLS-1$
+				Image cached = iconCache.get(key);
+				if (cached != null) {
+					stack.push(cached);
+					skipUntilPutCacheKey = key; // activate skip
+				}
+				// else: key not cached — fall through, let subsequent tokens build the image
+			} else if (token.startsWith("*")) { //$NON-NLS-1$
+				executeCommand(token, stack, mode, background);
+			} else if (!token.isBlank()) {
+				Image img = createSingleImage(token, background);
+				stack.push(img != null ? img : new WritableImage(1, 1));
 			}
-			String[] imageParts = java.util.Arrays.copyOfRange(parts, startIdx, parts.length);
-			Image[] images = new Image[imageParts.length];
-			for (int i = 0; i < imageParts.length; i++) {
-				images[i] = imageParts[i] != null ? getImage(imageParts[i], false) : null;
-			}
-			int[] aligns = new int[images.length];
-			java.util.Arrays.fill(aligns, align);
-			boolean[] subtracts = new boolean[images.length];
-			if (subtract)
-				java.util.Arrays.fill(subtracts, 1, subtracts.length, true);
-			return overlayImagesImpl(images, aligns, subtracts);
 		}
+		return stack.isEmpty() ? null : stack.peek();
+	}
 
+	/**
+	 * Loads a single non-composite image from a spec string. Handles {@code EMPTY},
+	 * {@code [PI]:} inline paths, SVG, ICO, and raster images. The SVG spec format
+	 * is {@code file.svg|w|h|scale|stroke|fill} — the old {@code viewStyle} slot
+	 * (formerly position 4) has been removed; stroke is now at position 4 and fill
+	 * at position 5.
+	 */
+	private static Image createSingleImage(String spec, boolean background) {
 		// Inline SVGPath rasterized into Image
 		if (spec.startsWith(PREFIX_PATH_IMAGE)) {
 			PathSpec ps = parsePathSpec(spec, PREFIX_PATH_IMAGE);
@@ -317,15 +256,13 @@ public class ImageUtils {
 				if (outH <= 0)
 					outH = 16;
 			}
-
 			return snapshotToImage(node, outW, outH);
 		}
 
-		// Param syntax: "file.svg;w;h;scale;css"
 		String[] params = spec.split("\\|", -1);
 		String filePath = params[0];
 
-		// Synthetic empty/solid-color canvas: EMPTY|size, EMPTY|w|h, EMPTY|w|h|color
+		// Synthetic canvas: EMPTY|size EMPTY|w|h EMPTY|w|h|color
 		if (filePath.equals("EMPTY")) { //$NON-NLS-1$
 			try {
 				int w = Math.max(1, Math.round(Float.parseFloat(params[1])));
@@ -357,8 +294,8 @@ public class ImageUtils {
 			}
 		}
 
-		// SVG handling
-		if (filePath.toLowerCase().endsWith(".svg")) {
+		// SVG: file.svg|w|h|scale|stroke|fill (viewStyle slot removed)
+		if (filePath.toLowerCase().endsWith(".svg")) { //$NON-NLS-1$
 			Float w = null;
 			Float h = null;
 			Float svgScale = null;
@@ -372,23 +309,20 @@ public class ImageUtils {
 
 			String strokeColor = null;
 			String fillColor = null;
+			if (params.length > 4 && StringUtils.hasLength(params[4]))
+				strokeColor = resolveSpecColor(params[4]);
 			if (params.length > 5 && StringUtils.hasLength(params[5]))
-				strokeColor = resolveSpecColor(params[5]);
-			if (params.length > 6 && StringUtils.hasLength(params[6]))
-				fillColor = resolveSpecColor(params[6]);
+				fillColor = resolveSpecColor(params[5]);
 
 			try {
 				if (filePath.startsWith(PREFIX_FILE)) {
 					File f = new File(filePath.substring(4));
-					if (f.exists() && f.isFile()) {
+					if (f.exists() && f.isFile())
 						return SvgConverter.createImageFromSVG(f, w, h, svgScale, strokeColor, fillColor);
-					}
 					return null;
 				}
-
-				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath);
+				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath); //$NON-NLS-1$
 				return SvgConverter.createImageFromSVGResource(res, w, h, svgScale, strokeColor, fillColor);
-
 			} catch (IllegalArgumentException e) {
 				log.error("Failed to load SVG image: {} - {}", spec, e.getMessage());
 				return null;
@@ -397,11 +331,11 @@ public class ImageUtils {
 				return null;
 			}
 		}
-		// ICO handling
-		if (filePath.toLowerCase().endsWith(".ico")) {
+
+		// ICO
+		if (filePath.toLowerCase().endsWith(".ico")) { //$NON-NLS-1$
 			Integer icoW = null;
 			Integer icoH = null;
-
 			if (params.length > 1 && StringUtils.hasLength(params[1]))
 				icoW = Integer.valueOf(params[1]);
 			if (params.length > 2 && StringUtils.hasLength(params[2]))
@@ -410,7 +344,6 @@ public class ImageUtils {
 				icoH = icoW;
 			if (icoH != null && icoW == null)
 				icoW = icoH;
-
 			try {
 				if (filePath.startsWith(PREFIX_FILE)) {
 					File f = new File(filePath.substring(4));
@@ -418,7 +351,7 @@ public class ImageUtils {
 						return IcoReader.loadFromFile(f, icoW, icoH);
 					return null;
 				}
-				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath);
+				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath); //$NON-NLS-1$
 				return IcoReader.loadFromResource(res, icoW, icoH);
 			} catch (Exception e) {
 				log.error("Failed to load ICO image: {}", spec, e);
@@ -437,19 +370,367 @@ public class ImageUtils {
 				}
 				log.error("Image file not found: {} (path: {})", spec, f.getAbsolutePath());
 				return null;
-			} else {
-				String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath); //$NON-NLS-1$
-				var url = ImageUtils.class.getResource(res);
-				if (url != null) {
-					return new Image(url.toExternalForm(), background);
-				}
-				log.error("Image resource not found: {} (resolved: {})", spec, res);
 			}
+			String res = filePath.startsWith("/") ? filePath : (brandingImagesRoot + filePath); //$NON-NLS-1$
+			var url = ImageUtils.class.getResource(res);
+			if (url != null)
+				return new Image(url.toExternalForm(), background);
+			log.error("Image resource not found: {} (resolved: {})", spec, res);
 		} catch (Exception e) {
 			log.error("Failed to load raster image: {}", spec, e);
 		}
-
 		return null;
+	}
+
+	/** Dispatches a {@code *CMD} postfix token against the stack and mode map. */
+	private static void executeCommand(String token, Deque<Image> stack, Map<String, Object> mode, boolean background) {
+		String[] parts = token.split("\\|", -1); //$NON-NLS-1$
+		String cmd = parts[0].substring(1); // strip leading '*'
+
+		switch (cmd) {
+		case "+" -> { //$NON-NLS-1$
+			Image overlay = stack.isEmpty() ? null : stack.pop();
+			Image base = stack.isEmpty() ? null : stack.pop();
+			Image result = postfixCompose(base, overlay, modeInt(mode, "align", ALIGN_BOTTOM_RIGHT), //$NON-NLS-1$
+					modeInt(mode, "offsetX", 0), modeInt(mode, "offsetY", 0), false); //$NON-NLS-1$ //$NON-NLS-2$
+			if (result != null)
+				stack.push(result);
+		}
+		case "-" -> { //$NON-NLS-1$
+			Image overlay = stack.isEmpty() ? null : stack.pop();
+			Image base = stack.isEmpty() ? null : stack.pop();
+			Image result = postfixCompose(base, overlay, modeInt(mode, "align", ALIGN_BOTTOM_RIGHT), //$NON-NLS-1$
+					modeInt(mode, "offsetX", 0), modeInt(mode, "offsetY", 0), true); //$NON-NLS-1$ //$NON-NLS-2$
+			if (result != null)
+				stack.push(result);
+		}
+		case "TL", "TR", "BL", "BR", "C" -> { //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+			int align = switch (cmd) {
+			case "TL" -> ALIGN_TOP_LEFT; //$NON-NLS-1$
+			case "TR" -> ALIGN_TOP_RIGHT; //$NON-NLS-1$
+			case "BL" -> ALIGN_BOTTOM_LEFT; //$NON-NLS-1$
+			case "C" -> ALIGN_CENTER; //$NON-NLS-1$
+			default -> ALIGN_BOTTOM_RIGHT;
+			};
+			mode.put("align", align); //$NON-NLS-1$
+			if (parts.length > 1 && StringUtils.hasLength(parts[1])) {
+				try {
+					mode.put("offsetX", Integer.parseInt(parts[1].trim())); //$NON-NLS-1$
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			if (parts.length > 2 && StringUtils.hasLength(parts[2])) {
+				try {
+					mode.put("offsetY", Integer.parseInt(parts[2].trim())); //$NON-NLS-1$
+				} catch (NumberFormatException ignored) {
+				}
+			}
+		}
+		case "EMPTY" -> { //$NON-NLS-1$
+			StringBuilder sb = new StringBuilder("EMPTY"); //$NON-NLS-1$
+			for (int i = 1; i < parts.length; i++)
+				sb.append("|").append(parts[i]); //$NON-NLS-1$
+			Image img = createSingleImage(sb.toString(), background);
+			if (img != null)
+				stack.push(img);
+		}
+		case "JFXSTYLE" -> jfxStyleTL.set(parts.length > 1 ? parts[1] : ""); //$NON-NLS-1$ //$NON-NLS-2$
+		case "RESET" -> mode.clear(); //$NON-NLS-1$
+		case "DUPLICATE" -> {
+//$NON-NLS-0$
+			if (!stack.isEmpty())
+				stack.push(stack.peek());
+		}
+		case "COPY" -> {
+//$NON-NLS-0$
+			if (!stack.isEmpty())
+				mode.put("_temp", stack.peek()); //$NON-NLS-1$
+		}
+		case "PASTE" -> { //$NON-NLS-1$
+			Image temp = (Image) mode.get("_temp"); //$NON-NLS-1$
+			if (temp != null)
+				stack.push(copyImage(temp));
+		}
+		case "POP" -> {
+//$NON-NLS-0$
+			if (!stack.isEmpty())
+				stack.pop();
+		}
+		case "MIRROR" -> { //$NON-NLS-1$
+			if (!stack.isEmpty()) {
+				boolean flipLR = !"V".equalsIgnoreCase(parts.length > 1 ? parts[1] : "H"); //$NON-NLS-1$ //$NON-NLS-2$
+				stack.push(mirrorImage(stack.pop(), flipLR));
+			}
+		}
+		case "ROTATE" -> { //$NON-NLS-1$
+			if (!stack.isEmpty() && parts.length > 1) {
+				try {
+					stack.push(rotateImage(stack.pop(), Integer.parseInt(parts[1].trim())));
+				} catch (NumberFormatException e) {
+					log.warn("*ROTATE: invalid degrees in: {}", token); //$NON-NLS-1$
+				}
+			}
+		}
+		case "CROP" -> { //$NON-NLS-1$
+			if (!stack.isEmpty()) {
+				Image top = stack.peek();
+				int cropW = (parts.length > 1 && StringUtils.hasLength(parts[1]))
+						? parseInt(parts[1], (int) top.getWidth())
+						: (int) top.getWidth();
+				int cropH = (parts.length > 2 && StringUtils.hasLength(parts[2]))
+						? parseInt(parts[2], (int) top.getHeight())
+						: (int) top.getHeight();
+				stack.push(cropImage(stack.pop(), cropW, cropH, modeInt(mode, "align", ALIGN_BOTTOM_RIGHT), //$NON-NLS-1$
+						modeInt(mode, "offsetX", 0), modeInt(mode, "offsetY", 0))); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+		}
+		case "TEXT" -> { //$NON-NLS-1$
+			String value = parts.length > 1 ? parts[1] : ""; //$NON-NLS-1$
+			if (parts.length > 2 && StringUtils.hasLength(parts[2]))
+				mode.put("textColor", parts[2]); //$NON-NLS-1$
+			if (parts.length > 3 && StringUtils.hasLength(parts[3])) {
+				try {
+					mode.put("textSize", Double.parseDouble(parts[3].trim())); //$NON-NLS-1$
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			if (parts.length > 4 && StringUtils.hasLength(parts[4]))
+				mode.put("textFont", parts[4]); //$NON-NLS-1$
+			if (StringUtils.hasLength(value)) {
+				Image img = textToImage(value, (String) mode.getOrDefault("textColor", "#000000"), //$NON-NLS-1$ //$NON-NLS-2$
+						((Number) mode.getOrDefault("textSize", 12.0)).doubleValue(), //$NON-NLS-1$
+						(String) mode.get("textFont")); //$NON-NLS-1$
+				if (img != null)
+					stack.push(img);
+			}
+		}
+		case "PUT_CACHE" -> { //$NON-NLS-1$
+			if (!stack.isEmpty() && parts.length > 1 && StringUtils.hasLength(parts[1]))
+				iconCache.put(parts[1], copyImage(stack.peek()));
+		}
+		default -> log.warn("Unknown postfix command: {}", token); //$NON-NLS-1$
+		}
+	}
+
+	private static int modeInt(Map<String, Object> mode, String key, int defaultVal) {
+		Object v = mode.get(key);
+		return (v instanceof Number n) ? n.intValue() : defaultVal;
+	}
+
+	private static int parseInt(String s, int defaultVal) {
+		try {
+			return Integer.parseInt(s.trim());
+		} catch (NumberFormatException e) {
+			return defaultVal;
+		}
+	}
+
+	/**
+	 * Composes {@code overlay} onto {@code base} using alignment, optional pixel
+	 * offsets, and normal (SRC_OVER) or subtract (DST_OUT) mode. The result canvas
+	 * is the union bounding box of both images at their computed positions, so an
+	 * offset that pushes the overlay beyond the base edges will grow the canvas.
+	 */
+	private static Image postfixCompose(Image base, Image overlay, int align, int offsetX, int offsetY,
+			boolean subtract) {
+		if (base == null)
+			return overlay;
+		if (overlay == null)
+			return base;
+
+		int bW = (int) Math.ceil(base.getWidth());
+		int bH = (int) Math.ceil(base.getHeight());
+		int oW = (int) Math.ceil(overlay.getWidth());
+		int oH = (int) Math.ceil(overlay.getHeight());
+
+		int ox, oy;
+		switch (align) {
+		case ALIGN_TOP_LEFT -> {
+			ox = offsetX;
+			oy = offsetY;
+		}
+		case ALIGN_TOP_RIGHT -> {
+			ox = bW - oW + offsetX;
+			oy = offsetY;
+		}
+		case ALIGN_BOTTOM_LEFT -> {
+			ox = offsetX;
+			oy = bH - oH + offsetY;
+		}
+		case ALIGN_CENTER -> {
+			ox = (bW - oW) / 2 + offsetX;
+			oy = (bH - oH) / 2 + offsetY;
+		}
+		default -> {
+			ox = bW - oW + offsetX;
+			oy = bH - oH + offsetY;
+		} // ALIGN_BOTTOM_RIGHT
+		}
+
+		int minX = Math.min(0, ox);
+		int minY = Math.min(0, oy);
+		int maxX = Math.max(bW, ox + oW);
+		int maxY = Math.max(bH, oy + oH);
+		int rW = maxX - minX;
+		int rH = maxY - minY;
+		if (rW <= 0 || rH <= 0)
+			return base;
+
+		WritableImage out = new WritableImage(rW, rH);
+		PixelWriter pw = out.getPixelWriter();
+		int[] clear = new int[rW];
+		for (int y = 0; y < rH; y++)
+			pw.setPixels(0, y, rW, 1, PixelFormat.getIntArgbInstance(), clear, 0, rW);
+
+		PixelReader baseReader = base.getPixelReader();
+		if (baseReader != null)
+			alphaCompositeInto(out, baseReader, -minX, -minY, bW, bH);
+
+		PixelReader overlayReader = overlay.getPixelReader();
+		if (overlayReader != null) {
+			if (subtract)
+				alphaSubtractInto(out, overlayReader, ox - minX, oy - minY, oW, oH);
+			else
+				alphaCompositeInto(out, overlayReader, ox - minX, oy - minY, oW, oH);
+		}
+		return out;
+	}
+
+	private static Image copyImage(Image src) {
+		int w = (int) Math.ceil(src.getWidth());
+		int h = (int) Math.ceil(src.getHeight());
+		PixelReader pr = src.getPixelReader();
+		if (pr == null)
+			return src;
+		int[] pixels = new int[w * h];
+		pr.getPixels(0, 0, w, h, PixelFormat.getIntArgbInstance(), pixels, 0, w);
+		WritableImage copy = new WritableImage(w, h);
+		copy.getPixelWriter().setPixels(0, 0, w, h, PixelFormat.getIntArgbInstance(), pixels, 0, w);
+		return copy;
+	}
+
+	private static Image mirrorImage(Image img, boolean flipLeftRight) {
+		int w = (int) Math.ceil(img.getWidth());
+		int h = (int) Math.ceil(img.getHeight());
+		PixelReader pr = img.getPixelReader();
+		if (pr == null)
+			return img;
+		WritableImage out = new WritableImage(w, h);
+		PixelWriter pw = out.getPixelWriter();
+		int[] row = new int[w];
+		for (int y = 0; y < h; y++) {
+			int srcY = flipLeftRight ? y : h - 1 - y;
+			pr.getPixels(0, srcY, w, 1, PixelFormat.getIntArgbInstance(), row, 0, w);
+			if (flipLeftRight) {
+				for (int x = 0, x2 = w - 1; x < x2; x++, x2--) {
+					int tmp = row[x];
+					row[x] = row[x2];
+					row[x2] = tmp;
+				}
+			}
+			pw.setPixels(0, y, w, 1, PixelFormat.getIntArgbInstance(), row, 0, w);
+		}
+		return out;
+	}
+
+	private static Image rotateImage(Image img, int degrees) {
+		int w = (int) Math.ceil(img.getWidth());
+		int h = (int) Math.ceil(img.getHeight());
+		PixelReader pr = img.getPixelReader();
+		if (pr == null || (degrees != 90 && degrees != 180 && degrees != 270))
+			return img;
+		int[] src = new int[w * h];
+		pr.getPixels(0, 0, w, h, PixelFormat.getIntArgbInstance(), src, 0, w);
+		int outW = (degrees == 180) ? w : h;
+		int outH = (degrees == 180) ? h : w;
+		int[] dst = new int[outW * outH];
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < w; x++) {
+				int nx, ny;
+				switch (degrees) {
+				case 90 -> {
+					nx = h - 1 - y;
+					ny = x;
+				}
+				case 180 -> {
+					nx = w - 1 - x;
+					ny = h - 1 - y;
+				}
+				default -> {
+					nx = y;
+					ny = w - 1 - x;
+				} // 270
+				}
+				dst[ny * outW + nx] = src[y * w + x];
+			}
+		}
+		WritableImage out = new WritableImage(outW, outH);
+		out.getPixelWriter().setPixels(0, 0, outW, outH, PixelFormat.getIntArgbInstance(), dst, 0, outW);
+		return out;
+	}
+
+	private static Image cropImage(Image img, int cropW, int cropH, int align, int offsetX, int offsetY) {
+		int iw = (int) Math.ceil(img.getWidth());
+		int ih = (int) Math.ceil(img.getHeight());
+		PixelReader pr = img.getPixelReader();
+		if (pr == null)
+			return img;
+		int sx, sy;
+		switch (align) {
+		case ALIGN_TOP_LEFT -> {
+			sx = offsetX;
+			sy = offsetY;
+		}
+		case ALIGN_TOP_RIGHT -> {
+			sx = iw - cropW + offsetX;
+			sy = offsetY;
+		}
+		case ALIGN_BOTTOM_LEFT -> {
+			sx = offsetX;
+			sy = ih - cropH + offsetY;
+		}
+		case ALIGN_CENTER -> {
+			sx = (iw - cropW) / 2 + offsetX;
+			sy = (ih - cropH) / 2 + offsetY;
+		}
+		default -> {
+			sx = iw - cropW + offsetX;
+			sy = ih - cropH + offsetY;
+		}
+		}
+		sx = Math.max(0, Math.min(sx, iw - 1));
+		sy = Math.max(0, Math.min(sy, ih - 1));
+		int aw = Math.min(cropW, iw - sx);
+		int ah = Math.min(cropH, ih - sy);
+		WritableImage out = new WritableImage(cropW, cropH);
+		if (aw > 0 && ah > 0) {
+			int[] row = new int[aw];
+			PixelWriter pw = out.getPixelWriter();
+			for (int y = 0; y < ah; y++) {
+				pr.getPixels(sx, sy + y, aw, 1, PixelFormat.getIntArgbInstance(), row, 0, aw);
+				pw.setPixels(0, y, aw, 1, PixelFormat.getIntArgbInstance(), row, 0, aw);
+			}
+		}
+		return out;
+	}
+
+	private static Image textToImage(String value, String color, double size, String fontName) {
+		javafx.scene.text.Font font = (fontName != null && !fontName.isBlank())
+				? javafx.scene.text.Font.font(fontName, size)
+				: javafx.scene.text.Font.font(size);
+		javafx.scene.text.Text node = new javafx.scene.text.Text(value);
+		node.setFont(font);
+		if (color != null && !color.isBlank()) {
+			try {
+				node.setFill(javafx.scene.paint.Color.web(resolveSpecColor(color)));
+			} catch (Exception e) {
+				node.setFill(javafx.scene.paint.Color.BLACK);
+			}
+		}
+		Bounds b = node.getBoundsInLocal();
+		int w = Math.max(1, (int) Math.ceil(b.getWidth()));
+		int h = Math.max(1, (int) Math.ceil(b.getHeight()));
+		return snapshotToImage(node, w, h);
 	}
 
 	/**
@@ -471,12 +752,20 @@ public class ImageUtils {
 		for (Map.Entry<String, String> e : tokenMap.entrySet())
 			nSpec = nSpec.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
 
+		jfxStyleTL.remove();
 		Image i = iconCache.get(nSpec);
-		if (i == null) {
-			i = createImage(nSpec, background);
-			if (i != null) {
-				iconCache.put(nSpec, i);
-			}
+		if (i != null) {
+			String cached = jfxStyleCache.get(nSpec);
+			if (cached != null)
+				jfxStyleTL.set(cached);
+			return i;
+		}
+		i = createImage(nSpec, background);
+		if (i != null) {
+			iconCache.put(nSpec, i);
+			String style = jfxStyleTL.get();
+			if (style != null)
+				jfxStyleCache.put(nSpec, style);
 		}
 		return i;
 	}
@@ -494,7 +783,7 @@ public class ImageUtils {
 		Image i = getImageIfPossible(spec, background);
 		if (i == null) {
 			// fallback kept from your original
-			i = getImageIfPossible("16/FILE.png#9/ERROR.png", false); //$NON-NLS-1$
+			i = getImageIfPossible("16/FILE.png#9/ERROR.png#*+", false); //$NON-NLS-1$
 			if (i != null) {
 				iconCache.put(spec, i);
 			}
@@ -878,39 +1167,6 @@ public class ImageUtils {
 		return (img != null ? new ImageView(img) : null);
 	}
 
-	private static String extractViewStyle(String spec) {
-		if (spec == null || spec.contains("#")) //$NON-NLS-1$
-			return null;
-
-		String[] p = spec.split("\\|", -1);
-		// For svg file specs only: "...svg|w|h|scale|style"
-		if (p.length >= 5 && p[0].toLowerCase().endsWith(".svg")) {
-			return p[4];
-		}
-		return null;
-	}
-
-	private static String stripViewStyleFromSpec(String spec) {
-		if (spec == null || spec.contains("#")) //$NON-NLS-1$
-			return spec;
-
-		String[] p = spec.split("\\|", -1);
-		if (p.length >= 5 && p[0].toLowerCase().endsWith(".svg")) {
-			// Strip slot 4 (viewStyle — ImageView only) but preserve slots 5/6 (stroke/fill
-			// — affect image content)
-			StringBuilder sb = new StringBuilder();
-			sb.append(p[0]).append("|").append(p[1]).append("|").append(p[2]).append("|").append(p[3]);
-			if (p.length > 5) {
-				sb.append("||").append(p[5]); // slot 4 forced empty, slot 5 = stroke
-			}
-			if (p.length > 6) {
-				sb.append("|").append(p[6]); // slot 6 = fill
-			}
-			return sb.toString();
-		}
-		return spec;
-	}
-
 	/**
 	 * Returns an {@link ImageView} from a polymorphic input ({@link Image} or spec
 	 * {@link String}).
@@ -960,19 +1216,15 @@ public class ImageUtils {
 			return null;
 
 		if (spec.startsWith(PREFIX_PATH)) {
-			// [P]: is not representable as ImageView without rasterizing;
-			// caller should use getIconNode().
 			throw new IllegalArgumentException("[P]: path specs return SVGPath Node; use getIconNode(spec) instead.");
 		}
 
-		String baseSpec = stripViewStyleFromSpec(spec);
-		Image img = getImage(baseSpec);
+		Image img = getImage(spec, false);
 		if (img == null)
 			return null;
 
 		ImageView iv = new ImageView(img);
-
-		String s = (style != null) ? style : extractViewStyle(spec);
+		String s = (style != null) ? style : jfxStyleTL.get();
 		if (s != null && !s.isBlank()) {
 			iv.setStyle(s);
 		}

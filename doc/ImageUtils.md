@@ -13,12 +13,15 @@ Central utility for loading, compositing, and caching JavaFX `Image` objects and
 Image img = ImageUtils.getImage("save_16.png", false);
 
 // ImageView, possibly sized
-ImageView iv = ImageUtils.getIconView("save_16.png");
+ImageView iv = ImageUtils.getIconView("save.svg");
 ImageView iv = ImageUtils.getIconView("save.svg", 24.0);
 
 // Polymorphic: accepts Image, ImageView, or String spec
-Node icon = ImageUtils.getIconNode("save.svg|24|24|1.0|");   // ImageView
-Node icon = ImageUtils.getIconNode("[P]:M0 0 L10 10|16|16"); // SVGPath node
+Node icon = ImageUtils.getIconNode("save.svg|24");       // ImageView
+Node icon = ImageUtils.getIconNode("[P]:M0 0 L10 10|16"); // SVGPath node
+
+// Composed image: cube icon with a green plus badge at bottom-right
+Image badge = ImageUtils.getImage("cube.svg|24#plus.svg|12|||2b8a3e#*+", false);
 ```
 
 ---
@@ -39,18 +42,19 @@ All methods that accept a `String spec` understand the following formats.
 
 ```
 filename.svg
-filename.svg|w|h|scale|style|stroke|fill
+filename.svg|w|h|scale|stroke|fill
 ```
 
 Parameters after `|` are all optional (leave blank to skip):
 - **w** — render width in pixels
 - **h** — render height in pixels
 - **scale** — extra scale multiplier applied after w/h
-- **style** — inline CSS applied to the wrapping `ImageView` (not the SVG itself)
 - **stroke** — replaces every `currentColor` keyword in the SVG source and overrides all explicit `stroke="…"` attributes (except `stroke="none"`) with this color
 - **fill** — overrides all explicit `fill="…"` attributes (except `fill="none"`) and injects `fill` onto shape elements that carry no inline fill attribute
 
-Because `#` is the overlay-chain separator, hex colors in **stroke**/**fill** are written without it:
+> **Note:** the `viewStyle` parameter that formerly occupied slot 4 has been removed. Use the [`*JFXSTYLE`](#jfxstyle) postfix command to apply CSS to the wrapping `ImageView`.
+
+Because `#` is the postfix token separator, hex colors in **stroke**/**fill** are written without it:
 
 | Notation | Example | Resolved to |
 |---|---|---|
@@ -62,11 +66,11 @@ Because `#` is the overlay-chain separator, hex colors in **stroke**/**fill** ar
 | CSS named color / `rgba(...)` | `white`, `rgba(0,0,0,0.5)` | used as-is |
 
 ```
-search.svg|16|16|||333333        # 16 px, stroke #333333
-arrow.svg|24|24|||FFFFFF         # white stroke
-tag.svg|16|16|||4A90D9|none      # blue stroke, fill none
-tag.svg|16|16|||4A90D980         # semi-transparent blue stroke (50 % alpha)
-home.svg|24|24                   # no colour injection
+search.svg|16|16||333333        # 16 px, stroke #333333
+arrow.svg|24|24||FFFFFF         # white stroke
+tag.svg|16|16||4A90D9|none      # blue stroke, fill none
+tag.svg|16|16||4A90D980         # semi-transparent blue stroke (50 % alpha)
+home.svg|24|24                  # no colour injection
 ```
 
 Paths follow the same relative / absolute / `[F]:` rules as raster images.
@@ -85,22 +89,6 @@ Selects the best-matching frame from a multi-image ICO file:
 - **`|w|h`** — same logic using `min(w, h)` as the target
 
 Paths follow the same relative / absolute / `[F]:` rules as raster images. Supported frame formats: PNG-in-ICO, 32-bpp BGRA DIB, 24-bpp BGR DIB, and indexed (≤8-bpp) DIB.
-
-### Solid-colour canvas
-
-```
-EMPTY|size
-EMPTY|w|h
-EMPTY|w|h|color
-```
-
-Creates a synthetic transparent canvas useful as a base layer. `h` may be left blank to default to `w`. `color` uses the same notation as SVG stroke/fill.
-
-```
-EMPTY|24               # 24×24 transparent canvas
-EMPTY|32|16            # 32×16 transparent canvas
-EMPTY|24|24|4A90D9     # 24×24 solid blue canvas
-```
 
 ### Inline SVG path data
 
@@ -135,73 +123,207 @@ Before lookup, every spec is passed through a two-step token replacement:
 
    Tokens are applied in insertion order. Passing `null` as value to `registerToken` removes that token.
 
-### Overlay chain — `#`
+---
 
-Multiple specs separated by `#` are alpha-composited left-to-right into a single image. The canvas is sized to fit the largest image; the first image effectively becomes the background.
+## Postfix composition
 
-An optional **alignment token** as the first `#`-separated element controls where every image in the chain is positioned on that canvas:
+Specs that contain `#` are evaluated as a **postfix (RPN) expression**. The spec is split on every `#`; each token is either:
 
-```
-base_16.png#overlay/lock_9.png           # lock badge at bottom-right (default)
-TL#base_16.png#overlay/badge_9.png       # badge at top-left
-BR#EMPTY|24#save.svg|16|||||00ff00       # green icon inside 24-px canvas, at bottom-right
-```
+- A **file spec** (does not start with `*`) — loaded as an image and pushed onto the stack.
+- A **command** (starts with `*`) — operates on the stack or sets a mode value.
 
-Alignment tokens: `TL`, `TR`, `BL`, `BR`, `C`. If the first element is not a recognised token it is treated as the first image.
+When processing is complete, the **top of the stack** is returned as the result.
 
-For the alignment to have a visible effect on an overlay, the overlay image must be smaller than the largest image (which defines the canvas). All images — including the base — are positioned with the same alignment, but the largest image lands at (0, 0) regardless of alignment.
-
-#### Subtract mode (`-`)
-
-Append `-` to the alignment token to switch all overlay images to **subtract mode** (DST_OUT compositing): each image after the first cuts its opaque pixels out of the accumulated result instead of painting over it. The first image is always the additive base.
+### Alignment mode — `*TL` `*TR` `*BL` `*BR` `*C`
 
 ```
-C-#base_32.png#svg/mask/circle.svg|32     # mask subtracts a centred circular hole from base
-TL-#base_16.png#shadow_mask.png           # mask subtracts from base, placed at top-left
--#base_16.png#mask.png                    # subtract at default BR alignment
+*TL
+*TR|offsetX|offsetY
+*BR|5|-3
+*C
 ```
 
-Subtraction formula per pixel: `outA = dstA × (1 − srcA)` — fully opaque mask pixels produce fully transparent output; fully transparent mask pixels leave the destination unchanged.
+Sets the current alignment (reference point used by `*+`, `*-`, and `*CROP`) and optionally the pixel offsets. Offsets default to `0, 0` and are not cleared by a subsequent alignment command unless new values are specified. Default alignment at startup is `BR, 0, 0`.
 
-### Processing chain — `##`
+| Token | Meaning |
+|---|---|
+| `*TL` | Top-left corner |
+| `*TR` | Top-right corner |
+| `*BL` | Bottom-left corner |
+| `*BR` | Bottom-right corner (default) |
+| `*C` | Centred |
 
-Specs separated by `##` are each resolved independently via `createImage` (so each segment may itself be a full overlay chain), then alpha-composited in one pass. This lets you chain independently-built images together.
-
-An optional **global alignment token** as the very first element sets the default placement and subtract mode for all segments:
-
-```
-base_16.png##overlay/Warning_9.png##overlay/lock_9.png
-BR##step1.png##step2.png
-```
-
-#### Per-segment alignment and subtract
-
-A `##` segment that starts with an alignment token (with or without `-`) **before the first `#`** overrides both the placement and the subtract mode for that segment only, while the rest of the segment is still resolved normally.
-
-This token is parsed twice — once by the `##` compositor for outer placement, and once by `createImage` for inner `#` chain compositing — so it controls the full chain at both levels.
+### Combine — `*+` and `*-`
 
 ```
-# Green 16-px icon at top-left inside a 24-px canvas, then a red badge at bottom-right:
-TL#EMPTY|24#save.svg|16|||||00ff00##BR#badge.svg|9|||||ff0000
-
-# Solid blue square, circular cutout at centre, badge at bottom-right:
-EMPTY|32|32|blue##C-#svg/mask/circle.svg|32##badge.svg
-
-# Photo with top-left corner faded, badge added:
-photo.png##TL-#svg/mask/fade_tl.svg|64##badge.svg
+base.svg|24#badge.svg|12#*+             # overlay badge at BR (default)
+*C#base.svg|24#mask.svg|24#*-           # subtract mask centred on base
+*BR|2|2#base.svg|24#badge.svg|12#*+     # overlay badge, shifted 2 px right and down
 ```
 
-To subtract a segment that is a plain image (not a `#` chain), wrap it with a bare `-`:
+Pops the top two images from the stack — **top** is the overlay/mask, **second** is the base — composites them, and pushes the result.
+
+- **`*+`** — SRC_OVER (normal alpha compositing): overlay paints over the base.
+- **`*-`** — DST_OUT (alpha subtract): overlay cuts its opaque pixels out of the base.
+
+The overlay is positioned relative to the base using the current alignment and offsets. The result canvas is the **union bounding box** of both positioned images, so a non-zero offset that pushes the overlay beyond the base edges will grow the canvas accordingly.
+
+For a chain of more than two images, repeat `*+` (or `*-`):
 
 ```
-base.png##-#mask.svg        # subtracts mask.svg at default BR alignment
-base.png##C-#mask.svg       # subtracts mask.svg at centre
+bottom.svg|32#mid.svg|16#*+#top.svg|9#*BR#*+
 ```
 
-A global alignment token with `-` makes **all** subsequent segments subtract:
+### Canvas — `*EMPTY`
 
 ```
-C-##photo.png##mask1.svg##mask2.svg     # both masks subtract from photo, all centred
+*EMPTY|size
+*EMPTY|w|h
+*EMPTY|w|h|color
+```
+
+Creates a synthetic canvas and pushes it. `h` may be blank to default to `w`. `color` uses the same notation as SVG stroke/fill. Equivalent to the bare `EMPTY|…` file-spec keyword, but explicit as a command.
+
+```
+*EMPTY|24                  # 24×24 transparent canvas
+*EMPTY|32|16               # 32×16 transparent canvas
+*EMPTY|24|24|4A90D9        # 24×24 solid blue canvas
+```
+
+### Text rendering — `*TEXT`
+
+```
+*TEXT|value|color|size|font
+```
+
+Sets mode values (`color`, `size`, `font`) for subsequent TEXT commands. If `value` is non-empty, renders it to a canvas and pushes the result. Any mode values already set are reused when parameters are omitted.
+
+```
+*TEXT|Hello|333333|14|Arial     # render "Hello" in dark grey, 14 px Arial
+*TEXT|16                        # set size only (colour/font unchanged)
+```
+
+### Mirror — `*MIRROR`
+
+```
+*MIRROR|H          # flip left-right (horizontal mirror)
+*MIRROR|V          # flip top-bottom (vertical mirror)
+```
+
+Pops the top image, flips it, and pushes the result. Axis defaults to `H` if omitted.
+
+### Rotate — `*ROTATE`
+
+```
+*ROTATE|90         # 90° clockwise
+*ROTATE|180
+*ROTATE|270        # 90° counter-clockwise
+```
+
+Pops the top image, rotates it losslessly (pixel-perfect, no resampling), and pushes the result. Only 90°, 180°, and 270° are supported; other values return the image unchanged.
+
+### Crop — `*CROP`
+
+```
+*CROP|w|h
+*CROP|w             # height unchanged
+*CROP||h            # width unchanged
+```
+
+Pops the top image, crops it to `w × h` using the current alignment and offsets as the anchor, and pushes the result. A blank dimension keeps the image's natural size on that axis.
+
+Examples:
+
+```
+# Take the top-left 16×16 region of a 24×24 image:
+icon.svg|24#*TL#*CROP|16|16
+
+# Take the bottom-right 16×16 region:
+icon.svg|24#*BR#*CROP|16|16
+
+# Take a 20×20 centred crop:
+icon.svg|24#*C#*CROP|20|20
+```
+
+### Stack manipulation
+
+| Command | Effect |
+|---|---|
+| `*DUPLICATE` | Push a copy of the top image (top remains) |
+| `*COPY` | Store a copy of the top image in a clipboard slot (stack unchanged) |
+| `*PASTE` | Push a copy of the clipboard image (clipboard preserved) |
+| `*POP` | Discard the top image |
+| `*RESET` | Clear all mode values (alignment reverts to `BR, 0, 0`; clipboard cleared) |
+
+### JFXSTYLE
+
+```
+*JFXSTYLE|-fx-opacity: 0.5;
+```
+
+Sets a CSS style string that `getIconView` will apply to the wrapping `ImageView` after loading the image. This replaces the former `viewStyle` parameter (slot 4 of the SVG spec). The value is not baked into the image — it is only applied when the result is retrieved through `getIconView`.
+
+```java
+// Spec with embedded JFXSTYLE
+ImageView iv = ImageUtils.getIconView("icon.svg|24#*JFXSTYLE|-fx-opacity: 0.5;");
+// → iv has style "-fx-opacity: 0.5;" applied
+```
+
+### Explicit cache — `*GET_CACHE` and `*PUT_CACHE`
+
+```
+*GET_CACHE|key
+*PUT_CACHE|key
+```
+
+Allows a composed sub-image to be reused across multiple spec evaluations without rebuilding it each time. The key is a plain string; it addresses a separate user-controlled cache slot (not the automatic spec-string cache).
+
+**Semantics:**
+
+- **`*GET_CACHE|key`** — if `key` is present in cache: push the cached image and **skip** all following tokens up to and including the matching `*PUT_CACHE|key`, then continue. If not present: do nothing (fall through).
+- **`*PUT_CACHE|key`** — if not currently being skipped: store a copy of the stack top under `key`. Acts as the skip target for a matching `*GET_CACHE`.
+
+**Pattern — shared base image:**
+
+```
+*GET_CACHE|sharedBase
+  ... expensive commands to build base ...
+*PUT_CACHE|sharedBase
+... overlay commands on top of base ...
+#*+
+```
+
+First call: cache miss → base is built, stored under `sharedBase`, overlay is applied.  
+Subsequent calls: cache hit → base is fetched from cache, expensive commands are skipped, overlay is applied.
+
+> Pairs must use identical keys. Nesting with different keys is supported; pairs with the same key must not be interleaved.
+
+---
+
+## Postfix examples
+
+```
+# Simple badge overlay (badge at BR, default):
+cube.svg|24#search.svg|16#*+
+
+# Badge with colour:
+cube.svg|24#plus.svg|16|||2b8a3e#*+
+
+# Badge at top-left:
+cube.svg|24#plus.svg|16#*TL#*+
+
+# Circular cutout in a solid blue square, then a badge:
+*EMPTY|32|32|4A90D9#*C#svg/mask/circle.svg|32#*-#badge.svg|12#*BR#*+
+
+# Green save icon (TL) and red save icon (BR) on a shared 24-px canvas:
+*EMPTY|24#save.svg|16||||00ff00#*TL#*+#save.svg|16||||ff0000#*BR#*+
+
+# Centre a square with an X overlaid on it:
+*C#square.svg|24#x.svg|24|||c0392b#*+
+
+# Shared expensive base used by two different final specs:
+*GET_CACHE|myBase#...#*PUT_CACHE|myBase#badge_a.svg|12#*+
+*GET_CACHE|myBase#...#*PUT_CACHE|myBase#badge_b.svg|12#*+
 ```
 
 ---
@@ -224,7 +346,7 @@ Image ImageUtils.getImage(Object input)
 Image ImageUtils.getImage(String iconNameBase, int size)
 ```
 
-`background = true` loads raster images asynchronously (non-blocking); SVG and overlays are always synchronous.
+`background = true` loads raster images asynchronously (non-blocking); SVG and postfix evaluation are always synchronous.
 
 ### Loading nodes / views
 
@@ -240,6 +362,8 @@ ImageView ImageUtils.getIconView(Object input)                    // polymorphic
 Node ImageUtils.getIconNode(String spec)
 ```
 
+`getIconView` reads the `*JFXSTYLE` value set during postfix evaluation and applies it to the returned `ImageView` automatically.
+
 ### SVG helpers
 
 ```java
@@ -252,7 +376,7 @@ Image ImageUtils.getSvgIcon(String iconName, Integer size)
 
 `iconName` is without the `.svg` extension; resolved via the branding root.
 
-### Compositing
+### Compositing (Java API)
 
 ```java
 // Composite spec strings → Image
@@ -290,8 +414,8 @@ void ImageUtils.saveImage(File target, String... iconspecs) throws IOException
 // Save a single image
 ImageUtils.saveImage(new File("out.png"), "16/SAVE.png");
 
-// Save a composed image (specs overlaid at bottom-right)
-ImageUtils.saveImage(new File("composed.png"), "24/FOLDER.png", "9/LOCK.png");
+// Save a composed image
+ImageUtils.saveImage(new File("composed.png"), "base.svg|24#badge.svg|12#*+");
 
 // Batch-create a multi-size icon set
 ImageUtils.saveImage(new File("app.ico"),
@@ -301,7 +425,7 @@ ImageUtils.saveImage(new File("app.ico"),
     "256/APP.png");
 ```
 
-Throws `IOException` if any spec cannot be resolved or if writing fails. Throws `IllegalArgumentException` for unsupported extensions or an empty spec list. ICO writing is handled by `IcoWriter`.
+Throws `IOException` if any spec cannot be resolved or if writing fails. Throws `IllegalArgumentException` for unsupported extensions or an empty spec list.
 
 ### Utilities
 
@@ -342,7 +466,7 @@ All values are global and shared across all callers.
 
 ## Built-in mask SVGs
 
-Transparency mask files are provided under `svg/mask/` relative to the branding images root. They are designed for use with subtract mode so that their alpha channel cuts away the corresponding part of a base image.
+Transparency mask files are provided under `svg/mask/` relative to the branding images root. They are designed for use with `*-` (subtract mode) so that their alpha channel cuts away the corresponding part of a base image.
 
 When subtracted, pixels where the mask is fully opaque become fully transparent in the result; pixels where the mask is transparent are unchanged.
 
@@ -379,17 +503,17 @@ Each fade runs from one edge or corner (opaque) to the opposite (transparent). W
 ### Usage examples
 
 ```
-# Circular cutout in a solid square, then a badge at bottom-right:
-EMPTY|32|32|blue##C-#svg/mask/circle.svg|32##badge.svg
+# Circular cutout in a solid blue square, then a badge at bottom-right:
+*EMPTY|32|32|4A90D9#*C#svg/mask/circle.svg|32#*-#badge.svg|12#*BR#*+
 
 # Photo with the top edge faded out:
-photo.png##-#svg/mask/fade_up.svg|64
+photo.png#*-#svg/mask/fade_up.svg|64#*+
 
 # Photo with the top-left corner cut away, badge at bottom-right:
-photo.png##TL-#svg/mask/fade_tl.svg|64##badge.svg
+photo.png#*TL#svg/mask/fade_tl.svg|64#*-#badge.svg|12#*BR#*+
 
-# Two masks both subtracted from a photo (global subtract mode):
-C-##photo.png##svg/mask/circle.svg|32##svg/mask/circle_in.svg|32
+# Two masks both subtracted from a photo, centred:
+photo.png#*C#svg/mask/circle.svg|32#*-#svg/mask/circle_in.svg|32#*-
 ```
 
 ---
@@ -405,7 +529,7 @@ Adapts `ImageUtils` to the BSToolbox `ImageLoader` SPI so that any code using th
 ImageLoader.setDefault(new AnyImageLoader());
 ```
 
-After installation, relative names, overlays, SVG, and scale substitution all work through the standard `ImageLoader` API.
+After installation, relative names, postfix composition, SVG, and scale substitution all work through the standard `ImageLoader` API.
 
 ---
 
@@ -415,3 +539,4 @@ After installation, relative names, overlays, SVG, and scale substitution all wo
 - Cache is never invalidated at runtime — suitable for static icons; not for dynamically generated specs that encode runtime state.
 - `createImage` is not cached; `getImageIfPossible` / `getImage` are.
 - `null` results are not cached — a failed load is retried on the next call.
+- The `*GET_CACHE` / `*PUT_CACHE` commands provide an explicit secondary cache keyed by a user-chosen string, independent of the automatic spec-string cache.
