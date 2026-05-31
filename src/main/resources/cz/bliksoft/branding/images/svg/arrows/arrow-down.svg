@@ -1,8 +1,6 @@
 <!--
-tags: [photo, crop, creative, artistic, visual, aesthetic, style]
-category: Design
-version: "1.0"
-unicode: "ea85"
+tags: [arrow, down, move, order, reorder, sort]
+category: Arrows
 -->
 <svg
   xmlns="http://www.w3.org/2000/svg"
@@ -15,6 +13,7 @@ unicode: "ea85"
   stroke-linecap="round"
   stroke-linejoin="round"
 >
-  <path d="M8 5v10a1 1 0 0 0 1 1h10" />
-  <path d="M5 8h10a1 1 0 0 1 1 1v10" />
+  <path d="M12 5l0 14" />
+  <path d="M18 13l-6 6" />
+  <path d="M6 13l6 6" />
 </svg>

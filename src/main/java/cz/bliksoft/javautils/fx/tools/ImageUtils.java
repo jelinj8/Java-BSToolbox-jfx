@@ -35,9 +35,9 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.shape.SVGPath;
 
 /**
- * Utility for loading, caching, and compositing JavaFX {@link Image} objects
- * from various sources. Images are resolved via an <em>icon spec string</em>
- * with the following supported formats:
+ * Utility for loading, caching, and composing JavaFX {@link Image} objects from
+ * various sources. Images are resolved via an <em>icon spec string</em> with
+ * the following supported formats:
  *
  * <ul>
  * <li>{@code name.png} / {@code name.svg} — resolved relative to the branding
@@ -87,7 +87,9 @@ import javafx.scene.shape.SVGPath;
  * {@code *PASTE}, {@code *POP}, {@code *RESET}; {@code *GET_CACHE|key} /
  * {@code *PUT_CACHE|key} — explicit cache: GET pushes the cached image and
  * skips to the matching PUT_CACHE (inclusive) when the key is present,
- * otherwise does nothing; PUT stores stack top under key.</li>
+ * otherwise does nothing; PUT stores stack top under key; {@code *NOCACHE} —
+ * suppresses storing the final result in the outer {@link #getImageIfPossible}
+ * cache (useful when generating large numbers of distinct one-time specs).</li>
  * <li>The token {@value #SCALE_PLACEHOLDER} in any spec is replaced with the
  * current UI-scale bucket string before lookup</li>
  * </ul>
@@ -138,6 +140,11 @@ public class ImageUtils {
 	 * postfix evaluation.
 	 */
 	private static final ThreadLocal<String> jfxStyleTL = new ThreadLocal<>();
+
+	/**
+	 * Set by {@code *NOCACHE} during postfix evaluation to suppress cache storage.
+	 */
+	private static final ThreadLocal<Boolean> noCacheTL = new ThreadLocal<>();
 
 	/** Overlay alignment: source image is centered over the base. */
 	public static final int ALIGN_CENTER = 0;
@@ -233,9 +240,7 @@ public class ImageUtils {
 	/**
 	 * Loads a single non-composite image from a spec string. Handles {@code EMPTY},
 	 * {@code [PI]:} inline paths, SVG, ICO, and raster images. The SVG spec format
-	 * is {@code file.svg|w|h|scale|stroke|fill} — the old {@code viewStyle} slot
-	 * (formerly position 4) has been removed; stroke is now at position 4 and fill
-	 * at position 5.
+	 * is {@code file.svg|w|h|scale|stroke|fill}
 	 */
 	private static Image createSingleImage(String spec, boolean background) {
 		// Inline SVGPath rasterized into Image
@@ -294,7 +299,7 @@ public class ImageUtils {
 			}
 		}
 
-		// SVG: file.svg|w|h|scale|stroke|fill (viewStyle slot removed)
+		// SVG: file.svg|w|h|scale|stroke|fill
 		if (filePath.toLowerCase().endsWith(".svg")) { //$NON-NLS-1$
 			Float w = null;
 			Float h = null;
@@ -508,6 +513,7 @@ public class ImageUtils {
 			if (!stack.isEmpty() && parts.length > 1 && StringUtils.hasLength(parts[1]))
 				iconCache.put(parts[1], copyImage(stack.peek()));
 		}
+		case "NOCACHE" -> noCacheTL.set(Boolean.TRUE); //$NON-NLS-1$
 		default -> log.warn("Unknown postfix command: {}", token); //$NON-NLS-1$
 		}
 	}
@@ -753,6 +759,7 @@ public class ImageUtils {
 			nSpec = nSpec.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
 
 		jfxStyleTL.remove();
+		noCacheTL.remove();
 		Image i = iconCache.get(nSpec);
 		if (i != null) {
 			String cached = jfxStyleCache.get(nSpec);
@@ -761,7 +768,7 @@ public class ImageUtils {
 			return i;
 		}
 		i = createImage(nSpec, background);
-		if (i != null) {
+		if (i != null && noCacheTL.get() == null) {
 			iconCache.put(nSpec, i);
 			String style = jfxStyleTL.get();
 			if (style != null)
@@ -782,22 +789,12 @@ public class ImageUtils {
 	public static Image getImage(String spec, boolean background) {
 		Image i = getImageIfPossible(spec, background);
 		if (i == null) {
-			// fallback kept from your original
-			i = getImageIfPossible("16/FILE.png#9/ERROR.png#*+", false); //$NON-NLS-1$
+			i = getImageIfPossible("svg/file.svg|16#svg/alert-triangle.svg|8|||red#*C||2#*+", false); //$NON-NLS-1$
 			if (i != null) {
 				iconCache.put(spec, i);
 			}
 		}
 		return i;
-	}
-
-	/**
-	 * Returns the standard 16×16 transparent placeholder image.
-	 *
-	 * @return the empty/transparent image, or {@code null} if unavailable
-	 */
-	public static Image getEmptyImage() {
-		return getImage("16/EMPTY.png");
 	}
 
 	/**
@@ -810,7 +807,7 @@ public class ImageUtils {
 	 *
 	 * @return the loaded image, or a fallback error icon
 	 */
-	public static Image getScaledSvgIcon(String iconName, Integer size) {
+	public static Image getScaledSvgImage(String iconName, Integer size) {
 		if (size == null) {
 			return getImage(MessageFormat.format("{0}.svg|||{1}", iconName, scale)); // $NON-NLS-2$
 		} else {
@@ -827,7 +824,7 @@ public class ImageUtils {
 	 *
 	 * @return the loaded image, or a fallback error icon
 	 */
-	public static Image getSvgIcon(String iconName, Integer size) {
+	public static Image getSvgImage(String iconName, Integer size) {
 		return getImage(MessageFormat.format("{0}.svg||{1}", iconName, size)); // $NON-NLS-3$
 	}
 
@@ -1163,7 +1160,7 @@ public class ImageUtils {
 	 *         unavailable
 	 */
 	public static ImageView getEmptyImageView() {
-		Image img = getEmptyImage();
+		Image img = createImage("EMPTY|16", false);
 		return (img != null ? new ImageView(img) : null);
 	}
 

@@ -103,6 +103,12 @@
 				<file name="remove">
 					<attribute name="keys" value="Delete" />
 				</file>
+				<file name="move-up">
+					<attribute name="keys" value="Alt+Up" />
+				</file>
+				<file name="move-down">
+					<attribute name="keys" value="Alt+Down" />
+				</file>
 			</file>
 		</file>
 		<file name="actions" id="registered-actions" />
@@ -162,6 +168,14 @@
 					<attribute name="iconspec">svg/adjustments.svg|${toolbar-size}|||green</attribute>
 					<attribute name="menu-iconspec">svg/adjustments.svg|${menu-icon-size}||||green</attribute>
 				</file>
+				<file name="login">
+					<attribute name="iconspec">svg/login.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/login.svg|${menu-icon-size}</attribute>
+				</file>
+				<file name="logout">
+					<attribute name="iconspec">svg/logout.svg|${toolbar-size}</attribute>
+					<attribute name="menu-iconspec">svg/logout.svg|${menu-icon-size}</attribute>
+				</file>
 				<file name="save">
 					<attribute name="iconspec">svg/save.svg|${toolbar-size}||||red</attribute>
 					<attribute name="menu-iconspec">svg/save.svg|${menu-icon-size}||||red</attribute>
@@ -193,7 +207,6 @@
 				</file>
 			</file>
 
-			<!-- Inline editor button iconspecs (edit-button-size = 12) -->
 			<file name="editor">
 				<file name="add">
 					<attribute name="iconspec">svg/plus.svg|${edit-button-size}|||${stroke-add}</attribute>
@@ -205,7 +218,13 @@
 					<attribute name="iconspec">svg/edit.svg|${edit-button-size}|||${stroke-edit}</attribute>
 				</file>
 				<file name="preview">
-					<attribute name="iconspec">svg/info-circle.svg|${edit-button-size}|||${stroke-info}</attribute>
+					<attribute name="iconspec">svg/info-square.svg|${edit-button-size}|||${stroke-info}</attribute>
+				</file>
+				<file name="move-up">
+					<attribute name="iconspec">svg/arrows/arrow-up.svg|${edit-button-size}|||${stroke-button}</attribute>
+				</file>
+				<file name="move-down">
+					<attribute name="iconspec">svg/arrows/arrow-down.svg|${edit-button-size}|||${stroke-button}</attribute>
 				</file>
 			</file>
 

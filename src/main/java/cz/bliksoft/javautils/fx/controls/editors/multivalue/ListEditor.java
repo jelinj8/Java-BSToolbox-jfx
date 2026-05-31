@@ -11,6 +11,7 @@ import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -24,14 +25,18 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -68,13 +73,23 @@ public class ListEditor<V> extends VBox {
 	private Supplier<V> addItemSupplier = null;
 	private Runnable editAction = null;
 	private Runnable previewAction = null;
+	private boolean orderingEnabled = false;
+	private boolean suppressEntrySync = false;
 
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
 	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
+	private final KeyCombination kcMoveUp = loadEditorKey("multivalue-editors/move-up", KeyCode.UP,
+			KeyCombination.ALT_DOWN);
+	private final KeyCombination kcMoveDown = loadEditorKey("multivalue-editors/move-down", KeyCode.DOWN,
+			KeyCombination.ALT_DOWN);
 	private final Button editBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
 	private final Button previewBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
+	private final Button moveUpBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-up"))); //$NON-NLS-1$
+	private final Button moveDownBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-down"))); //$NON-NLS-1$
 
 	private HBox toolbar;
 	private Node leadingToolbarNode;
@@ -138,6 +153,25 @@ public class ListEditor<V> extends VBox {
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
+		moveUpBtn.setFocusTraversable(false);
+		moveUpBtn.setTooltip(new Tooltip("Přesunout nahoru"));
+		moveUpBtn.setVisible(false);
+		moveUpBtn.setManaged(false);
+		moveUpBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),
+				table.getSelectionModel().getSelectedIndex() - 1));
+		moveUpBtn.disableProperty().bind(table.getSelectionModel().selectedIndexProperty().lessThanOrEqualTo(0));
+
+		moveDownBtn.setFocusTraversable(false);
+		moveDownBtn.setTooltip(new Tooltip("Přesunout dolů"));
+		moveDownBtn.setVisible(false);
+		moveDownBtn.setManaged(false);
+		moveDownBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),
+				table.getSelectionModel().getSelectedIndex() + 1));
+		moveDownBtn.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+			int idx = table.getSelectionModel().getSelectedIndex();
+			return idx < 0 || idx >= entries.size() - 1;
+		}, table.getSelectionModel().selectedIndexProperty(), entries));
+
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.ENTER) {
 				if (table.getEditingCell() == null) {
@@ -159,6 +193,14 @@ public class ListEditor<V> extends VBox {
 						&& table.getSelectionModel().getSelectedItem() != null) {
 					e.consume();
 					firePreview();
+				} else if (orderingEnabled && kcMoveUp.match(e)
+						&& table.getSelectionModel().getSelectedItem() != null) {
+					e.consume();
+					moveUpBtn.fire();
+				} else if (orderingEnabled && kcMoveDown.match(e)
+						&& table.getSelectionModel().getSelectedItem() != null) {
+					e.consume();
+					moveDownBtn.fire();
 				}
 			}
 		});
@@ -191,12 +233,14 @@ public class ListEditor<V> extends VBox {
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, editBtn, previewBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, moveUpBtn, moveDownBtn, editBtn, previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, table);
 
 		entries.addListener((ListChangeListener<ListEntry<V>>) change -> {
+			if (suppressEntrySync)
+				return;
 			while (change.next()) {
 				if (change.wasPermutated()) {
 					for (int i = change.getFrom(); i < change.getTo(); i++)
@@ -258,6 +302,69 @@ public class ListEditor<V> extends VBox {
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {
 		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
 		return kc != null ? kc : new KeyCodeCombination(fallback);
+	}
+
+	private static KeyCombination loadEditorKey(String key, KeyCode fallback, KeyCombination.Modifier... modifiers) {
+		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
+		return kc != null ? kc : new KeyCodeCombination(fallback, modifiers);
+	}
+
+	public void setOrderingEnabled(boolean enabled) {
+		orderingEnabled = enabled;
+		moveUpBtn.setVisible(enabled);
+		moveUpBtn.setManaged(enabled);
+		moveDownBtn.setVisible(enabled);
+		moveDownBtn.setManaged(enabled);
+		if (enabled) {
+			installDragAndDrop();
+		} else {
+			table.setRowFactory(null);
+		}
+	}
+
+	private void moveItem(int from, int to) {
+		if (from == to || from < 0 || to < 0 || to >= entries.size())
+			return;
+		suppressEntrySync = true;
+		ListEntry<V> entry = entries.remove(from);
+		V value = items.remove(from);
+		entries.add(to, entry);
+		items.add(to, value);
+		suppressEntrySync = false;
+		table.getSelectionModel().select(to);
+		table.scrollTo(to);
+	}
+
+	private void installDragAndDrop() {
+		table.setRowFactory(tv -> {
+			TableRow<ListEntry<V>> row = new TableRow<>();
+			row.setOnDragDetected(e -> {
+				if (!row.isEmpty()) {
+					Dragboard db = row.startDragAndDrop(TransferMode.MOVE);
+					ClipboardContent cc = new ClipboardContent();
+					cc.putString(Integer.toString(row.getIndex()));
+					db.setContent(cc);
+					e.consume();
+				}
+			});
+			row.setOnDragOver(e -> {
+				if (e.getGestureSource() != row && e.getDragboard().hasString()) {
+					e.acceptTransferModes(TransferMode.MOVE);
+				}
+				e.consume();
+			});
+			row.setOnDragDropped(e -> {
+				Dragboard db = e.getDragboard();
+				if (db.hasString()) {
+					int from = Integer.parseInt(db.getString());
+					int to = row.isEmpty() ? entries.size() - 1 : row.getIndex();
+					moveItem(from, to);
+					e.setDropCompleted(true);
+				}
+				e.consume();
+			});
+			return row;
+		});
 	}
 
 	/** Forces all visible cells to re-render with their current values. */
