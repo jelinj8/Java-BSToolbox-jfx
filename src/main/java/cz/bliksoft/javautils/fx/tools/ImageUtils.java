@@ -33,9 +33,30 @@ import javafx.scene.shape.SVGPath;
  * <li>{@code name.png} / {@code name.svg} — resolved relative to the branding
  * images root (default: {@code /cz/bliksoft/branding/images/})</li>
  * <li>{@code /absolute/path.png} — absolute classpath resource</li>
- * <li>{@code [F]:/filesystem/path.png} — explicit file-system path</li>
- * <li>{@code name.svg|w|h|scale|style} — SVG with optional pixel width, height,
- * extra scale multiplier, and inline CSS style</li>
+ * <li>{@code [F]:/filesystem/path.png} — explicit file-system path (also
+ * supported for SVG)</li>
+ * <li>{@code name.svg|w|h|scale|viewStyle|stroke|fill} — SVG with optional
+ * parameters (all may be left blank):
+ * <ul>
+ * <li>{@code w}, {@code h} — pixel width/height; omit either to derive from the
+ * SVG's natural aspect ratio</li>
+ * <li>{@code scale} — extra scale multiplier applied on top of w/h</li>
+ * <li>{@code viewStyle} — CSS applied to the
+ * {@link javafx.scene.image.ImageView} only (not baked into the image)</li>
+ * <li>{@code stroke} — color that replaces every {@code currentColor}
+ * occurrence in the SVG source and overrides explicit {@code stroke}
+ * attributes; accepts bare hex ({@code ff0000}), {@code 0xRRGGBB}, or CSS named
+ * colors</li>
+ * <li>{@code fill} — color injected as {@code fill} on all SVG shape elements
+ * (except {@code fill="none"}); same color syntax as stroke</li>
+ * </ul>
+ * </li>
+ * <li>{@code EMPTY|size} — synthetic transparent canvas ({@code size×size}
+ * pixels); useful as the base layer in overlay chains</li>
+ * <li>{@code EMPTY|w|h} — transparent canvas with explicit width and height
+ * ({@code h} may be left blank to default to {@code w})</li>
+ * <li>{@code EMPTY|w|h|color} — solid-color canvas; color uses the same syntax
+ * as the SVG stroke/fill slots ({@code h} may be left blank)</li>
  * <li>{@code [P]:svgPathData|w|h|scale|style} — inline SVG path data rendered
  * as a styled {@link javafx.scene.shape.SVGPath} node; use {@link #getIconNode}
  * to retrieve it</li>
@@ -44,16 +65,18 @@ import javafx.scene.shape.SVGPath;
  * <li>{@code [PS]:svgPathData|w|h|scale|style} — inline SVG path as a
  * layoutable {@link javafx.scene.shape.Shape} node; use {@link #getIconNode} to
  * retrieve it</li>
- * <li>{@code base#overlay#...} — overlay chain: images composited in order with
- * bottom-right alignment by default; an optional alignment token ({@code TL},
- * {@code TR}, {@code BL}, {@code BR}, {@code C}) as the first
- * {@code #}-separated element overrides the alignment for that chain</li>
- * <li>{@code step1##step2##...} — processing chain: each {@code ##}-separated
- * segment is resolved independently via {@code createImage} (so a segment may
- * itself be an overlay chain with its own alignment token), and the resulting
- * images are then composited in a single pass; an optional alignment token as
- * the very first {@code ##}-part controls the composite alignment (default
- * bottom-right)</li>
+ * <li>{@code img1#img2#...} — overlay chain: images composited left-to-right
+ * (first = background, last = foreground) at bottom-right alignment by default;
+ * an optional alignment token ({@code TL}, {@code TR}, {@code BL}, {@code BR},
+ * {@code C}) as the first {@code #}-separated element overrides the alignment
+ * for the whole chain</li>
+ * <li>{@code seg1##seg2##...} — processing chain: each {@code ##}-separated
+ * segment is resolved independently (a segment may itself be an overlay chain
+ * with its own alignment token), then all results are composited in a single
+ * pass at bottom-right alignment by default; an optional alignment token as the
+ * very first {@code ##}-part overrides that alignment. Example — green icon at
+ * top-left, red badge at bottom-right of a 24-px canvas:
+ * {@code TL#EMPTY|24#save.svg|16|||||00ff00##BR#badge.svg|9|||||ff0000}</li>
  * <li>The token {@value #SCALE_PLACEHOLDER} in any spec is replaced with the
  * current UI-scale bucket string before lookup</li>
  * </ul>
