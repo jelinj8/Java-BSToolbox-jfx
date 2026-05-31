@@ -113,8 +113,10 @@
 			<attribute name="tab-icon-size" value="16" />
 			<attribute name="menu-icon-size" value="16" />
 			<attribute name="main-title-icon-size" value="24" />
-			<attribute name="edit-button-size" value="12" />
+			<attribute name="edit-button-size" value="16" />
+			<attribute name="button-size" value="18" />
 			<attribute name="overlay-size" value="9" />
+			<attribute name="toolbar-overlay-size" value="16" />
 
 			<!-- Colour variables (theme-agnostic defaults, finetuned later) -->
 			<attribute name="fill" value="" />
@@ -235,7 +237,7 @@
 			<!-- Codebook selector -->
 			<file name="codebook">
 				<file name="open">
-					<attribute name="iconspec">svg/list.svg|${edit-button-size}||||${stroke-button}
+					<attribute name="iconspec">svg/list.svg|${button-size}||||${stroke-button}
 					</attribute>
 				</file>
 			</file>
@@ -258,9 +260,19 @@
 			<file
 				name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAction" />
 			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAllAction" />
+			<file
 				name="cz.bliksoft.javautils.app.ui.actions.basic.PreviewAction" />
 			<file
 				name="cz.bliksoft.javautils.app.ui.actions.basic.PrintAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.RefreshAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.ReloadAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenAdministrationAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenLocalConfigurationAction" />
 			<file
 				name="cz.bliksoft.javautils.app.ui.actions.basic.ShowAboutAction" />
 			<file

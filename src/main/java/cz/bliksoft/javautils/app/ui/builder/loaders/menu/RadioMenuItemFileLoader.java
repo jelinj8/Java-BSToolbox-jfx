@@ -8,7 +8,7 @@ public class RadioMenuItemFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject file) {
 		RadioMenuItem mi = new RadioMenuItem();
-		mi.setText(file.getAttribute("text", file.getName()));
+		mi.setText(file.getLocalizedAttribute("text", file.getName()));
 		mi.setSelected(file.getBool("selected", false));
 		mi.setDisable(file.getBool("disable", false));
 		return mi;

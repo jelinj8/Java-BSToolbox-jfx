@@ -8,7 +8,7 @@ public class CheckMenuItemFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject file) {
 		CheckMenuItem mi = new CheckMenuItem();
-		mi.setText(file.getAttribute("text", file.getName()));
+		mi.setText(file.getLocalizedAttribute("text", file.getName()));
 		mi.setSelected(file.getBool("selected", false));
 		mi.setDisable(file.getBool("disable", false));
 		return mi;

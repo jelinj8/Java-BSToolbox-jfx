@@ -12,7 +12,7 @@ public class TextFileLoader extends FileLoader {
 	public Object loadObject(FileObject file) {
 		Text txt = new Text();
 
-		String text = file.getAttribute("text", null);
+		String text = file.getLocalizedAttribute("text", null);
 		if (text != null)
 			txt.setText(text);
 

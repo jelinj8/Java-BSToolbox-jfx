@@ -8,7 +8,7 @@ public class MenuItemFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject file) {
 		MenuItem mi = new MenuItem();
-		mi.setText(file.getAttribute("text", file.getName()));
+		mi.setText(file.getLocalizedAttribute("text", file.getName()));
 		mi.setDisable(file.getBool("disable", false));
 
 		// Optional action id (you wire this to your action registry)

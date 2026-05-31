@@ -18,6 +18,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -134,9 +136,7 @@ public class SvgConverter {
 		try (var is = new FileInputStream(svg)) {
 			svgContent = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
-		// Only substitute when SVG uses currentColor — don't override explicit colors.
-		// Falls back to "black" so SVG Salamander never receives the unresolvable
-		// keyword.
+		svgContent = expandCssClassColors(svgContent);
 		String effectiveStroke = strokeColor != null ? strokeColor
 				: (svgContent.contains("currentColor") ? (defaultStrokeColor != null ? defaultStrokeColor : "black")
 						: null);
@@ -187,9 +187,6 @@ public class SvgConverter {
 	 */
 	public static Image createImageFromSVGResource(String path, Float width, Float height, Float scale,
 			String strokeColor, String fillColor) throws Exception {
-		if (strokeColor == null && fillColor == null && defaultStrokeColor == null && defaultFillColor == null)
-			return createImageFromSVG(loadSvgIcon(path), width, height, scale);
-
 		var url = SvgConverter.class.getResource(path);
 		if (url == null)
 			throw new IllegalArgumentException("SVG resource not found: " + path);
@@ -199,6 +196,7 @@ public class SvgConverter {
 			svgContent = new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 
+		svgContent = expandCssClassColors(svgContent);
 		String effectiveStroke = strokeColor != null ? strokeColor
 				: (svgContent.contains("currentColor") ? (defaultStrokeColor != null ? defaultStrokeColor : "black")
 						: null);
@@ -215,6 +213,62 @@ public class SvgConverter {
 	 */
 	private static final Pattern SHAPE_NO_FILL = Pattern
 			.compile("<(path|rect|circle|ellipse|polygon|polyline|line)(?![^>]*\\bfill=)");
+
+	private static final Pattern STYLE_BLOCK = Pattern.compile("<style[^>]*>(.*?)</style>",
+			Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
+	private static final Pattern CSS_CLASS_RULE = Pattern.compile("\\.([-\\w]+)\\s*\\{([^}]*)\\}");
+
+	/**
+	 * Expands CSS class-based fill/stroke rules from embedded {@code <style>}
+	 * blocks into inline presentation attributes on matching shape elements. SVG
+	 * Salamander does not support CSS class selectors, so without this step any
+	 * element that relies on a {@code .className { fill: ... }} rule renders black.
+	 */
+	static String expandCssClassColors(String svg) {
+		Matcher styleM = STYLE_BLOCK.matcher(svg);
+		Map<String, String> classFills = new LinkedHashMap<>();
+		Map<String, String> classStrokes = new LinkedHashMap<>();
+
+		while (styleM.find()) {
+			Matcher ruleM = CSS_CLASS_RULE.matcher(styleM.group(1));
+			while (ruleM.find()) {
+				String cls = ruleM.group(1);
+				String body = ruleM.group(2);
+				for (String decl : body.split(";")) {
+					int colon = decl.indexOf(':');
+					if (colon < 0)
+						continue;
+					String prop = decl.substring(0, colon).trim();
+					String val = decl.substring(colon + 1).trim();
+					if (val.isEmpty())
+						continue;
+					if ("fill".equals(prop))
+						classFills.put(cls, val);
+					else if ("stroke".equals(prop))
+						classStrokes.put(cls, val);
+				}
+			}
+		}
+
+		if (classFills.isEmpty() && classStrokes.isEmpty())
+			return svg;
+
+		for (Map.Entry<String, String> e : classFills.entrySet()) {
+			Pattern p = Pattern.compile(
+					"<(path|rect|circle|ellipse|polygon|polyline|line|text|tspan|g)" + "(?=[^>]*\\bclass=\"[^\"]*\\b"
+							+ Pattern.quote(e.getKey()) + "\\b[^\"]*\")" + "(?![^>]*\\bfill=)");
+			svg = p.matcher(svg).replaceAll("<$1 fill=\"" + Matcher.quoteReplacement(e.getValue()) + "\"");
+		}
+
+		for (Map.Entry<String, String> e : classStrokes.entrySet()) {
+			Pattern p = Pattern.compile(
+					"<(path|rect|circle|ellipse|polygon|polyline|line|text|tspan|g)" + "(?=[^>]*\\bclass=\"[^\"]*\\b"
+							+ Pattern.quote(e.getKey()) + "\\b[^\"]*\")" + "(?![^>]*\\bstroke=)");
+			svg = p.matcher(svg).replaceAll("<$1 stroke=\"" + Matcher.quoteReplacement(e.getValue()) + "\"");
+		}
+
+		return svg;
+	}
 
 	/**
 	 * Overrides stroke and fill colors in SVG source text.

@@ -8,7 +8,7 @@ public class MenuFileLoader extends FileLoader {
 	@Override
 	public Object loadObject(FileObject file) {
 		Menu m = new Menu();
-		m.setText(file.getAttribute("text", file.getName()));
+		m.setText(file.getLocalizedAttribute("text", file.getName()));
 		m.setDisable(file.getBool("disable", false));
 		return m;
 	}

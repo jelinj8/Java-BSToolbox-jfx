@@ -150,7 +150,7 @@ public final class UIComposer {
 		applySceneAttribs(scn, file);
 
 		// Title from attributes
-		String title = file.getAttribute("title", null);
+		String title = file.getLocalizedAttribute("title", null);
 		if (title != null)
 			stage.setTitle(title);
 
@@ -376,7 +376,7 @@ public final class UIComposer {
 	}
 
 	public static void applyControl(Control c, FileObject f) {
-		String tt = f.getAttribute("tooltip");
+		String tt = f.getLocalizedAttribute("tooltip", null);
 		if (tt != null)
 			c.setTooltip(new Tooltip(tt));
 	}
@@ -390,7 +390,7 @@ public final class UIComposer {
 		if (b != null)
 			c.setEditable(b);
 
-		String prompt = f.getAttribute("prompt");
+		String prompt = f.getLocalizedAttribute("prompt", null);
 		if (prompt != null)
 			c.setPromptText(prompt);
 	}
@@ -416,7 +416,7 @@ public final class UIComposer {
 	}
 
 	public static void applyLabeled(Labeled l, FileObject f) {
-		String text = f.getAttribute("text", null);
+		String text = f.getLocalizedAttribute("text", null);
 		if (text != null)
 			l.setText(text);
 
@@ -611,7 +611,7 @@ public final class UIComposer {
 	// ------------------- TabPane helpers -------------------
 
 	private static Tab makeTab(Node content, FileObject tabDef) {
-		String text = tabDef.getAttribute("text", null);
+		String text = tabDef.getLocalizedAttribute("text", null);
 		if (text == null || text.isBlank())
 			text = tabDef.getName();
 
@@ -737,7 +737,7 @@ public final class UIComposer {
 	}
 
 	private static TitledPane wrapAsTitledPane(Node content, FileObject def) {
-		String text = def.getAttribute("text", null);
+		String text = def.getLocalizedAttribute("text", null);
 		if (text == null || text.isBlank())
 			text = def.getName();
 

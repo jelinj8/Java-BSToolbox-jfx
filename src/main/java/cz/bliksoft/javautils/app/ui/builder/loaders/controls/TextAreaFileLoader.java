@@ -9,7 +9,7 @@ public class TextAreaFileLoader extends FileLoader {
 	public Object loadObject(FileObject file) {
 		TextArea txt = new TextArea();
 
-		String text = file.getAttribute("text");
+		String text = file.getLocalizedAttribute("text", null);
 		if (text != null)
 			txt.setText(text);
 

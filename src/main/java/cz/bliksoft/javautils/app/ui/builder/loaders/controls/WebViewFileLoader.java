@@ -13,7 +13,7 @@ public class WebViewFileLoader extends FileLoader {
 		WebEngine engine = view.getEngine();
 
 		String url = file.getAttribute("url", null);
-		String html = file.getAttribute("html", null);
+		String html = file.getLocalizedAttribute("html", null);
 
 		if (url != null && !url.isBlank()) {
 			engine.load(url);

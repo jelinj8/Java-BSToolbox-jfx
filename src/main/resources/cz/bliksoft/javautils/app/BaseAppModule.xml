@@ -38,23 +38,23 @@
 	</file>
 	<file name="licences">
 		<file name="LGPL3">
-			<attribute name="name">licences/LGPL3_NAME</attribute>
-			<attribute name="url">licences/LGPL3_URL</attribute>
+			<attribute name="name" translation="licences/LGPL3_NAME">licences/LGPL3_NAME</attribute>
+			<attribute name="url" translation="licences/LGPL3_URL">licences/LGPL3_URL</attribute>
 		</file>
 		<file name="commercial">
-			<attribute name="name">licences/commercial_NAME</attribute>
+			<attribute name="name" translation="licences/commercial_NAME">licences/commercial_NAME</attribute>
 		</file>
 		<file name="APACHE2">
-			<attribute name="name">licences/APACHE2_NAME</attribute>
-			<attribute name="url">licences/APACHE2_URL</attribute>
+			<attribute name="name" translation="licences/APACHE2_NAME">licences/APACHE2_NAME</attribute>
+			<attribute name="url" translation="licences/APACHE2_URL">licences/APACHE2_URL</attribute>
 		</file>
 		<file name="BSD2">
-			<attribute name="name">licences/BSD2_NAME</attribute>
-			<attribute name="url">licences/BSD2_URL</attribute>
+			<attribute name="name" translation="licences/BSD2_NAME">licences/BSD2_NAME</attribute>
+			<attribute name="url" translation="licences/BSD2_URL">licences/BSD2_URL</attribute>
 		</file>
 		<file name="CreativeCommons">
-			<attribute name="name">licences/CreativeCommons_NAME</attribute>
-			<attribute name="url">licences/CreativeCommons_URL</attribute>
+			<attribute name="name" translation="licences/CreativeCommons_NAME">licences/CreativeCommons_NAME</attribute>
+			<attribute name="url" translation="licences/CreativeCommons_URL">licences/CreativeCommons_URL</attribute>
 		</file>
 	</file>
 	
