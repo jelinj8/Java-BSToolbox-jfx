@@ -77,6 +77,20 @@ Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"C
 
 `FileLoader` (from BSToolbox xmlfilesystem) is extended for each JavaFX control type. Loaders exist for: standard controls (Button, Label, TextArea, ComboBox, etc.), layout panes (HBox, VBox, BorderPane, GridPane, AnchorPane, etc.), menus (MenuBar, MenuItem, ContextMenu), and FXML (delegates to `FXMLLoader` with optional controller override). UI structure is described in XML and assembled via these loaders.
 
+**XmlFilesystem attribute format — critical:** In XmlFilesystem XML files, attributes of a node are `<attribute name="..." value="..."/>` child elements — NOT XML element attributes. The control type is the `name` attribute of the `<file>` element. Loader code reads values via `f.getAttribute("key", null)`, `f.getDouble("key", default)`, `f.getInteger("key", null)`, `f.getBool("key")`, `f.getLocalizedAttribute("key", null)`, etc. — all of which read from these child attribute nodes. A UI definition looks like:
+
+```xml
+<file name="HBox">
+    <attribute name="spacing" value="10"/>
+    <file name="Button">
+        <attribute name="text" value="Submit"/>
+        <attribute name="defaultButton" value="true"/>
+    </file>
+</file>
+```
+
+Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definition syntax.
+
 ### Observable Beans & Status
 
 `IStatusBean` tracks object lifecycle state: `INITIAL → NEW → SAVED ↔ MODIFIED`, plus `DETACHED`, `DELETED`, `DELETED_SAVED`. `IParentedStatusBean` propagates changes up to parent beans. `BasicBeanWrapper` wraps plain POJOs as observable beans. `ObjectStatus` renders state as SVG status badges.

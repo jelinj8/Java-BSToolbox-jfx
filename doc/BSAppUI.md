@@ -87,7 +87,15 @@ Controls: `Button`, `ToggleButton`, `CheckBox`, `RadioButton`, `Label`,
 `TextField`, `TextArea`, `PasswordField`, `ComboBox`, `Spinner`, `Slider`,
 `ProgressBar`, `ProgressIndicator`, `Hyperlink`, `MenuButton`, `SplitMenuButton`,
 `ListView`, `TableView`, `TreeView`, `TreeTableView`, `Separator`,
-`DatePicker`, `ColorPicker`.
+`DatePicker`, `ColorPicker`, `QRLabel`.
+
+**`QRLabel`** renders its `text` as a pixel-exact QR code image (no blur). Specific attributes:
+
+| Attribute | Default | Effect |
+|---|---|---|
+| `text` | — | Text/URL to encode |
+| `modulusMultiplier` | `4` | Pixels per QR module |
+| `errorCorrectionLevel` | `M` | ZXing level: `L`, `M`, `Q`, `H` |
 
 Menus: `MenuBar`, `Menu`, `MenuItem`, `CheckMenuItem`, `RadioMenuItem`,
 `SeparatorMenuItem`, `ContextMenu`.

@@ -87,6 +87,8 @@
 			name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.CheckBoxFileLoader" />
 		<file
 			name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.RadioButtonFileLoader" />
+		<file
+			name="cz.bliksoft.javautils.app.ui.builder.loaders.controls.QRLabelFileLoader" />
 	</file>
 
 	<file name="core">
