@@ -223,6 +223,38 @@ public class ImageUtils {
 		String[] params = spec.split("\\|", -1);
 		String filePath = params[0];
 
+		// Synthetic empty/solid-color canvas: EMPTY|size, EMPTY|w|h, EMPTY|w|h|color
+		if (filePath.equals("EMPTY")) { //$NON-NLS-1$
+			try {
+				int w = Math.max(1, Math.round(Float.parseFloat(params[1])));
+				int h = (params.length > 2 && StringUtils.hasLength(params[2]))
+						? Math.max(1, Math.round(Float.parseFloat(params[2])))
+						: w;
+				int argb = 0;
+				if (params.length > 3 && StringUtils.hasLength(params[3])) {
+					String css = resolveSpecColor(params[3]);
+					javafx.scene.paint.Color c = javafx.scene.paint.Color.web(css);
+					int a = (int) Math.round(c.getOpacity() * 255);
+					int r = (int) Math.round(c.getRed() * 255);
+					int g = (int) Math.round(c.getGreen() * 255);
+					int b = (int) Math.round(c.getBlue() * 255);
+					argb = (a << 24) | (r << 16) | (g << 8) | b;
+				}
+				WritableImage img = new WritableImage(w, h);
+				if (argb != 0) {
+					PixelWriter pw = img.getPixelWriter();
+					int[] row = new int[w];
+					java.util.Arrays.fill(row, argb);
+					for (int y = 0; y < h; y++)
+						pw.setPixels(0, y, w, 1, PixelFormat.getIntArgbInstance(), row, 0, w);
+				}
+				return img;
+			} catch (Exception e) {
+				log.error("Failed to create EMPTY canvas: {}", spec, e);
+				return null;
+			}
+		}
+
 		// SVG handling
 		if (filePath.toLowerCase().endsWith(".svg")) {
 			Float w = null;
