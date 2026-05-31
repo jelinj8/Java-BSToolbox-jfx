@@ -178,8 +178,7 @@
 					</attribute>
 				</file>
 				<file name="save-all">
-					<attribute name="iconspec">TL#24/EMPTY.png#svg/save.svg|16|||||00ff00##BR#svg/save.svg|16|||||ff0000</attribute>
-					<attribute name="iconspec2">TL#svg/shapes/filled/square.svg|${toolbar-size}|||||white#svg/save.svg|16|||||00ff00##BR#svg/man.svg|16|||||000000</attribute>
+					<attribute name="iconspec">TL#EMPTY|24#svg/save.svg|16|||||00ff00##BR#svg/save.svg|16|||||ff0000</attribute>
 				</file>
 				<file name="close">
 					<attribute name="iconspec">24/CLOSE.png</attribute>

@@ -45,8 +45,9 @@ import javafx.scene.shape.SVGPath;
  * {@link javafx.scene.image.ImageView} only (not baked into the image)</li>
  * <li>{@code stroke} — color that replaces every {@code currentColor}
  * occurrence in the SVG source and overrides explicit {@code stroke}
- * attributes; accepts bare hex ({@code ff0000}), {@code 0xRRGGBB}, or CSS named
- * colors</li>
+ * attributes; accepts bare hex ({@code ff0000}, {@code ff000080} with alpha),
+ * {@code 0xRRGGBB} / {@code 0xRRGGBBAA}, or CSS named colors and
+ * {@code rgba(...)} expressions</li>
  * <li>{@code fill} — color injected as {@code fill} on all SVG shape elements
  * (except {@code fill="none"}); same color syntax as stroke</li>
  * </ul>
@@ -865,8 +866,11 @@ public class ImageUtils {
 	 * Converts a spec color token (which cannot contain {@code #}) to a CSS color
 	 * string usable in SVG attributes.
 	 * <ul>
-	 * <li>3 or 6 hex chars (e.g. {@code 333333}) → {@code #333333}</li>
-	 * <li>{@code 0xRRGGBB} → {@code #RRGGBB}</li>
+	 * <li>3, 4, 6, or 8 hex chars (e.g. {@code 333333}, {@code ff000080}) →
+	 * {@code #333333}, {@code #ff000080}; 4-char is {@code #RGBA}, 8-char is
+	 * {@code #RRGGBBAA}</li>
+	 * <li>{@code 0xRRGGBB} / {@code 0xRRGGBBAA} → {@code #RRGGBB} /
+	 * {@code #RRGGBBAA}</li>
 	 * <li>CSS named colors, {@code none}, {@code rgb(...)} etc. → returned
 	 * as-is</li>
 	 * </ul>
@@ -876,7 +880,7 @@ public class ImageUtils {
 			return null;
 		if (s.startsWith("0x") || s.startsWith("0X"))
 			return "#" + s.substring(2);
-		if (s.matches("[0-9a-fA-F]{3,6}"))
+		if (s.matches("[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}"))
 			return "#" + s;
 		return s;
 	}

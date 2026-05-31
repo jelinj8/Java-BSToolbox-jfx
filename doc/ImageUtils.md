@@ -54,14 +54,18 @@ Because `#` is the overlay-chain separator, hex colors in **stroke**/**fill** ar
 
 | Notation | Example | Resolved to |
 |---|---|---|
-| 3 or 6 hex chars | `333` / `4A90D9` | `#333` / `#4A90D9` |
-| `0xRRGGBB` | `0xFFFFFF` | `#FFFFFF` |
-| CSS named color | `white`, `none` | used as-is |
+| 3 hex chars (`RGB`) | `333` | `#333` |
+| 4 hex chars (`RGBA`) | `333F` | `#333F` |
+| 6 hex chars (`RRGGBB`) | `4A90D9` | `#4A90D9` |
+| 8 hex chars (`RRGGBBAA`) | `4A90D980` | `#4A90D980` |
+| `0xRRGGBB` / `0xRRGGBBAA` | `0xFFFFFF` / `0xFFFFFF80` | `#FFFFFF` / `#FFFFFF80` |
+| CSS named color / `rgba(...)` | `white`, `rgba(0,0,0,0.5)` | used as-is |
 
 ```
 search.svg|16|16|||333333        # 16 px, stroke #333333
 arrow.svg|24|24|||FFFFFF         # white stroke
 tag.svg|16|16|||4A90D9|none      # blue stroke, fill none
+tag.svg|16|16|||4A90D980         # semi-transparent blue stroke (50 % alpha)
 home.svg|24|24                   # no colour injection
 ```
 
