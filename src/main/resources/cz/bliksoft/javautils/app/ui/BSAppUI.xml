@@ -181,13 +181,13 @@
 					<attribute name="menu-iconspec">svg/save.svg|${menu-icon-size}||||red</attribute>
 				</file>
 				<file name="save-all">
-					<attribute name="iconspec">*EMPTY|24#svg/save.svg|16||||00ff00#*TL#*+#svg/save.svg|16||||ff0000#*BR#*+</attribute>
+					<attribute name="iconspec">*EMPTY|24#svg/save.svg|16||||00ff00#*ANCHOR|TL#*+#svg/save.svg|16||||ff0000#*ANCHOR|BR#*+</attribute>
 				</file>
 				<file name="close">
-					<attribute name="iconspec">*C#svg/shapes/outline/square.svg|24#svg/shapes/outline/x.svg|24|||${stroke-remove}#*+</attribute>
+					<attribute name="iconspec">*ANCHOR|C#svg/shapes/outline/square.svg|24#svg/shapes/outline/x.svg|24|||${stroke-remove}#*+</attribute>
 				</file>
 				<file name="close-all">
-					<attribute name="iconspec">24/CLOSE.png</attribute>
+					<attribute name="iconspec">svg/shapes/outline/square.svg|20#*PUSH#*ANCHOR|C|4|4#*+|E#svg/shapes/outline/x.svg|16|||${stroke-remove}#*ANCHOR|C|0|0#*+</attribute>
 				</file>
 				<file name="preview">
 					<attribute name="iconspec">svg/search.svg|${toolbar-size}</attribute>

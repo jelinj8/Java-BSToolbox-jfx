@@ -155,6 +155,31 @@ public final class IconspecUtils {
 	}
 
 	/**
+	 * Applies the same {@code ${token}} substitution used by {@link #getIconspec}
+	 * to an arbitrary raw iconspec string. Use this to resolve tokens in iconspec
+	 * strings that come from external sources (user input, persisted configuration)
+	 * rather than from the iconspec registry.
+	 *
+	 * @param rawSpec a raw iconspec string that may contain {@code ${token}}
+	 *                placeholders; {@code null} is returned unchanged
+	 * @return the spec with all known variables substituted
+	 */
+	public static String substituteSpec(String rawSpec) {
+		if (rawSpec == null)
+			return null;
+		return substitute(rawSpec);
+	}
+
+	/**
+	 * Returns the substitution variable map built from the XmlFilesystem
+	 * ({@code /core/iconspec}, {@code /core/ui/themes}, current theme folder). The
+	 * map is unmodifiable and built lazily on first access.
+	 */
+	public static Map<String, String> getVars() {
+		return vars();
+	}
+
+	/**
 	 * Returns the substitution variable map, building it on first call. Variables
 	 * are collected from (in order, later values overwrite earlier ones):
 	 * {@code /core/iconspec}, {@code /core/ui/themes},

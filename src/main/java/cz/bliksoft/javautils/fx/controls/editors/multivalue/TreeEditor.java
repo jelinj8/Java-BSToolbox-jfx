@@ -268,6 +268,8 @@ public class TreeEditor<N> extends VBox {
 	}
 
 	private void updateAddButton(TreeItem<N> sel) {
+		addSplitBtn.textProperty().unbind();
+
 		if (sel == null || sel.getValue() == null) {
 			addSimpleBtn.setVisible(false);
 			addSimpleBtn.setManaged(false);
@@ -298,9 +300,16 @@ public class TreeEditor<N> extends VBox {
 		} else {
 			addSplitBtn.getItems().clear();
 			addSplitBtn.setOnAction(e -> addChild(selFinal, firstType));
-			addSplitBtn.setText(firstType.getTypeName());
+			var titleProp = firstType.titleProperty();
+			if (titleProp != null)
+				addSplitBtn.textProperty().bind(titleProp);
+			else
+				addSplitBtn.setText(firstType.getTitle());
+			var graphicObs = firstType.graphicProperty();
+			addSplitBtn.setGraphic(graphicObs != null ? graphicObs.getValue() : null);
 			for (ITreeNodeType<N> ct : childTypes.subList(1, childTypes.size())) {
-				MenuItem item = new MenuItem(ct.getTypeName());
+				var gObs = ct.graphicProperty();
+				MenuItem item = new MenuItem(ct.getTitle(), gObs != null ? gObs.getValue() : null);
 				item.setOnAction(e -> addChild(selFinal, ct));
 				addSplitBtn.getItems().add(item);
 			}

@@ -2,11 +2,13 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
 import java.util.Collection;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
+import cz.bliksoft.javautils.app.ui.interfaces.ITitleProvider;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
@@ -25,6 +27,8 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.Label;
@@ -83,6 +87,8 @@ public class ListEditor<V> extends VBox {
 			KeyCombination.ALT_DOWN);
 	private final KeyCombination kcMoveDown = loadEditorKey("multivalue-editors/move-down", KeyCode.DOWN,
 			KeyCombination.ALT_DOWN);
+	private final Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
+	private final SplitMenuButton addSplitBtn = new SplitMenuButton();
 	private final Button editBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
 	private final Button previewBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
@@ -93,6 +99,15 @@ public class ListEditor<V> extends VBox {
 
 	private HBox toolbar;
 	private Node leadingToolbarNode;
+	private List<AddChoice<V>> addItemChoices = null;
+
+	/**
+	 * One add-item choice shown in the SplitMenuButton add variant. {@code title}
+	 * provides the display text (and optionally a graphic if it also implements
+	 * {@link IGraphicsProvider}).
+	 */
+	public record AddChoice<T>(ITitleProvider title, Supplier<T> factory) {
+	}
 
 	@SuppressWarnings("unchecked")
 	public ListEditor() {
@@ -128,9 +143,15 @@ public class ListEditor<V> extends VBox {
 		table.getSelectionModel().selectedItemProperty()
 				.addListener((obs, o, n) -> selectedItem.set(n != null ? n.value.get() : null));
 
-		Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addBtn.setFocusTraversable(false);
 		addBtn.setTooltip(new Tooltip("Přidat"));
+
+		addSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
+		addSplitBtn.setFocusTraversable(false);
+		addSplitBtn.setTooltip(new Tooltip("Přidat"));
+		addSplitBtn.setVisible(false);
+		addSplitBtn.setManaged(false);
+
 		Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 		delBtn.setFocusTraversable(false);
 		delBtn.setTooltip(new Tooltip("Odebrat"));
@@ -185,7 +206,10 @@ public class ListEditor<V> extends VBox {
 			} else if (table.getEditingCell() == null) {
 				if (kcAdd.match(e)) {
 					e.consume();
-					addBtn.fire();
+					if (addSplitBtn.isManaged())
+						addSplitBtn.fire();
+					else
+						addBtn.fire();
 				} else if (kcRemove.match(e)) {
 					e.consume();
 					delBtn.fire();
@@ -207,14 +231,7 @@ public class ListEditor<V> extends VBox {
 
 		addBtn.setOnAction(e -> {
 			if (addItemSupplier != null) {
-				V item = addItemSupplier.get();
-				if (item == null)
-					return;
-				ListEntry<V> entry = new ListEntry<>(item);
-				entries.add(entry);
-				table.getSelectionModel().select(entry);
-				table.scrollTo(entry);
-				table.requestFocus();
+				insertNewItem(addItemSupplier.get());
 			} else {
 				ListEntry<V> entry = new ListEntry<>(null);
 				entries.add(entry);
@@ -233,7 +250,8 @@ public class ListEditor<V> extends VBox {
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, moveUpBtn, moveDownBtn, editBtn, previewBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addBtn, addSplitBtn, delBtn, moveUpBtn, moveDownBtn, editBtn,
+				previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, table);
@@ -271,15 +289,85 @@ public class ListEditor<V> extends VBox {
 		});
 	}
 
+	// ---- Internal helpers ----
+
+	private void insertNewItem(V item) {
+		if (item == null)
+			return;
+		ListEntry<V> entry = new ListEntry<>(item);
+		entries.add(entry);
+		table.getSelectionModel().select(entry);
+		table.scrollTo(entry);
+		table.requestFocus();
+	}
+
+	private void updateAddButton() {
+		if (addItemChoices == null || addItemChoices.isEmpty()) {
+			addSplitBtn.setVisible(false);
+			addSplitBtn.setManaged(false);
+			addBtn.setVisible(true);
+			addBtn.setManaged(true);
+			return;
+		}
+		if (addItemChoices.size() == 1) {
+			AddChoice<V> choice = addItemChoices.get(0);
+			addBtn.setOnAction(e -> insertNewItem(choice.factory().get()));
+			addSplitBtn.setVisible(false);
+			addSplitBtn.setManaged(false);
+			addBtn.setVisible(true);
+			addBtn.setManaged(true);
+			return;
+		}
+		AddChoice<V> first = addItemChoices.get(0);
+		addSplitBtn.setText(choiceTitle(first));
+		addSplitBtn.setGraphic(choiceGraphic(first));
+		addSplitBtn.setOnAction(e -> insertNewItem(first.factory().get()));
+		addSplitBtn.getItems().clear();
+		for (int i = 1; i < addItemChoices.size(); i++) {
+			AddChoice<V> choice = addItemChoices.get(i);
+			MenuItem menuItem = new MenuItem(choiceTitle(choice), choiceGraphic(choice));
+			menuItem.setOnAction(e -> insertNewItem(choice.factory().get()));
+			addSplitBtn.getItems().add(menuItem);
+		}
+		addBtn.setVisible(false);
+		addBtn.setManaged(false);
+		addSplitBtn.setVisible(true);
+		addSplitBtn.setManaged(true);
+	}
+
+	private static String choiceTitle(AddChoice<?> choice) {
+		return choice.title().getTitle();
+	}
+
+	private static javafx.scene.Node choiceGraphic(AddChoice<?> choice) {
+		var obs = choice.title().graphicProperty();
+		return obs != null ? obs.getValue() : null;
+	}
+
 	// ---- Public API ----
 
 	/**
 	 * When set, the add button calls this supplier instead of inserting a null
 	 * entry. Return {@code null} from the supplier to cancel the add (nothing is
 	 * inserted).
+	 * <p>
+	 * Ignored when {@link #setAddItemChoices} has been configured.
 	 */
 	public void setAddItemSupplier(Supplier<V> supplier) {
 		addItemSupplier = supplier;
+	}
+
+	/**
+	 * Configures the add button as a {@link SplitMenuButton} offering multiple item
+	 * types. When {@code choices} has exactly one entry the plain add button is
+	 * kept; with two or more entries the first choice becomes the split button's
+	 * primary action and the rest appear as menu items.
+	 * <p>
+	 * Pass {@code null} or an empty list to revert to the default plain add button.
+	 */
+	public void setAddItemChoices(List<AddChoice<V>> choices) {
+		addItemChoices = choices;
+		updateAddButton();
 	}
 
 	public void setEditAction(Runnable action) {
@@ -408,13 +496,25 @@ public class ListEditor<V> extends VBox {
 	}
 
 	public void addItem(V item) {
-		if (item == null)
-			return;
-		ListEntry<V> entry = new ListEntry<>(item);
-		entries.add(entry);
-		table.getSelectionModel().select(entry);
-		table.scrollTo(entry);
-		table.requestFocus();
+		insertNewItem(item);
+	}
+
+	/**
+	 * Updates the value of the currently selected entry without changing the
+	 * selection.
+	 */
+	public void updateSelectedItem(V newValue) {
+		ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
+		if (sel != null)
+			sel.value.set(newValue);
+	}
+
+	/**
+	 * Returns the zero-based index of the currently selected row, or {@code -1} if
+	 * nothing is selected.
+	 */
+	public int getSelectedIndex() {
+		return table.getSelectionModel().getSelectedIndex();
 	}
 
 	public void setLeadingToolbarNode(Node node) {

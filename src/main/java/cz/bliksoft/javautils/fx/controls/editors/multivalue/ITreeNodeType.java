@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 import java.util.List;
 
 import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import cz.bliksoft.javautils.app.ui.interfaces.ITitleProvider;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
@@ -20,10 +21,18 @@ import javafx.stage.Window;
  *
  * @param <N> the application node type managed by the tree
  */
-public interface ITreeNodeType<N> {
+public interface ITreeNodeType<N> extends ITitleProvider {
 
 	/** Label shown in the add-child menu. */
 	String getTypeName();
+
+	/**
+	 * Defaults to {@link #getTypeName()} so existing implementors need no change.
+	 */
+	@Override
+	default String getTitle() {
+		return getTypeName();
+	}
 
 	/** Text rendered in the tree cell for the given node. */
 	String getDisplayText(N node);

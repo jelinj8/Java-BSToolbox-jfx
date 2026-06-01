@@ -134,31 +134,33 @@ Specs that contain `#` are evaluated as a **postfix (RPN) expression**. The spec
 
 When processing is complete, the **top of the stack** is returned as the result.
 
-### Alignment mode — `*TL` `*TR` `*BL` `*BR` `*C`
+### Anchor — `*ANCHOR`
 
 ```
-*TL
-*TR|offsetX|offsetY
-*BR|5|-3
-*C
+*ANCHOR|position
+*ANCHOR|position|offsetX|offsetY
+*ANCHOR|BR|5|-3
+*ANCHOR|C
+*ANCHOR|N
 ```
 
-Sets the current alignment (reference point used by `*+`, `*-`, and `*CROP`) and optionally the pixel offsets. Offsets default to `0, 0` and are not cleared by a subsequent alignment command unless new values are specified. Default alignment at startup is `BR, 0, 0`.
+Sets the current anchor position (and optional pixel offsets) used by `*+`, `*-`, `*CROP`, `*DRAW`, and `*TEXT`. Offsets default to `0, 0` and persist until overridden or `*RESET`. Default at startup is `BR, 0, 0`.
 
-| Token | Meaning |
+| Position | Meaning |
 |---|---|
-| `*TL` | Top-left corner |
-| `*TR` | Top-right corner |
-| `*BL` | Bottom-left corner |
-| `*BR` | Bottom-right corner (default) |
-| `*C` | Centred |
+| `TL` | Top-left corner |
+| `TR` | Top-right corner |
+| `BL` | Bottom-left corner |
+| `BR` | Bottom-right corner (default) |
+| `C` | Centred |
+| `N` | New — forces `*TEXT` to push a standalone image without compositing onto the existing canvas |
 
 ### Combine — `*+` and `*-`
 
 ```
 base.svg|24#badge.svg|12#*+             # overlay badge at BR (default)
-*C#base.svg|24#mask.svg|24#*-           # subtract mask centred on base
-*BR|2|2#base.svg|24#badge.svg|12#*+     # overlay badge, shifted 2 px right and down
+*ANCHOR|C#base.svg|24#mask.svg|24#*-           # subtract mask centred on base
+*ANCHOR|BR|2|2#base.svg|24#badge.svg|12#*+     # overlay badge, shifted 2 px right and down
 ```
 
 Pops the top two images from the stack — **top** is the overlay/mask, **second** is the base — composites them, and pushes the result.
@@ -171,7 +173,7 @@ The overlay is positioned relative to the base using the current alignment and o
 For a chain of more than two images, repeat `*+` (or `*-`):
 
 ```
-bottom.svg|32#mid.svg|16#*+#top.svg|9#*BR#*+
+bottom.svg|32#mid.svg|16#*+#top.svg|9#*ANCHOR|BR#*+
 ```
 
 ### Canvas — `*EMPTY`
@@ -203,46 +205,34 @@ Sets mode values (`color`, `size`, `font`) for subsequent TEXT commands. If `val
 *TEXT|16                        # set size only (colour/font unchanged)
 ```
 
-### Mirror — `*MIRROR`
+### Filters — `*FILTER`
 
 ```
-*MIRROR|H          # flip left-right (horizontal mirror)
-*MIRROR|V          # flip top-bottom (vertical mirror)
+*FILTER|name|p1|p2|...
 ```
 
-Pops the top image, flips it, and pushes the result. Axis defaults to `H` if omitted.
+Pops the top image, applies the named filter, and pushes the result.
 
-### Rotate — `*ROTATE`
-
-```
-*ROTATE|90         # 90° clockwise
-*ROTATE|180
-*ROTATE|270        # 90° counter-clockwise
-```
-
-Pops the top image, rotates it losslessly (pixel-perfect, no resampling), and pushes the result. Only 90°, 180°, and 270° are supported; other values return the image unchanged.
-
-### Crop — `*CROP`
-
-```
-*CROP|w|h
-*CROP|w             # height unchanged
-*CROP||h            # width unchanged
-```
-
-Pops the top image, crops it to `w × h` using the current alignment and offsets as the anchor, and pushes the result. A blank dimension keeps the image's natural size on that axis.
-
-Examples:
+| Filter | Parameters | Description |
+|---|---|---|
+| `shadow` | `color`, `width`, `fill` | Diffuse fade-out shadow/glow. `fill`: `F`=filled interior (default), `T`=holes preserved |
+| `outline` | `color`, `width`, `fill` | Sharp silhouette expansion (no blur). Same `fill` flag as shadow |
+| `rotate` | `angle` | Clockwise rotation in degrees. Multiples of 90° resize the canvas losslessly; other angles keep canvas size using bilinear interpolation |
+| `shift` | `angle`, `pixels` | Translate in direction `angle` (0°=right, 90°=down); canvas size unchanged |
+| `scale` | `w`, `h`, `mode` | Scale image. `mode`: `F`=fit (letterbox), `C`=crop/fill, `%`=percent |
+| `resize` | `w`, `h` | Change canvas size without scaling, using current anchor |
+| `mask` | `color`, `invert` | Replace all pixel colours with `color` keeping original alpha. `invert`: `N`=normal, `Y`=invert alpha |
+| `monochrome` | `color` | Convert to monochrome weighted by pixel luminance |
+| `keymask` | `color` | Replace `color` (or auto-detected corner colour) with full transparency |
+| `mirror` | `direction` | Flip image. `direction`: `H`=horizontal/left-right (default), `V`=vertical/top-bottom |
 
 ```
-# Take the top-left 16×16 region of a 24×24 image:
-icon.svg|24#*TL#*CROP|16|16
-
-# Take the bottom-right 16×16 region:
-icon.svg|24#*BR#*CROP|16|16
-
-# Take a 20×20 centred crop:
-icon.svg|24#*C#*CROP|20|20
+icon.svg|24#*FILTER|rotate|90        # 90° clockwise, canvas resized to fit
+icon.svg|24#*FILTER|rotate|45        # 45° rotation, canvas size unchanged
+icon.svg|24#*FILTER|mirror           # flip left-right
+icon.svg|24#*FILTER|mirror|V         # flip top-bottom
+icon.svg|24#*FILTER|resize|32|32     # crop/pad to 32×32 using current anchor
+icon.svg|24#*ANCHOR|TL#*FILTER|resize|16|16   # take top-left 16×16 region
 ```
 
 ### Stack manipulation
@@ -310,16 +300,16 @@ cube.svg|24#search.svg|16#*+
 cube.svg|24#plus.svg|16|||2b8a3e#*+
 
 # Badge at top-left:
-cube.svg|24#plus.svg|16#*TL#*+
+cube.svg|24#plus.svg|16#*ANCHOR|TL#*+
 
 # Circular cutout in a solid blue square, then a badge:
-*EMPTY|32|32|4A90D9#*C#svg/mask/circle.svg|32#*-#badge.svg|12#*BR#*+
+*EMPTY|32|32|4A90D9#*ANCHOR|C#svg/mask/circle.svg|32#*-#badge.svg|12#*ANCHOR|BR#*+
 
 # Green save icon (TL) and red save icon (BR) on a shared 24-px canvas:
-*EMPTY|24#save.svg|16||||00ff00#*TL#*+#save.svg|16||||ff0000#*BR#*+
+*EMPTY|24#save.svg|16||||00ff00#*ANCHOR|TL#*+#save.svg|16||||ff0000#*ANCHOR|BR#*+
 
 # Centre a square with an X overlaid on it:
-*C#square.svg|24#x.svg|24|||c0392b#*+
+*ANCHOR|C#square.svg|24#x.svg|24|||c0392b#*+
 
 # Shared expensive base used by two different final specs:
 *GET_CACHE|myBase#...#*PUT_CACHE|myBase#badge_a.svg|12#*+
@@ -504,16 +494,16 @@ Each fade runs from one edge or corner (opaque) to the opposite (transparent). W
 
 ```
 # Circular cutout in a solid blue square, then a badge at bottom-right:
-*EMPTY|32|32|4A90D9#*C#svg/mask/circle.svg|32#*-#badge.svg|12#*BR#*+
+*EMPTY|32|32|4A90D9#*ANCHOR|C#svg/mask/circle.svg|32#*-#badge.svg|12#*ANCHOR|BR#*+
 
 # Photo with the top edge faded out:
 photo.png#*-#svg/mask/fade_up.svg|64#*+
 
 # Photo with the top-left corner cut away, badge at bottom-right:
-photo.png#*TL#svg/mask/fade_tl.svg|64#*-#badge.svg|12#*BR#*+
+photo.png#*ANCHOR|TL#svg/mask/fade_tl.svg|64#*-#badge.svg|12#*ANCHOR|BR#*+
 
 # Two masks both subtracted from a photo, centred:
-photo.png#*C#svg/mask/circle.svg|32#*-#svg/mask/circle_in.svg|32#*-
+photo.png#*ANCHOR|C#svg/mask/circle.svg|32#*-#svg/mask/circle_in.svg|32#*-
 ```
 
 ---
