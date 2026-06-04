@@ -118,6 +118,7 @@
 			<attribute name="toolbar-size" value="24" />
 			<attribute name="toolbar-small" value="16" />
 			<attribute name="toolbar-large" value="32" />
+			<attribute name="label-icon-size" value="16" />
 			<attribute name="tab-icon-size" value="16" />
 			<attribute name="menu-icon-size" value="16" />
 			<attribute name="main-title-icon-size" value="32" />
