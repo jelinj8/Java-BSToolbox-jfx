@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import javafx.beans.Observable;
@@ -114,14 +115,14 @@ public class KeyValueEditor<V> extends VBox {
 
 		Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addBtn.setFocusTraversable(false);
-		addBtn.setTooltip(new Tooltip("Přidat"));
+		addBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
 		Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip("Odebrat"));
+		delBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.remove")));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip("Náhled"));
+		previewBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.preview")));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());

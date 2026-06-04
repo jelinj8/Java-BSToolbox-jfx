@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import com.github.sarxos.webcam.Webcam;
 
 import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
@@ -69,7 +70,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	// =========================================================================
 
 	public CameraCaptureDialog() {
-		setTitle("Snímání z kamery");
+		setTitle(BSAppMessages.getString("CameraCaptureDialog.title"));
 		getDialogPane().getButtonTypes().setAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);
 		getDialogPane().setContent(buildContent());
 
@@ -121,7 +122,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	// =========================================================================
 
 	private VBox buildContent() {
-		sourceCombo.setPromptText("Zdroj kamery…");
+		sourceCombo.setPromptText(BSAppMessages.getString("CameraCaptureDialog.sourceCombo.prompt"));
 		sourceCombo.setCellFactory(lv -> new WebcamListCell());
 		sourceCombo.setButtonCell(new WebcamListCell());
 		sourceCombo.setMinWidth(200);
@@ -137,7 +138,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 			}
 		});
 
-		ToolBar toolbar = new ToolBar(new Label("Kamera:"), sourceCombo, captureBtn);
+		ToolBar toolbar = new ToolBar(new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")), sourceCombo, captureBtn);
 
 		cropPane.setMinHeight(400);
 		VBox.setVgrow(cropPane, Priority.ALWAYS);
@@ -185,7 +186,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 			if (cam == null)
 				return;
 			captureBtn.setDisable(true);
-			statusLabel.setText("Probíhá snímání…");
+			statusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.capturing"));
 			new Thread(() -> {
 				BufferedImage img = null;
 				String error = null;
@@ -201,13 +202,13 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 				try {
 					img = future.get(10, TimeUnit.SECONDS);
 					if (img == null)
-						error = "Kamera vrátila prázdný snímek.";
+						error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
 				} catch (TimeoutException ex) {
 					future.cancel(true);
-					error = "Kamera neodpovídá — zkuste jiný zdroj.";
+					error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
 					log.warn("Camera capture timed out for {}", cam.getName());
 				} catch (Exception ex) {
-					error = "Zachycení selhalo: " + ex.getMessage();
+					error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
 					log.warn("Camera capture failed", ex);
 				} finally {
 					exec.shutdownNow();
@@ -230,7 +231,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 						cropPane.setImage(finalImg);
 						statusLabel.setText("");
 					} else {
-						statusLabel.setText(finalError != null ? finalError : "Neznámá chyba.");
+						statusLabel.setText(finalError != null ? finalError : BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
 					}
 					captureBtn.setDisable(false);
 				});

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.app.ui.interfaces.ITitleProvider;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
@@ -144,21 +145,21 @@ public class ListEditor<V> extends VBox {
 				.addListener((obs, o, n) -> selectedItem.set(n != null ? n.value.get() : null));
 
 		addBtn.setFocusTraversable(false);
-		addBtn.setTooltip(new Tooltip("Přidat"));
+		addBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
 
 		addSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addSplitBtn.setFocusTraversable(false);
-		addSplitBtn.setTooltip(new Tooltip("Přidat"));
+		addSplitBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 
 		Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip("Odebrat"));
+		delBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.remove")));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		editBtn.setFocusTraversable(false);
-		editBtn.setTooltip(new Tooltip("Upravit"));
+		editBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.edit")));
 		editBtn.setVisible(false);
 		editBtn.setManaged(false);
 		editBtn.setOnAction(e -> {
@@ -168,14 +169,14 @@ public class ListEditor<V> extends VBox {
 		editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip("Náhled"));
+		previewBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.preview")));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		moveUpBtn.setFocusTraversable(false);
-		moveUpBtn.setTooltip(new Tooltip("Přesunout nahoru"));
+		moveUpBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.moveUp")));
 		moveUpBtn.setVisible(false);
 		moveUpBtn.setManaged(false);
 		moveUpBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),
@@ -183,7 +184,7 @@ public class ListEditor<V> extends VBox {
 		moveUpBtn.disableProperty().bind(table.getSelectionModel().selectedIndexProperty().lessThanOrEqualTo(0));
 
 		moveDownBtn.setFocusTraversable(false);
-		moveDownBtn.setTooltip(new Tooltip("Přesunout dolů"));
+		moveDownBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.moveDown")));
 		moveDownBtn.setVisible(false);
 		moveDownBtn.setManaged(false);
 		moveDownBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),

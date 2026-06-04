@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
@@ -96,27 +97,27 @@ public class TreeEditor<N> extends VBox {
 		addSimpleBtn.setVisible(false);
 		addSimpleBtn.setManaged(false);
 		addSimpleBtn.setFocusTraversable(false);
-		addSimpleBtn.setTooltip(new Tooltip("Přidat"));
+		addSimpleBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 		addSplitBtn.setFocusTraversable(false);
 		addSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
-		addSplitBtn.setTooltip(new Tooltip("Přidat"));
+		addSplitBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
 
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip("Odebrat"));
+		delBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.remove")));
 		delBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 
 		dialogBtn.setVisible(false);
 		dialogBtn.setManaged(false);
 		dialogBtn.setFocusTraversable(false);
-		dialogBtn.setTooltip(new Tooltip("Upravit"));
+		dialogBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.edit")));
 		dialogBtn.setOnAction(e -> openDialogForSelected());
 
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip("Náhled"));
+		previewBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.preview")));
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 
