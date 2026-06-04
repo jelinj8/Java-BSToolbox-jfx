@@ -65,6 +65,31 @@ IUIAction action = UIActions.getAction("Save");
 In XML UI descriptions the `action` attribute on any `ButtonBase` or `MenuItem`
 does this lookup automatically and wires the control via `ActionBinder`.
 
+### Shortcut-only actions (no button or menu item)
+
+An action declared under `core/actions` with a `keys` attribute does not need to
+be referenced by any UI control to have its keyboard shortcut work. `UIComposer`
+calls `UIActions.bindAll(acceleratorManager)` at scene-attach time, which registers
+every loaded action with the scene's `AcceleratorManager`. The shortcut becomes
+active as soon as the action's enabled and visible state allows it.
+
+```xml
+<!-- core/actions — shortcut fires without any button in the UI -->
+<file name="com.example.MyAction">
+    <attribute name="keys" value="Ctrl+M" />
+</file>
+```
+
+### bindAll
+
+```java
+UIActions.bindAll(AcceleratorManager manager);
+```
+
+Iterates all registered actions and calls `manager.bind(action)` for each.
+Calling `bind` on an already-bound action is idempotent, so `bindAll` is safe to
+call after individual actions have already been bound via XML button processing.
+
 ---
 
 ## ActionBinder
@@ -214,16 +239,32 @@ so they fire regardless of which control has focus.
 AcceleratorManager mgr = new AcceleratorManager();
 mgr.attach(scene);       // call once the scene is ready
 
-mgr.bind(myAction);      // installs accelerator, respects enabled + visible
-mgr.unbind(myAction);    // removes accelerator and all listeners
+mgr.bind(myAction);      // registers the action; idempotent (safe to call twice)
+mgr.unbind(myAction);    // removes the accelerator and all listeners
 ```
 
-The shortcut only fires when both `enabledProperty()` and `visibleProperty()` are
-`true`. Accelerator changes on the action are tracked live.
+**Dynamic registration** — the shortcut is added to `scene.getAccelerators()` only
+while the action is both enabled and visible. It is removed as soon as either
+property becomes `false`, and re-added when both return to `true`. A `null`
+property means *always true* (matches the `IUIAction` interface contract). Actions
+that return `null` from both properties are permanently registered.
+
+**Shortcut conflicts** — `Scene.getAccelerators()` is a `Map`, so only one runnable
+per key can be registered at a time. When multiple actions share the same shortcut
+(e.g. Login and Logout both on `Ctrl+L`), the dynamic registration above naturally
+resolves conflicts: at most one of them is enabled+visible at any given moment, so
+at most one is registered at a time. The two-argument `Map.remove(key, runnable)`
+makes this race-safe — removing an already-overwritten entry is a no-op.
+
+**Automatic registration via `UIActions.bindAll`** — `UIComposer` calls
+`UIActions.bindAll(ctx.accelerators())` immediately after attaching the scene. This
+ensures every action declared under `core/actions` with a `keys` attribute has its
+shortcut registered, even if the action is not referenced by any button or menu
+item in the XML UI. Calling `bind` on an already-bound action is idempotent.
 
 **Note:** `MenuItem` accelerators are handled separately by `ActionBinder.bind(MenuItem,
-IUIAction)`, which binds `mi.acceleratorProperty()` directly to the action's property.
-`AcceleratorManager` is for scene-level shortcuts that should fire regardless of
+IUIAction)`, which binds `mi.acceleratorProperty()` directly to the action's
+property. `AcceleratorManager` is for scene-level shortcuts that fire regardless of
 menu state.
 
 ---

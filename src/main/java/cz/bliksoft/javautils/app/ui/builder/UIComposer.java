@@ -141,6 +141,7 @@ public final class UIComposer {
 		if (product instanceof UiSceneProduct sp) {
 			stage.setScene(sp.scene());
 			ctx.accelerators().attach(sp.scene());
+			UIActions.bindAll(ctx.accelerators());
 			return;
 		}
 
@@ -170,6 +171,7 @@ public final class UIComposer {
 		}
 
 		ctx.accelerators().attach(scn);
+		UIActions.bindAll(ctx.accelerators());
 	}
 
 	private static void setStageIcons(Stage stage, String basePath) {

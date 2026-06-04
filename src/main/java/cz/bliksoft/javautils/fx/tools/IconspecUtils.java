@@ -149,8 +149,18 @@ public final class IconspecUtils {
 
 	private static String substitute(String raw) {
 		String resolved = raw;
-		for (Map.Entry<String, String> e : vars().entrySet())
-			resolved = resolved.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
+		boolean changed;
+		do {
+			if (!resolved.contains("${")) //$NON-NLS-1$
+				break;
+			changed = false;
+			for (Map.Entry<String, String> e : vars().entrySet()) {
+				String next = resolved.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
+				if (next != resolved)
+					changed = true;
+				resolved = next;
+			}
+		} while (changed);
 		return resolved;
 	}
 

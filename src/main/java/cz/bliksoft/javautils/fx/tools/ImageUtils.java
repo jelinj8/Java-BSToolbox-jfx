@@ -19,6 +19,7 @@ import javax.imageio.ImageIO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import cz.bliksoft.javautils.math.polynomial.PolynomialEvaluator;
 import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.ui.UiScale;
 import cz.bliksoft.javautils.fx.controls.images.ico.IcoReader;
@@ -163,6 +164,7 @@ public class ImageUtils {
 	 * Set by {@code *NOCACHE} during postfix evaluation to suppress cache storage.
 	 */
 	private static final ThreadLocal<Boolean> noCacheTL = new ThreadLocal<>();
+	private static final ThreadLocal<PolynomialEvaluator> compositionEvaluatorTL = new ThreadLocal<>();
 
 	/** Overlay alignment: source image is centered over the base. */
 	public static final int ALIGN_CENTER = 0;
@@ -245,34 +247,38 @@ public class ImageUtils {
 		Map<String, Object> mode = new HashMap<>();
 		String skipUntilPutCacheKey = null; // non-null = skip tokens until matching *PUT_CACHE
 
-		for (String token : spec.split("#", -1)) { //$NON-NLS-1$
-			// Skip mode: bypass all tokens until the matching *PUT_CACHE|key is seen
-			if (skipUntilPutCacheKey != null) {
-				if (token.startsWith("*PUT_CACHE")) { //$NON-NLS-1$
-					String[] p = token.split("\\|", -1); //$NON-NLS-1$
-					if (skipUntilPutCacheKey.equals(p.length > 1 ? p[1] : "")) //$NON-NLS-1$
-						skipUntilPutCacheKey = null;
+		try {
+			for (String token : spec.split("#", -1)) { //$NON-NLS-1$
+				// Skip mode: bypass all tokens until the matching *PUT_CACHE|key is seen
+				if (skipUntilPutCacheKey != null) {
+					if (token.startsWith("*PUT_CACHE")) { //$NON-NLS-1$
+						String[] p = token.split("\\|", -1); //$NON-NLS-1$
+						if (skipUntilPutCacheKey.equals(p.length > 1 ? p[1] : "")) //$NON-NLS-1$
+							skipUntilPutCacheKey = null;
+					}
+					continue;
 				}
-				continue;
-			}
 
-			if (token.startsWith("*GET_CACHE")) { //$NON-NLS-1$
-				String[] p = token.split("\\|", -1); //$NON-NLS-1$
-				String key = p.length > 1 ? p[1] : ""; //$NON-NLS-1$
-				Image cached = iconCache.get(key);
-				if (cached != null) {
-					stack.push(cached);
-					skipUntilPutCacheKey = key; // activate skip
+				if (token.startsWith("*GET_CACHE")) { //$NON-NLS-1$
+					String[] p = token.split("\\|", -1); //$NON-NLS-1$
+					String key = p.length > 1 ? p[1] : ""; //$NON-NLS-1$
+					Image cached = iconCache.get(key);
+					if (cached != null) {
+						stack.push(cached);
+						skipUntilPutCacheKey = key; // activate skip
+					}
+					// else: key not cached — fall through, let subsequent tokens build the image
+				} else if (token.startsWith("*")) { //$NON-NLS-1$
+					executeCommand(token, stack, mode, background, spec);
+				} else if (!token.isBlank()) {
+					Image img = createSingleImage(token, background);
+					stack.push(img != null ? img : new WritableImage(1, 1));
 				}
-				// else: key not cached — fall through, let subsequent tokens build the image
-			} else if (token.startsWith("*")) { //$NON-NLS-1$
-				executeCommand(token, stack, mode, background, spec);
-			} else if (!token.isBlank()) {
-				Image img = createSingleImage(token, background);
-				stack.push(img != null ? img : new WritableImage(1, 1));
 			}
+			return stack.isEmpty() ? null : stack.peek();
+		} finally {
+			compositionEvaluatorTL.remove();
 		}
-		return stack.isEmpty() ? null : stack.peek();
 	}
 
 	/**
@@ -308,9 +314,9 @@ public class ImageUtils {
 		// Synthetic canvas: EMPTY|size EMPTY|w|h EMPTY|w|h|color
 		if (filePath.equals("EMPTY")) { //$NON-NLS-1$
 			try {
-				int w = Math.max(1, Math.round(Float.parseFloat(params[1])));
+				int w = Math.max(1, (int) Math.round(evalNum(params[1])));
 				int h = (params.length > 2 && StringUtils.hasLength(params[2]))
-						? Math.max(1, Math.round(Float.parseFloat(params[2])))
+						? Math.max(1, (int) Math.round(evalNum(params[2])))
 						: w;
 				int argb = 0;
 				if (params.length > 3 && StringUtils.hasLength(params[3])) {
@@ -344,11 +350,11 @@ public class ImageUtils {
 			Float svgScale = null;
 
 			if (params.length > 1 && StringUtils.hasLength(params[1]))
-				w = Float.valueOf(params[1]);
+				w = (float) evalNum(params[1]);
 			if (params.length > 2 && StringUtils.hasLength(params[2]))
-				h = Float.valueOf(params[2]);
+				h = (float) evalNum(params[2]);
 			if (params.length > 3 && StringUtils.hasLength(params[3]))
-				svgScale = Float.valueOf(params[3]);
+				svgScale = (float) evalNum(params[3]);
 
 			String strokeColor = null;
 			String fillColor = null;
@@ -673,6 +679,17 @@ public class ImageUtils {
 			if (parts.length > 1 && StringUtils.hasLength(parts[1]))
 				iconCache.remove(parts[1]);
 		}
+		case "SET" -> { //$NON-NLS-1$
+			if (parts.length > 2 && StringUtils.hasLength(parts[1])) {
+				double val = parseDouble(parts[2], 0.0);
+				PolynomialEvaluator ev = compositionEvaluatorTL.get();
+				if (ev == null) {
+					ev = new PolynomialEvaluator();
+					compositionEvaluatorTL.set(ev);
+				}
+				ev.registerVariable(parts[1], val);
+			}
+		}
 		case "NOCACHE" -> noCacheTL.set(Boolean.TRUE); // IconspecCommand.NOCACHE //$NON-NLS-1$
 		default -> log.warn("Unknown postfix command: {} in spec: {}", token, spec); //$NON-NLS-1$
 		}
@@ -683,12 +700,17 @@ public class ImageUtils {
 		return (v instanceof Number n) ? n.intValue() : defaultVal;
 	}
 
+	private static double evalNum(String s) {
+		PolynomialEvaluator ev = compositionEvaluatorTL.get();
+		return ev != null ? ev.evaluate(s) : PolynomialEvaluator.eval(s);
+	}
+
 	private static int parseInt(String s, int defaultVal) {
 		if (s == null || s.isBlank())
 			return defaultVal;
 		try {
-			return Integer.parseInt(s.trim());
-		} catch (NumberFormatException e) {
+			return (int) Math.round(evalNum(s.trim()));
+		} catch (Exception e) {
 			return defaultVal;
 		}
 	}
@@ -923,10 +945,25 @@ public class ImageUtils {
 		if (spec == null)
 			return null;
 
-		String nSpec = spec.contains(SCALE_PLACEHOLDER) ? spec.replace(SCALE_PLACEHOLDER, UiScale.bucketedScaleString())
-				: spec;
-		for (Map.Entry<String, String> e : tokenMap.entrySet())
-			nSpec = nSpec.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
+		String nSpec = spec;
+		boolean changed;
+		do {
+			if (!nSpec.contains("${")) //$NON-NLS-1$
+				break;
+			changed = false;
+			if (nSpec.contains(SCALE_PLACEHOLDER)) {
+				String next = nSpec.replace(SCALE_PLACEHOLDER, UiScale.bucketedScaleString());
+				if (next != nSpec)
+					changed = true;
+				nSpec = next;
+			}
+			for (Map.Entry<String, String> e : tokenMap.entrySet()) {
+				String next = nSpec.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
+				if (next != nSpec)
+					changed = true;
+				nSpec = next;
+			}
+		} while (changed);
 
 		jfxStyleTL.remove();
 		noCacheTL.remove();
@@ -2331,8 +2368,8 @@ public class ImageUtils {
 		if (s == null || s.isBlank())
 			return defaultVal;
 		try {
-			return Double.parseDouble(s.trim());
-		} catch (NumberFormatException e) {
+			return evalNum(s.trim());
+		} catch (Exception e) {
 			return defaultVal;
 		}
 	}

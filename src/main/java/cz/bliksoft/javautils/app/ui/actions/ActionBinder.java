@@ -172,9 +172,12 @@ public final class ActionBinder {
 	 */
 	public static void bind(Hyperlink hl, IUIAction a) {
 		hl.setOnAction(e -> a.execute());
-		hl.disableProperty().bind(Bindings.not(a.enabledProperty()));
-		hl.visibleProperty().bind(a.visibleProperty());
-		hl.managedProperty().bind(a.visibleProperty());
+		if (a.enabledProperty() != null)
+			hl.disableProperty().bind(Bindings.not(a.enabledProperty()));
+		if (a.visibleProperty() != null) {
+			hl.visibleProperty().bind(a.visibleProperty());
+			hl.managedProperty().bind(a.visibleProperty());
+		}
 		if (a.textProperty() != null)
 			hl.textProperty().bind(a.textProperty());
 		if (a instanceof IIconSpecPropertyProvider p) {

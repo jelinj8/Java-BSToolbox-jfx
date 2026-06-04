@@ -79,6 +79,26 @@ public enum IconspecCommand {
 	/** Resets the mode map (alignment, offsets, text settings). */
 	RESET("RESET"),
 
+	// ── Variables ────────────────────────────────────────────────────────────
+
+	/**
+	 * Registers a named variable with a computed value into a per-composition
+	 * {@link cz.bliksoft.javautils.math.polynomial.PolynomialEvaluator} instance.
+	 * The instance is created on the first {@code SET} in a composition and
+	 * discarded after the composition completes. Once a {@code SET} is present, all
+	 * subsequent numeric parameters in the same composition are evaluated using
+	 * that instance, making the variable available everywhere (canvas sizes, SVG
+	 * dimensions, DRAW coordinates, etc.).
+	 *
+	 * <p>
+	 * {@code value} is itself an arithmetic expression; earlier {@code SET}
+	 * variables are available to it.
+	 *
+	 * <p>
+	 * Example: {@code *SET|sz|24#*SET|h|sz*1.5#EMPTY|sz|h}
+	 */
+	SET("SET", "name", "value"),
+
 	// ── Transforms ───────────────────────────────────────────────────────────
 
 	// ── Filters ──────────────────────────────────────────────────────────────

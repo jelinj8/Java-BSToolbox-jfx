@@ -1,6 +1,7 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
 import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -31,6 +32,7 @@ public abstract class UIActionBase implements IUIAction, IIconSpecPropertyProvid
 	private ReadOnlyObjectWrapper<KeyCombination> accelerator;
 	private ReadOnlyStringWrapper text;
 	private SimpleStringProperty iconSpec;
+	private SimpleStringProperty menuIconSpec;
 
 	/**
 	 * Sets (or replaces) the keyboard accelerator for this action. Typically called
@@ -74,6 +76,19 @@ public abstract class UIActionBase implements IUIAction, IIconSpecPropertyProvid
 		return iconSpec;
 	}
 
+	/** Sets (or replaces) the menu-specific icon spec string for this action. */
+	public void setMenuIconSpec(String spec) {
+		if (menuIconSpec == null)
+			menuIconSpec = new SimpleStringProperty(spec);
+		else
+			menuIconSpec.set(spec);
+	}
+
+	@Override
+	public Property<String> menuIconSpecProperty() {
+		return menuIconSpec;
+	}
+
 	/**
 	 * Creates a lightweight {@link UIActionBase} from a key, optional label text,
 	 * optional icon spec, optional key-binding folder, and a {@link Runnable}.
@@ -103,8 +118,10 @@ public abstract class UIActionBase implements IUIAction, IIconSpecPropertyProvid
 		};
 		if (text != null)
 			result.setText(text);
-		if (iconSpec != null)
-			result.setIconSpec(iconSpec);
+		if (iconSpec != null) {
+			result.setIconSpec(IconspecUtils.getIconspec(iconSpec));
+			result.setMenuIconSpec(IconspecUtils.getMenuIconspec(iconSpec));
+		}
 		if (shortcutFolder != null)
 			result.setAccelerator(ShortcutFileLoader.loadFromKeyBindings(shortcutFolder + "/" + key));
 		return result;

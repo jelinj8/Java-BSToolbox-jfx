@@ -120,11 +120,12 @@
 			<attribute name="toolbar-large" value="32" />
 			<attribute name="tab-icon-size" value="16" />
 			<attribute name="menu-icon-size" value="16" />
-			<attribute name="main-title-icon-size" value="24" />
-			<attribute name="edit-button-size" value="16" />
+			<attribute name="main-title-icon-size" value="32" />
+			<attribute name="edit-button-size" value="18" />
 			<attribute name="button-size" value="18" />
-			<attribute name="overlay-size" value="9" />
-			<attribute name="toolbar-overlay-size" value="16" />
+
+			<attribute name="overlay-size" value="${button-size}/2" />
+			<attribute name="toolbar-overlay-size" value="${toolbar-size}/3*2" />
 
 			<!-- Colour variables (theme-agnostic defaults, finetuned later) -->
 			<attribute name="fill" value="" />

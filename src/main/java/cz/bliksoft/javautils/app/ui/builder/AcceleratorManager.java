@@ -66,21 +66,21 @@ public final class AcceleratorManager {
 	public void bind(IUIAction action) {
 		if (action.acceleratorProperty() == null)
 			return;
+		if (bindings.containsKey(action))
+			return;
 
 		ChangeListener<KeyCombination> keyListener = (obs, oldK, newK) -> refresh(action);
 		ChangeListener<Boolean> gateListener = (obs, o, n) -> refresh(action);
 
-		Binding binding = new Binding(() -> { // invoked by Scene accelerator
-			if (action.visibleProperty().get() && action.enabledProperty().get()) {
-				action.execute();
-			}
-		}, keyListener, gateListener);
+		Binding binding = new Binding(action::execute, keyListener, gateListener);
 
 		bindings.put(action, binding);
 
 		action.acceleratorProperty().addListener(keyListener);
-		action.enabledProperty().addListener(gateListener);
-		action.visibleProperty().addListener(gateListener);
+		if (action.enabledProperty() != null)
+			action.enabledProperty().addListener(gateListener);
+		if (action.visibleProperty() != null)
+			action.visibleProperty().addListener(gateListener);
 
 		installOrUpdate(action, binding);
 	}
@@ -95,11 +95,12 @@ public final class AcceleratorManager {
 		if (b == null)
 			return;
 
-		if (action.acceleratorProperty() != null) {
+		if (action.acceleratorProperty() != null)
 			action.acceleratorProperty().removeListener(b.keyListener);
-		}
-		action.enabledProperty().removeListener(b.gateListener);
-		action.visibleProperty().removeListener(b.gateListener);
+		if (action.enabledProperty() != null)
+			action.enabledProperty().removeListener(b.gateListener);
+		if (action.visibleProperty() != null)
+			action.visibleProperty().removeListener(b.gateListener);
 
 		if (scene != null && b.currentKey != null) {
 			scene.getAccelerators().remove(b.currentKey, b.runnable);
@@ -117,15 +118,17 @@ public final class AcceleratorManager {
 			return;
 
 		KeyCombination newKey = action.acceleratorProperty().get();
+		boolean shouldBeActive = newKey != null && (action.visibleProperty() == null || action.visibleProperty().get())
+				&& (action.enabledProperty() == null || action.enabledProperty().get());
 
-		// Remove old key mapping if changed
-		if (b.currentKey != null && (newKey == null || !b.currentKey.equals(newKey))) {
+		// Always remove our current registration first; the 2-arg remove is a no-op if
+		// our runnable was already replaced by a conflicting action's registration
+		if (b.currentKey != null) {
 			scene.getAccelerators().remove(b.currentKey, b.runnable);
 			b.currentKey = null;
 		}
 
-		// Install if present
-		if (newKey != null && b.currentKey == null) {
+		if (shouldBeActive) {
 			b.currentKey = newKey;
 			scene.getAccelerators().put(newKey, b.runnable);
 		}

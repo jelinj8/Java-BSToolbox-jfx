@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.ui.builder.AcceleratorManager;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileObjectClassLoader;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
@@ -80,6 +81,11 @@ public class UIActions {
 
 			isLoaded = true;
 		}
+	}
+
+	public static void bindAll(AcceleratorManager manager) {
+		loadActions();
+		registeredActions.values().forEach(manager::bind);
 	}
 
 	public static String dumpActions() {

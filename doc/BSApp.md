@@ -98,6 +98,28 @@ String val = (String) BSApp.getEnvironmentProperty("DisabledModules", "");
 
 ---
 
+## BaseAppModule
+
+`BaseAppModule` is always force-enabled regardless of `EnabledModules` /
+`DisabledModules`. It runs at loading order `-10000` — before every application
+module — and performs these steps automatically:
+
+- Registers the default framework CSS stylesheet.
+- Calls `Services.loadServices()` — instantiates all `services/` nodes from the
+  merged filesystem and keeps them alive for the application lifetime.
+- Calls `Singletons.loadSingletons()` — registers singleton metadata from the
+  `singletons/` folder so instances can be retrieved later by interface via
+  `Singletons.getSingleton(Class)`.
+
+You do not need to call either method yourself; they are always executed before
+your own modules' `init()` runs. `Services.cleanup()` and `Singletons.cleanup()`
+are called by the framework on shutdown to close any `Closeable` instances.
+
+See the BSToolbox **services.md** for the XML declaration format and implementation
+patterns for service and singleton classes.
+
+---
+
 ## Module enable/disable
 
 Modules are enabled or disabled at startup via global environment properties:
