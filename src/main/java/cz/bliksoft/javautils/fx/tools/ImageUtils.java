@@ -390,10 +390,15 @@ public class ImageUtils {
 		if (filePath.toLowerCase().endsWith(".ico")) { //$NON-NLS-1$
 			Integer icoW = null;
 			Integer icoH = null;
-			if (params.length > 1 && StringUtils.hasLength(params[1]))
-				icoW = Integer.valueOf(params[1]);
-			if (params.length > 2 && StringUtils.hasLength(params[2]))
-				icoH = Integer.valueOf(params[2]);
+			try {
+				if (params.length > 1 && StringUtils.hasLength(params[1]))
+					icoW = (int) Math.round(evalNum(params[1]));
+				if (params.length > 2 && StringUtils.hasLength(params[2]))
+					icoH = (int) Math.round(evalNum(params[2]));
+			} catch (Exception e) {
+				log.error("Failed to evaluate ICO size params for spec '{}': {}", spec, e.getMessage());
+				return null;
+			}
 			if (icoW != null && icoH == null)
 				icoH = icoW;
 			if (icoH != null && icoW == null)
