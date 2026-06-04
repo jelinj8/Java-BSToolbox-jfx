@@ -9,7 +9,10 @@ import java.util.stream.Collectors;
 
 import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.binding.Bindings;
+import javafx.scene.image.Image;
 import javafx.beans.binding.BooleanBinding;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -73,6 +76,12 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		if (owner != null)
 			stage.initOwner(owner);
 		stage.setTitle(dialogTitle);
+		String iconSpec = IconspecUtils.getMenuIconspec("codebook/dialog/tree");
+		if (iconSpec != null) {
+			Image dialogIcon = ImageUtils.getImage(iconSpec, false);
+			if (dialogIcon != null)
+				stage.getIcons().setAll(dialogIcon);
+		}
 
 		TextField filterField = new TextField();
 		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));

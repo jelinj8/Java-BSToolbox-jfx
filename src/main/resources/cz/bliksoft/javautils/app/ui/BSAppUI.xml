@@ -273,6 +273,14 @@
 					<attribute name="iconspec">svg/list.svg|${button-size}|||${stroke-button}
 					</attribute>
 				</file>
+				<file name="dialog">
+					<file name="list">
+						<attribute name="iconspec">svg/list-search.svg|${window-title-icon-size}</attribute>
+					</file>
+					<file name="tree">
+						<attribute name="iconspec">svg/list-tree.svg|${window-title-icon-size}</attribute>
+					</file>
+				</file>
 			</file>
 
 			<file name="buttons">

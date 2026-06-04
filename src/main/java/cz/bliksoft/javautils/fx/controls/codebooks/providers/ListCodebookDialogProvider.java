@@ -7,6 +7,9 @@ import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
+import javafx.scene.image.Image;
 import javafx.beans.property.Property;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
@@ -48,6 +51,12 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		if (owner != null)
 			stage.initOwner(owner);
 		stage.setTitle(BSAppMessages.getString("Codebook.button.title"));
+		String iconSpec = IconspecUtils.getMenuIconspec("codebook/dialog/list");
+		if (iconSpec != null) {
+			Image dialogIcon = ImageUtils.getImage(iconSpec, false);
+			if (dialogIcon != null)
+				stage.getIcons().setAll(dialogIcon);
+		}
 
 		TextField filterField = new TextField();
 		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
