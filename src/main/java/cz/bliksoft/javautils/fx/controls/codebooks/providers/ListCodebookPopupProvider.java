@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.codebooks.providers;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
@@ -47,8 +48,8 @@ public class ListCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 
 		PopupFilteredListSelector(Consumer<T> onConfirm, BasicCodebookProvider<T> base) {
 			this.base = base;
-			this.filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()),
-					base.additionalFilter == null ? (s -> true) : base.additionalFilter);
+			Predicate<T> initialPred = base.additionalFilter != null ? base.additionalFilter : s -> true;
+			this.filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()), initialPred);
 			this.list = new ListView<>(filtered);
 
 			base.setCellFactory(list);

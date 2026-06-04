@@ -138,7 +138,8 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 			}
 		});
 
-		ToolBar toolbar = new ToolBar(new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")), sourceCombo, captureBtn);
+		ToolBar toolbar = new ToolBar(new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
+				sourceCombo, captureBtn);
 
 		cropPane.setMinHeight(400);
 		VBox.setVgrow(cropPane, Priority.ALWAYS);
@@ -231,7 +232,8 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 						cropPane.setImage(finalImg);
 						statusLabel.setText("");
 					} else {
-						statusLabel.setText(finalError != null ? finalError : BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
+						statusLabel.setText(finalError != null ? finalError
+								: BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
 					}
 					captureBtn.setDisable(false);
 				});

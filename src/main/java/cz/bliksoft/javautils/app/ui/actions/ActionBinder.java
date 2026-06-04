@@ -181,7 +181,8 @@ public final class ActionBinder {
 		if (a.textProperty() != null)
 			hl.textProperty().bind(a.textProperty());
 		if (a instanceof IIconSpecPropertyProvider p) {
-			IconBinder.bindIcon(hl.graphicProperty()::setValue, p, IconspecUtils.getIconspecSize("label-icon-size", 16)); //$NON-NLS-1$
+			IconBinder.bindIcon(hl.graphicProperty()::setValue, p,
+					IconspecUtils.getIconspecSize("label-icon-size", 16)); //$NON-NLS-1$
 		}
 		bindCssClasses(hl.getStyleClass(), a);
 		bindHint(hl, a);

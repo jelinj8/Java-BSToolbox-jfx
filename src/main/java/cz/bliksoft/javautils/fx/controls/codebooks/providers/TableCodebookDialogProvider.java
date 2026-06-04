@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -88,8 +89,8 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
-		FilteredList<T> filtered = new FilteredList<>(FXCollections.observableArrayList(dataSource.get()),
-				additionalFilter == null ? s -> true : additionalFilter);
+		Predicate<T> initialPred = additionalFilter != null ? additionalFilter : s -> true;
+		FilteredList<T> filtered = new FilteredList<>(FXCollections.observableArrayList(dataSource.get()), initialPred);
 
 		TableView<T> table = new TableView<>(filtered);
 		table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);

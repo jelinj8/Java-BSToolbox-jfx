@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -75,8 +76,8 @@ public class TableCodebookPopupProvider<T> extends BasicCodebookProvider<T> {
 				List<Supplier<TableColumn<T, ?>>> columnFactories) {
 			this.base = base;
 
-			filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()),
-					base.additionalFilter == null ? s -> true : base.additionalFilter);
+			Predicate<T> initialPred = base.additionalFilter != null ? base.additionalFilter : s -> true;
+			filtered = new FilteredList<>(FXCollections.observableArrayList(base.dataSource.get()), initialPred);
 
 			table = new TableView<>(filtered);
 			table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
