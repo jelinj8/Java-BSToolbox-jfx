@@ -349,12 +349,17 @@ public class ImageUtils {
 			Float h = null;
 			Float svgScale = null;
 
-			if (params.length > 1 && StringUtils.hasLength(params[1]))
-				w = (float) evalNum(params[1]);
-			if (params.length > 2 && StringUtils.hasLength(params[2]))
-				h = (float) evalNum(params[2]);
-			if (params.length > 3 && StringUtils.hasLength(params[3]))
-				svgScale = (float) evalNum(params[3]);
+			try {
+				if (params.length > 1 && StringUtils.hasLength(params[1]))
+					w = (float) evalNum(params[1]);
+				if (params.length > 2 && StringUtils.hasLength(params[2]))
+					h = (float) evalNum(params[2]);
+				if (params.length > 3 && StringUtils.hasLength(params[3]))
+					svgScale = (float) evalNum(params[3]);
+			} catch (Exception e) {
+				log.error("Failed to evaluate SVG size params for spec '{}': {}", spec, e.getMessage());
+				return null;
+			}
 
 			String strokeColor = null;
 			String fillColor = null;
@@ -711,6 +716,7 @@ public class ImageUtils {
 		try {
 			return (int) Math.round(evalNum(s.trim()));
 		} catch (Exception e) {
+			log.warn("parseInt: failed to evaluate '{}': {}", s, e.getMessage());
 			return defaultVal;
 		}
 	}
@@ -2370,6 +2376,7 @@ public class ImageUtils {
 		try {
 			return evalNum(s.trim());
 		} catch (Exception e) {
+			log.warn("parseDouble: failed to evaluate '{}': {}", s, e.getMessage());
 			return defaultVal;
 		}
 	}
