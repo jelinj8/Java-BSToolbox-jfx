@@ -29,93 +29,35 @@ import javafx.scene.image.WritableImage;
 
 /**
  * Utility for loading, caching, and composing JavaFX {@link Image} objects from
- * various sources. Spec resolution itself — parsing, postfix composition,
- * pixel-level filters, SVG/QR/ICO rendering, {@code *TEXT}/{@code *DRAW}, … —
- * is delegated to the toolkit-agnostic {@link IconSpecEngine} in the base
- * library; this class adds only the genuinely JavaFX-specific layer on top:
- * {@link Image} results (converted from the engine's {@link BufferedImage}),
- * scene-graph node creation ({@link ImageView},
- * {@link javafx.scene.shape.SVGPath}/ {@link javafx.scene.shape.Shape} for
- * {@code [P]:}/{@code [PS]:} specs), UI-scale-aware token substitution, and an
- * {@code Image}-keyed result cache.
+ * various sources, described by a compact <em>icon spec string</em>.
  *
- * Images are resolved via an <em>icon spec string</em> with the following
- * supported formats:
- *
+ * <p>
+ * Spec resolution itself — parsing, postfix composition, pixel-level filters,
+ * SVG/QR/ICO rendering, {@code *TEXT}/{@code *DRAW}, {@code *META}/
+ * {@code EMPTY}/{@code [PI]:}, … — is delegated to the toolkit-agnostic
+ * {@link IconSpecEngine} in the base library; see its class documentation for
+ * the full icon-spec language reference. This class adds only the genuinely
+ * JavaFX-specific layer on top:
  * <ul>
- * <li>{@code name.png} / {@code name.svg} — resolved relative to the branding
- * images root (default: {@code /cz/bliksoft/branding/images/})</li>
- * <li>{@code /absolute/path.png} — absolute classpath resource</li>
- * <li>{@code [F]:/filesystem/path.png} — explicit file-system path (also
- * supported for SVG)</li>
- * <li>{@code name.svg|w|h|scale|stroke|fill} — SVG with optional parameters
- * (all may be left blank):
- * <ul>
- * <li>{@code w}, {@code h} — pixel width/height; omit either to derive from the
- * SVG's natural aspect ratio</li>
- * <li>{@code scale} — extra scale multiplier applied on top of w/h</li>
- * <li>{@code stroke} — color that replaces every {@code currentColor}
- * occurrence in the SVG source and overrides explicit {@code stroke}
- * attributes; accepts bare hex ({@code ff0000}, {@code ff000080} with alpha),
- * {@code 0xRRGGBB} / {@code 0xRRGGBBAA}, or CSS named colors and
- * {@code rgba(...)} expressions</li>
- * <li>{@code fill} — color injected as {@code fill} on all SVG shape elements
- * (except {@code fill="none"}); same color syntax as stroke</li>
- * </ul>
- * </li>
- * <li>{@code EMPTY|size} — synthetic transparent canvas ({@code size×size}
- * pixels); useful as the base layer in overlay chains</li>
- * <li>{@code EMPTY|w|h} — transparent canvas with explicit width and height
- * ({@code h} may be left blank to default to {@code w})</li>
- * <li>{@code EMPTY|w|h|color} — solid-color canvas; color uses the same syntax
- * as the SVG stroke/fill slots ({@code h} may be left blank)</li>
- * <li>{@code [P]:svgPathData|w|h|scale|style} — inline SVG path data rendered
- * as a styled {@link javafx.scene.shape.SVGPath} node; use {@link #getIconNode}
- * to retrieve it</li>
- * <li>{@code [PI]:svgPathData|w|h|scale|style} — inline SVG path rasterized to
- * an {@link Image}</li>
- * <li>{@code [PS]:svgPathData|w|h|scale|style} — inline SVG path as a
- * layoutable {@link javafx.scene.shape.Shape} node; use {@link #getIconNode} to
- * retrieve it</li>
- * <li>Postfix composition — {@code #}-separated tokens where non-{@code *}
- * tokens are file specs pushed onto a stack and {@code *}-prefixed tokens are
- * commands operating on the stack. The result is the top of the stack. Example
- * — badge overlay at BR: {@code base.svg|24#badge.svg|12#*+}. Example —
- * green/red dual badges:
- * {@code *EMPTY|24#save.svg|16|||00ff00#*ANCHOR|TL#*+#save.svg|16|||ff0000#*ANCHOR|BR#*+}.
- * Commands: {@code *+|canvasMode} / {@code *-|canvasMode} (SRC_OVER / DST_OUT
- * compose; {@code canvasMode}: {@code C}=crop result to base size (default),
- * {@code E}=extend canvas to union bounding box);
- * {@code *ANCHOR|position|offsetX|offsetY} (positions: {@code TL}, {@code TR},
- * {@code BL}, {@code BR} (default), {@code C}, {@code N});
- * {@code *EMPTY|w|h|color}; {@code *META|key|value} — sticky metadata
- * side-channel readable via {@link IconSpecEngine#getLastMetadata()};
- * {@code *JFXSTYLE|css} — sugar for {@code *META|jfxStyle|css}, consumed by
- * {@link #getIconView} to style the resulting {@link ImageView};
- * {@code *COLOR|stroke|fill|width} — sticky drawing colors (use {@code none}
- * for no paint); {@code *TEXT|value|size|font|style} — renders text using COLOR
- * fill/stroke (style flags: {@code B}old, {@code I}talic, {@code U}nderline,
- * {@code S}trikethrough, {@code O}utline; prefix with {@code -} to remove, bare
- * {@code -} clears all); {@code *DRAW|shape|...params...|t} — draws onto the
- * top canvas using COLOR fill/stroke ({@code t} overrides stroke width for this
- * call); shapes: {@code line|x1|y1|x2|y2}, {@code circle|cx|cy|r},
- * {@code square|x|y|side}, {@code rectangle|x|y|w|h}; {@code *PUSH},
- * {@code *SWAP}, {@code *COPY}, {@code *PASTE}, {@code *POP}, {@code *RESET};
- * {@code *GET_CACHE|key} / {@code *PUT_CACHE|key} — explicit cache: GET pushes
- * the cached image and skips to the matching PUT_CACHE (inclusive) when the key
- * is present, otherwise does nothing; PUT stores stack top under key;
- * {@code *NOCACHE} — suppresses storing the final result in the outer
- * {@link #getImageIfPossible} cache (useful when generating large numbers of
- * distinct one-time specs); {@code *FILTER|name|p1|p2|p3} — apply a pixel-level
- * filter; supported filters: {@code shadow|color|width} (diffuse shadow/glow),
- * {@code outline|color|width} (sharp silhouette expansion),
- * {@code rotate|angle} (CW rotation, keep canvas size),
- * {@code shift|angle|pixels} (translation in direction), {@code scale|w|h|mode}
- * (scale image; mode: {@code F}=fit, {@code C}=crop, {@code %}=percent),
- * {@code resize|w|h} (canvas resize using current alignment/offset — replaces
- * {@code *CROP}).</li>
- * <li>The token {@value #SCALE_PLACEHOLDER} in any spec is replaced with the
- * current UI-scale bucket string before lookup</li>
+ * <li>{@link Image} results, converted from the engine's {@link BufferedImage}
+ * via {@link javafx.embed.swing.SwingFXUtils}</li>
+ * <li>scene-graph node creation: {@link ImageView} via {@link #getIconView},
+ * and {@link javafx.scene.shape.SVGPath}/{@link javafx.scene.shape.Shape} nodes
+ * via {@link #getIconNode} for the JavaFX-only
+ * {@code [P]:svgPathData|w|h|scale|style} /
+ * {@code [PS]:svgPathData|w|h|scale|style} specs (layoutable scene-graph shapes
+ * — as opposed to {@code [PI]:...}, which the engine rasterizes to an
+ * {@link Image})</li>
+ * <li>{@code *JFXSTYLE|css} / {@code *META|jfxStyle|css} support: the CSS style
+ * string accumulated by the engine (readable via
+ * {@link IconSpecEngine#getLastMetadata()}) is applied by {@link #getIconView}
+ * to the wrapping {@link ImageView} after loading</li>
+ * <li>UI-scale-aware token substitution — the token {@value #SCALE_PLACEHOLDER}
+ * in any spec is replaced with the current UI-scale bucket string (see
+ * {@link #setScale}) before resolution</li>
+ * <li>an {@code Image}-keyed result cache layered on top of the engine's
+ * spec-internal cache, to avoid repeated {@code BufferedImage → Image}
+ * conversions for the same resolved spec (see {@link #getImageIfPossible})</li>
  * </ul>
  *
  * <p>
