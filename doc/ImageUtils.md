@@ -4,6 +4,8 @@
 
 Central utility for loading, compositing, and caching JavaFX `Image` objects and icon nodes. All results are cached by the resolved spec string. Images are described by a compact string format called an *icon spec*.
 
+> **Architecture note:** spec parsing, postfix composition, pixel-level filters, `*TEXT`/`*DRAW`, and SVG/QR/ICO rendering are implemented by the toolkit-agnostic `cz.bliksoft.javautils.images.iconspec.IconSpecEngine` in the base library (`BSToolbox`), operating on `BufferedImage`. This makes the icon-spec language usable outside JavaFX too — e.g. server-side template generation via the `Base64IconSpec` Freemarker extension. `ImageUtils` here is a thin JavaFX adapter: it converts the engine's `BufferedImage` results to `Image`/`ImageView`/scene-graph nodes, applies UI-scale-aware token substitution, and layers its own `Image`-keyed cache on top. The icon-spec language documented below is shared verbatim between both layers (see `IconSpecEngine` for the engine-side reference).
+
 ---
 
 ## Quick start
@@ -276,18 +278,24 @@ icon.svg|24#*ANCHOR|TL#*FILTER|resize|16|16   # take top-left 16×16 region
 | `*POP` | Discard the top image |
 | `*RESET` | Clear all mode values (alignment reverts to `BR, 0, 0`; clipboard cleared) |
 
-### JFXSTYLE
+### META and JFXSTYLE
 
 ```
+*META|key|value
 *JFXSTYLE|-fx-opacity: 0.5;
 ```
 
-Sets a CSS style string that `getIconView` will apply to the wrapping `ImageView` after loading the image. This replaces the former `viewStyle` parameter (slot 4 of the SVG spec). The value is not baked into the image — it is only applied when the result is retrieved through `getIconView`.
+`*META|key|value` is a toolkit-agnostic metadata side-channel: it stashes an arbitrary `key`/`value` pair alongside the resolved image without baking it into the pixels. It is implemented by the shared `IconSpecEngine` (in `BSToolbox`, used by both this JavaFX layer and server-side consumers such as the `Base64IconSpec` Freemarker extension) and is readable back via `IconSpecEngine.getLastMetadata()`.
+
+`*JFXSTYLE|css` is JavaFX-specific sugar for `*META|jfxStyle|css`. It sets a CSS style string that `getIconView` will apply to the wrapping `ImageView` after loading the image (`ImageUtils` reads the `jfxStyle` metadata key back out and republishes it for `getIconView` to consume). This replaces the former `viewStyle` parameter (slot 4 of the SVG spec). The value is not baked into the image — it is only applied when the result is retrieved through `getIconView`.
 
 ```java
 // Spec with embedded JFXSTYLE
 ImageView iv = ImageUtils.getIconView("icon.svg|24#*JFXSTYLE|-fx-opacity: 0.5;");
 // → iv has style "-fx-opacity: 0.5;" applied
+
+// Equivalent, spelled out via the generalized form
+ImageView iv2 = ImageUtils.getIconView("icon.svg|24#*META|jfxStyle|-fx-opacity: 0.5;");
 ```
 
 ### Explicit cache — `*GET_CACHE` and `*PUT_CACHE`
