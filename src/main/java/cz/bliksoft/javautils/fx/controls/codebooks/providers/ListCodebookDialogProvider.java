@@ -20,6 +20,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
@@ -156,7 +157,16 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		root.setBottom(buttons);
 		BorderPane.setMargin(buttons, new Insets(10, 0, 0, 0));
 
-		stage.setScene(new Scene(root, 420, 360));
+		Scene scene = new Scene(root, 420, 360);
+
+		scene.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+			if (e.getCode() == KeyCode.ESCAPE) {
+				stage.close();
+				e.consume();
+			}
+		});
+
+		stage.setScene(scene);
 		stage.show();
 
 		// initial focus

@@ -41,6 +41,10 @@
 				<attribute name="sk">komerčná licencia</attribute>
 			</file>
 		</file>
+		<file name="Administration.group.framework">
+			<attribute name="default">Framework</attribute>
+			<attribute name="cs">Framework</attribute>
+		</file>
 	</file>
 	<file name="licences">
 		<file name="LGPL3">
@@ -65,13 +69,6 @@
 		<file name="MIT">
 			<attribute name="name" translation="licences/MIT_NAME">licences/MIT_NAME</attribute>
 			<attribute name="url" translation="licences/MIT_URL">licences/MIT_URL</attribute>
-		</file>
-	</file>
-	
-	<file name="translations">
-		<file name="Administration.group.framework">
-			<attribute name="default">Framework</attribute>
-			<attribute name="cs">Framework</attribute>
 		</file>
 	</file>
 

@@ -128,7 +128,7 @@
 
 			<attribute name="overlay-size" value="${button-size}/2" />
 			<attribute name="toolbar-overlay-size"
-				value="${toolbar-size}/3*2" />
+				value="${toolbar-size}/5*3" />
 
 			<!-- Colour variables (theme-agnostic defaults, finetuned later) -->
 			<attribute name="fill" value="" />
@@ -140,6 +140,7 @@
 			<attribute name="stroke-warning" value="e67700" />
 			<attribute name="stroke-error" value="c0392b" />
 			<attribute name="stroke-button" value="c0c0c0" />
+			<attribute name="window-title-icon-stroke" value="c0c0c0" />
 
 			<!-- Framework action iconspecs. iconspec = toolbar (primary) menu-iconspec 
 				= menu variant; if absent, ActionBinder falls back to iconspec -->
@@ -275,10 +276,10 @@
 				</file>
 				<file name="dialog">
 					<file name="list">
-						<attribute name="iconspec">svg/list-search.svg|${window-title-icon-size}</attribute>
+						<attribute name="iconspec">svg/list-search.svg|${window-title-icon-size}|||${window-title-icon-stroke}</attribute>
 					</file>
 					<file name="tree">
-						<attribute name="iconspec">svg/list-tree.svg|${window-title-icon-size}</attribute>
+						<attribute name="iconspec">svg/list-tree.svg|${window-title-icon-size}|||${window-title-icon-stroke}</attribute>
 					</file>
 				</file>
 			</file>
@@ -333,6 +334,8 @@
 			<file name="themes">
 				<file name="light">
 					<!-- light-theme iconspec variable overrides — finetuned later -->
+					<attribute name="stroke-button" value="868e96" />
+					<attribute name="window-title-icon-stroke" value="868e96" />
 				</file>
 				<file name="dark">
 					<!-- dark-theme iconspec variable overrides — finetuned later -->
@@ -344,6 +347,7 @@
 					<attribute name="stroke-warning" value="ffa94d" />
 					<attribute name="stroke-error" value="ff6b6b" />
 					<attribute name="stroke-button" value="dee2e6" />
+					<attribute name="window-title-icon-stroke" value="dee2e6" />
 				</file>
 			</file>
 		</file>

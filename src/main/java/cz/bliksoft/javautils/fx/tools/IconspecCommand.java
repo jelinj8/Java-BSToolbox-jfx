@@ -37,6 +37,15 @@ public enum IconspecCommand {
 	 */
 	COMPOSE_OUT("-", "canvasMode"),
 
+	/**
+	 * Composite filter: applies a filter to the top-of-stack image (the "badge"),
+	 * uses the filtered result as a DST_OUT mask against the image below, then
+	 * composites the original (unfiltered) badge back on top via SRC_OVER.
+	 * Equivalent to: {@code *COPY # *FILTER|… # *- # *PASTE # *+} Parameters are
+	 * identical to the standalone {@code *FILTER} command.
+	 */
+	COMPOSE_FILTER("*", "filter", "p1", "p2", "p3"),
+
 	// ── Anchor / alignment ───────────────────────────────────────────────────
 
 	/**
@@ -60,6 +69,19 @@ public enum IconspecCommand {
 	 * stack.
 	 */
 	EMPTY("EMPTY", "width", "height", "color"),
+
+	/**
+	 * Generates a QR code from {@code data} and pushes it onto the stack as a
+	 * synthetic image, analogous to {@code *EMPTY}.
+	 *
+	 * <p>
+	 * {@code ec} is the ZXing error-correction level ({@code L}, {@code M} —
+	 * default, {@code Q}, {@code H}). {@code module_size} is the pixel size of each
+	 * QR module (default 2). If {@code target_size} is given, the per-module pixel
+	 * size is instead computed to best fit the encoded matrix into that overall
+	 * pixel size, and the supplied {@code module_size} is ignored.
+	 */
+	QR("QR", "ec", "moduleSize", "targetSize", "data"),
 
 	/** Pushes a copy of the top-of-stack image (top remains). */
 	PUSH("PUSH"),

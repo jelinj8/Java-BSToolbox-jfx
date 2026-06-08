@@ -176,6 +176,23 @@ For a chain of more than two images, repeat `*+` (or `*-`):
 bottom.svg|32#mid.svg|16#*+#top.svg|9#*ANCHOR|BR#*+
 ```
 
+### Composite filter — `**`
+
+```
+base.svg|24#badge.svg|12#**|outline|green|1             # green outline badge at BR
+*ANCHOR|BR#base.svg|24#badge.svg|12#**|shadow|000000|3  # drop-shadow badge
+```
+
+Shorthand for the badge-with-cutout pattern. Pops the top two images — **top** is the badge, **second** is the base — applies the named filter to the badge, uses the filtered result as a DST_OUT mask against the base, then composites the original (unfiltered) badge back on top via SRC_OVER.
+
+Equivalent to the five-step sequence:
+
+```
+*COPY # *FILTER|name|… # *- # *PASTE # *+
+```
+
+Parameters are identical to `*FILTER`: `name` is the filter name followed by filter-specific values `p1 p2 p3`. See the [Filters](#filters----filter) table for the full list.
+
 ### Canvas — `*EMPTY`
 
 ```
@@ -190,6 +207,20 @@ Creates a synthetic canvas and pushes it. `h` may be blank to default to `w`. `c
 *EMPTY|24                  # 24×24 transparent canvas
 *EMPTY|32|16               # 32×16 transparent canvas
 *EMPTY|24|24|4A90D9        # 24×24 solid blue canvas
+```
+
+### QR codes — `*QR`
+
+```
+*QR|ec|module_size|target_size|data
+```
+
+Generates a QR code from `data` and pushes it onto the stack as a synthetic image, analogous to `*EMPTY`. `ec` is the error-correction level (`L`, `M` — default, `Q`, `H`). `module_size` is the pixel size of each QR module (default `2`); if `target_size` is given, the per-module pixel size is instead computed to best fit the encoded matrix into roughly that overall pixel size, and `module_size` is ignored. `data` is the text/URL to encode and is required — like other parameters, it may not contain `|` or `#`.
+
+```
+*QR||||https://example.com           # defaults: EC level M, 2px modules
+*QR|H|3||https://example.com         # EC level H, 3px modules
+*QR|M||128|https://example.com       # ~128×128px overall, module size auto-computed
 ```
 
 ### Text rendering — `*TEXT`

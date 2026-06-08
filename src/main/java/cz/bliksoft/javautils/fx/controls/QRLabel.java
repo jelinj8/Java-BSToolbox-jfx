@@ -13,6 +13,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
+import cz.bliksoft.javautils.fx.controls.images.qr.QrCodeRenderer;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -20,8 +21,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
 
@@ -99,25 +98,9 @@ public class QRLabel extends Region {
 			hints.put(EncodeHintType.MARGIN, 0);
 
 			BitMatrix matrix = new QRCodeWriter().encode(t, BarcodeFormat.QR_CODE, 0, 0, hints);
-			int modules = matrix.getWidth();
 			int mult = getModulusMultiplier();
-			int pixelSize = modules * mult;
-
-			WritableImage img = new WritableImage(pixelSize, pixelSize);
-			PixelWriter pw = img.getPixelWriter();
-			int[] row = new int[pixelSize];
-
-			for (int y = 0; y < modules; y++) {
-				for (int x = 0; x < modules; x++) {
-					int argb = matrix.get(x, y) ? 0xFF000000 : 0xFFFFFFFF;
-					for (int dx = 0; dx < mult; dx++) {
-						row[x * mult + dx] = argb;
-					}
-				}
-				for (int dy = 0; dy < mult; dy++) {
-					pw.setPixels(0, y * mult + dy, pixelSize, 1, PixelFormat.getIntArgbInstance(), row, 0, pixelSize);
-				}
-			}
+			WritableImage img = QrCodeRenderer.rasterize(matrix, mult);
+			int pixelSize = (int) img.getWidth();
 
 			imageView.setImage(img);
 			imageView.setFitWidth(pixelSize);

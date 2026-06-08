@@ -24,6 +24,7 @@ import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.ui.UiScale;
 import cz.bliksoft.javautils.fx.controls.images.ico.IcoReader;
 import cz.bliksoft.javautils.fx.controls.images.ico.IcoWriter;
+import cz.bliksoft.javautils.fx.controls.images.qr.QrCodeRenderer;
 import cz.bliksoft.javautils.fx.controls.images.svg.SvgConverter;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Bounds;
@@ -343,6 +344,28 @@ public class ImageUtils {
 			}
 		}
 
+		// QR code: QR|ec|moduleSize|targetSize|data
+		if (filePath.equals("QR")) { //$NON-NLS-1$
+			String data = params.length > 4 ? params[4] : ""; //$NON-NLS-1$
+			if (!StringUtils.hasLength(data)) {
+				log.warn("Invalid QR spec '{}': missing data", spec);
+				return null;
+			}
+			try {
+				String ec = params.length > 1 ? params[1] : null;
+				Integer moduleSize = (params.length > 2 && StringUtils.hasLength(params[2]))
+						? (int) Math.round(evalNum(params[2]))
+						: null;
+				Integer targetSize = (params.length > 3 && StringUtils.hasLength(params[3]))
+						? (int) Math.round(evalNum(params[3]))
+						: null;
+				return QrCodeRenderer.render(data, ec, moduleSize, targetSize);
+			} catch (LinkageError | Exception e) {
+				log.warn("Failed to render QR code for spec '{}': {}", spec, e.getMessage());
+				return null;
+			}
+		}
+
 		// SVG: file.svg|w|h|scale|stroke|fill
 		if (filePath.toLowerCase().endsWith(".svg")) { //$NON-NLS-1$
 			Float w = null;
@@ -498,6 +521,14 @@ public class ImageUtils {
 			if (img != null)
 				stack.push(img);
 		}
+		case "QR" -> { // IconspecCommand.QR //$NON-NLS-1$
+			StringBuilder sb = new StringBuilder("QR"); //$NON-NLS-1$
+			for (int i = 1; i < parts.length; i++)
+				sb.append("|").append(parts[i]); //$NON-NLS-1$
+			Image img = createSingleImage(sb.toString(), background);
+			if (img != null)
+				stack.push(img);
+		}
 		case "JFXSTYLE" -> jfxStyleTL.set(parts.length > 1 ? parts[1] : ""); // IconspecCommand.JFXSTYLE //$NON-NLS-1$ //$NON-NLS-2$
 																				// — sets inline CSS via setStyle()
 		case "RESET" -> mode.clear(); // IconspecCommand.RESET //$NON-NLS-1$
@@ -533,25 +564,31 @@ public class ImageUtils {
 					log.warn("Unknown filter name in: {}", token); //$NON-NLS-1$
 				} else {
 					Image top = stack.pop();
-					Image result = switch (filter) {
-					case SHADOW -> filterShadow(top, parseArgbColor(get(parts, 2), 0xFF000000),
-							parseInt(get(parts, 3), 5), !"T".equalsIgnoreCase(get(parts, 4))); //$NON-NLS-1$
-					case OUTLINE -> filterOutline(top, parseArgbColor(get(parts, 2), 0xFF000000),
-							parseInt(get(parts, 3), 1), !"T".equalsIgnoreCase(get(parts, 4))); //$NON-NLS-1$
-					case ROTATE -> filterRotate(top, parseDouble(get(parts, 2), 0.0));
-					case SHIFT -> filterShift(top, parseDouble(get(parts, 2), 0.0), parseDouble(get(parts, 3), 0.0));
-					case SCALE -> filterScale(top, get(parts, 2), get(parts, 3), get(parts, 4));
-					case RESIZE -> filterResize(top, parseInt(get(parts, 2), (int) top.getWidth()),
-							parseInt(get(parts, 3), (int) top.getHeight()), modeInt(mode, "align", ALIGN_BOTTOM_RIGHT), //$NON-NLS-1$
-							modeInt(mode, "offsetX", 0), modeInt(mode, "offsetY", 0)); //$NON-NLS-1$ //$NON-NLS-2$
-					case MASK ->
-						filterMask(top, parseArgbColor(get(parts, 2), 0xFFFFFFFF), "Y".equalsIgnoreCase(get(parts, 3))); //$NON-NLS-1$
-					case MONOCHROME -> filterMonochrome(top, parseArgbColor(get(parts, 2), 0xFFFFFFFF));
-					case KEYMASK -> filterKeymask(top, get(parts, 2));
-					case MIRROR -> mirrorImage(top, !"V".equalsIgnoreCase(get(parts, 2))); //$NON-NLS-1$
-					};
+					Image result = applyFilter(filter, top, parts, 2, mode);
 					if (result != null)
 						stack.push(result);
+				}
+			}
+		}
+		case "*" -> { // IconspecCommand.COMPOSE_FILTER — **|filtername|p1|p2|p3 //$NON-NLS-1$
+			// Equivalent to: *COPY # *FILTER|… # *- # *PASTE # *+
+			if (stack.size() >= 2 && parts.length > 1) {
+				ImageFilter filter = ImageFilter.fromName(parts[1]);
+				if (filter == null) {
+					log.warn("Unknown filter name in ** command: {}", token); //$NON-NLS-1$
+				} else {
+					int align = modeInt(mode, "align", ALIGN_BOTTOM_RIGHT); //$NON-NLS-1$
+					int offsetX = modeInt(mode, "offsetX", 0); //$NON-NLS-1$
+					int offsetY = modeInt(mode, "offsetY", 0); //$NON-NLS-1$
+					Image top = stack.pop();
+					Image base = stack.pop();
+					Image topFiltered = applyFilter(filter, top, parts, 2, mode);
+					if (topFiltered != null) {
+						Image baseCutout = postfixCompose(base, topFiltered, align, offsetX, offsetY, true, false);
+						Image result = postfixCompose(baseCutout, top, align, offsetX, offsetY, false, false);
+						if (result != null)
+							stack.push(result);
+					}
 				}
 			}
 		}
@@ -703,6 +740,27 @@ public class ImageUtils {
 		case "NOCACHE" -> noCacheTL.set(Boolean.TRUE); // IconspecCommand.NOCACHE //$NON-NLS-1$
 		default -> log.warn("Unknown postfix command: {} in spec: {}", token, spec); //$NON-NLS-1$
 		}
+	}
+
+	private static Image applyFilter(ImageFilter filter, Image img, String[] parts, int offset,
+			Map<String, Object> mode) {
+		return switch (filter) {
+		case SHADOW -> filterShadow(img, parseArgbColor(get(parts, offset), 0xFF000000),
+				parseInt(get(parts, offset + 1), 5), !"T".equalsIgnoreCase(get(parts, offset + 2))); //$NON-NLS-1$
+		case OUTLINE -> filterOutline(img, parseArgbColor(get(parts, offset), 0xFF000000),
+				parseInt(get(parts, offset + 1), 1), !"T".equalsIgnoreCase(get(parts, offset + 2))); //$NON-NLS-1$
+		case ROTATE -> filterRotate(img, parseDouble(get(parts, offset), 0.0));
+		case SHIFT -> filterShift(img, parseDouble(get(parts, offset), 0.0), parseDouble(get(parts, offset + 1), 0.0));
+		case SCALE -> filterScale(img, get(parts, offset), get(parts, offset + 1), get(parts, offset + 2));
+		case RESIZE -> filterResize(img, parseInt(get(parts, offset), (int) img.getWidth()),
+				parseInt(get(parts, offset + 1), (int) img.getHeight()), modeInt(mode, "align", ALIGN_BOTTOM_RIGHT), //$NON-NLS-1$
+				modeInt(mode, "offsetX", 0), modeInt(mode, "offsetY", 0)); //$NON-NLS-1$ //$NON-NLS-2$
+		case MASK -> filterMask(img, parseArgbColor(get(parts, offset), 0xFFFFFFFF),
+				"Y".equalsIgnoreCase(get(parts, offset + 1))); //$NON-NLS-1$
+		case MONOCHROME -> filterMonochrome(img, parseArgbColor(get(parts, offset), 0xFFFFFFFF));
+		case KEYMASK -> filterKeymask(img, get(parts, offset));
+		case MIRROR -> mirrorImage(img, !"V".equalsIgnoreCase(get(parts, offset))); //$NON-NLS-1$
+		};
 	}
 
 	private static int modeInt(Map<String, Object> mode, String key, int defaultVal) {
