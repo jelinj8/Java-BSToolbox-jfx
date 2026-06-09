@@ -59,6 +59,7 @@ public class CameraAdministrationProvider implements IAdministrationProvider {
 	public Node getAdministrationComponent() {
 		if (component == null) {
 			CameraCapturePane pane = new CameraCapturePane();
+			pane.setPreviewEnabled(true);
 			pane.initCameras();
 			component = pane;
 		}

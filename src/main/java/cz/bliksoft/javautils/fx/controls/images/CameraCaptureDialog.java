@@ -57,6 +57,14 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	// =========================================================================
 
 	/**
+	 * Enables or disables the live-preview split-button mode. Must be called before
+	 * the dialog is shown.
+	 */
+	public void setPreviewEnabled(boolean v) {
+		capturePane.setPreviewEnabled(v);
+	}
+
+	/**
 	 * Configures the output-size preset list shown in the toolbar. When the user
 	 * picks a preset the cropped result will be downscaled to fit within those
 	 * dimensions. Must be called before the dialog is shown.

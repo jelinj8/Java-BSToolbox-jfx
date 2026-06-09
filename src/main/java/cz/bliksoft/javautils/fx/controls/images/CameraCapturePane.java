@@ -24,7 +24,9 @@ import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.images.PixelOps;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
@@ -32,6 +34,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.ToolBar;
 import javafx.scene.image.Image;
@@ -82,6 +86,12 @@ public class CameraCapturePane extends VBox {
 	private final List<Dimension> outputPresets = new ArrayList<>();
 	private Label outResLabel;
 
+	// ---- Live preview ----
+	private final BooleanProperty previewEnabled = new SimpleBooleanProperty(false);
+	private final SplitMenuButton captureSplitBtn = new SplitMenuButton();
+	private final MenuItem previewToggleItem = new MenuItem();
+	private volatile boolean previewRunning = false;
+
 	// =========================================================================
 	// Constructor
 	// =========================================================================
@@ -103,9 +113,12 @@ public class CameraCapturePane extends VBox {
 
 	/**
 	 * Returns the cropped region as a {@link WritableImage}, or the full image if
-	 * no crop selection is active, or {@code null} if no image is loaded.
+	 * no crop selection is active, or {@code null} if no image is loaded. If a live
+	 * preview is running it is stopped first so the last frame is frozen.
 	 */
 	public WritableImage getImageAsWritable() {
+		if (previewRunning)
+			stopPreview();
 		WritableImage cropped = cropPane.getCroppedImage();
 		if (cropped != null)
 			return cropped;
@@ -148,6 +161,22 @@ public class CameraCapturePane extends VBox {
 		updateOutResCombo();
 	}
 
+	/**
+	 * When true, the capture button becomes a split button with a live-preview
+	 * toggle in its dropdown. Default: false.
+	 */
+	public BooleanProperty previewEnabledProperty() {
+		return previewEnabled;
+	}
+
+	public boolean isPreviewEnabled() {
+		return previewEnabled.get();
+	}
+
+	public void setPreviewEnabled(boolean v) {
+		previewEnabled.set(v);
+	}
+
 	// =========================================================================
 	// UI construction
 	// =========================================================================
@@ -159,6 +188,8 @@ public class CameraCapturePane extends VBox {
 		sourceCombo.setMinWidth(200);
 
 		sourceCombo.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+			if (previewRunning)
+				stopPreview();
 			if (n != null) {
 				BSApp.setLocalProperty(PREF_CAMERA, n.getName());
 				try {
@@ -242,6 +273,15 @@ public class CameraCapturePane extends VBox {
 			rotateRightBtn.setDisable(!hasImage);
 		});
 
+		// Split capture button for live-preview mode
+		captureSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
+		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
+		captureSplitBtn.getItems().add(previewToggleItem);
+		captureBtn.visibleProperty().bind(previewEnabled.not());
+		captureBtn.managedProperty().bind(previewEnabled.not());
+		captureSplitBtn.visibleProperty().bind(previewEnabled);
+		captureSplitBtn.managedProperty().bind(previewEnabled);
+
 		// Spacer between left and right toolbar groups
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -251,7 +291,7 @@ public class CameraCapturePane extends VBox {
 		outResLabel.setManaged(false);
 
 		ToolBar toolbar = new ToolBar(new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
-				sourceCombo, captureBtn, camResCombo,
+				sourceCombo, captureBtn, captureSplitBtn, camResCombo,
 				new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")), camRotationCombo,
 				spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn, rotateRightBtn);
 
@@ -265,6 +305,11 @@ public class CameraCapturePane extends VBox {
 		setPrefHeight(520);
 
 		updateOutResCombo();
+
+		sceneProperty().addListener((obs, oldScene, newScene) -> {
+			if (newScene == null)
+				stopPreview();
+		});
 	}
 
 	private void updateOutResCombo() {
@@ -374,69 +419,149 @@ public class CameraCapturePane extends VBox {
 	// =========================================================================
 
 	private void wireCaptureButton() {
-		captureBtn.setOnAction(e -> {
-			Webcam cam = sourceCombo.getValue();
-			if (cam == null)
-				return;
-			captureBtn.setDisable(true);
-			statusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.capturing"));
-			Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
-			int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
-			new Thread(() -> {
-				BufferedImage img = null;
-				String error = null;
-				ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
-					Thread t = new Thread(r, "camera-capture");
-					t.setDaemon(true);
-					return t;
-				});
-				Future<BufferedImage> future = exec.submit(() -> {
-					if (selectedRes != null)
-						cam.setViewSize(selectedRes);
-					cam.open();
-					return cam.getImage();
-				});
-				try {
-					img = future.get(10, TimeUnit.SECONDS);
-					if (img == null)
-						error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
-					else if (preRotation != 0)
-						img = applyRotation(img, preRotation);
-				} catch (TimeoutException ex) {
-					future.cancel(true);
-					error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
-					log.warn("Camera capture timed out for {}", cam.getName());
-				} catch (Exception ex) {
-					error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
-					log.warn("Camera capture failed", ex);
-				} finally {
-					exec.shutdownNow();
-					// cam.close() blocks while Sarxos' internal capture thread winds down
-					// (~20 s with OBS Virtual Camera). Run it on a daemon thread so the
-					// UI error message appears immediately after the 10 s timeout.
-					Thread closer = new Thread(() -> {
-						try {
-							cam.close();
-						} catch (Exception ignore) {
-						}
-					}, "camera-close");
-					closer.setDaemon(true);
-					closer.start();
-				}
-				final BufferedImage finalImg = img;
-				final String finalError = error;
-				Platform.runLater(() -> {
-					if (finalImg != null && finalError == null) {
-						cropPane.setImage(finalImg);
-						statusLabel.setText("");
-					} else {
-						statusLabel.setText(finalError != null ? finalError
-								: BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
-					}
-					captureBtn.setDisable(false);
-				});
-			}, "camera-capture-ctrl").start();
+		captureBtn.setOnAction(e -> doCapture());
+		captureSplitBtn.setOnAction(e -> {
+			if (previewRunning)
+				stopPreview(); // freeze: last preview frame is already in the crop pane
+			else
+				doCapture();
 		});
+		previewToggleItem.setOnAction(e -> {
+			if (previewRunning)
+				stopPreview();
+			else
+				startPreview();
+		});
+	}
+
+	private void doCapture() {
+		Webcam cam = sourceCombo.getValue();
+		if (cam == null)
+			return;
+		captureBtn.setDisable(true);
+		captureSplitBtn.setDisable(true);
+		statusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.capturing"));
+		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
+		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
+		new Thread(() -> {
+			BufferedImage img = null;
+			String error = null;
+			ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
+				Thread t = new Thread(r, "camera-capture");
+				t.setDaemon(true);
+				return t;
+			});
+			Future<BufferedImage> future = exec.submit(() -> {
+				if (selectedRes != null)
+					cam.setViewSize(selectedRes);
+				cam.open();
+				return cam.getImage();
+			});
+			try {
+				img = future.get(10, TimeUnit.SECONDS);
+				if (img == null)
+					error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
+				else if (preRotation != 0)
+					img = applyRotation(img, preRotation);
+			} catch (TimeoutException ex) {
+				future.cancel(true);
+				error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
+				log.warn("Camera capture timed out for {}", cam.getName());
+			} catch (Exception ex) {
+				error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
+				log.warn("Camera capture failed", ex);
+			} finally {
+				exec.shutdownNow();
+				// cam.close() blocks while Sarxos' internal capture thread winds down
+				// (~20 s with OBS Virtual Camera). Run it on a daemon thread so the
+				// UI error message appears immediately after the 10 s timeout.
+				Thread closer = new Thread(() -> {
+					try {
+						cam.close();
+					} catch (Exception ignore) {
+					}
+				}, "camera-close");
+				closer.setDaemon(true);
+				closer.start();
+			}
+			final BufferedImage finalImg = img;
+			final String finalError = error;
+			Platform.runLater(() -> {
+				if (finalImg != null && finalError == null) {
+					cropPane.setImage(finalImg);
+					statusLabel.setText("");
+				} else {
+					statusLabel.setText(finalError != null ? finalError
+							: BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
+				}
+				captureBtn.setDisable(false);
+				captureSplitBtn.setDisable(false);
+			});
+		}, "camera-capture-ctrl").start();
+	}
+
+	private void startPreview() {
+		Webcam cam = sourceCombo.getValue();
+		if (cam == null)
+			return;
+		previewRunning = true;
+		sourceCombo.setDisable(true);
+		camResCombo.setDisable(true);
+		camRotationCombo.setDisable(true);
+		statusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.previewing"));
+		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStop"));
+		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
+		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
+		Thread t = new Thread(() -> {
+			try {
+				if (selectedRes != null)
+					cam.setViewSize(selectedRes);
+				cam.open();
+				while (previewRunning) {
+					BufferedImage frame = cam.getImage();
+					if (frame != null) {
+						final BufferedImage rotated = preRotation != 0 ? applyRotation(frame, preRotation) : frame;
+						Platform.runLater(() -> cropPane.setImage(rotated));
+					}
+					try {
+						Thread.sleep(33); // ~30 fps cap
+					} catch (InterruptedException ie) {
+						Thread.currentThread().interrupt();
+						break;
+					}
+				}
+			} catch (Exception ex) {
+				log.warn("Camera preview failed for {}", cam.getName(), ex);
+				final String msg = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
+				Platform.runLater(() -> statusLabel.setText(msg));
+			} finally {
+				previewRunning = false;
+				Thread closer = new Thread(() -> {
+					try {
+						cam.close();
+					} catch (Exception ignore) {
+					}
+				}, "camera-close");
+				closer.setDaemon(true);
+				closer.start();
+				Platform.runLater(this::resetPreviewControls);
+			}
+		}, "camera-preview");
+		t.setDaemon(true);
+		t.start();
+	}
+
+	private void stopPreview() {
+		previewRunning = false;
+		statusLabel.setText("");
+		resetPreviewControls();
+	}
+
+	private void resetPreviewControls() {
+		sourceCombo.setDisable(false);
+		camResCombo.setDisable(false);
+		camRotationCombo.setDisable(false);
+		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
 	}
 
 	// =========================================================================

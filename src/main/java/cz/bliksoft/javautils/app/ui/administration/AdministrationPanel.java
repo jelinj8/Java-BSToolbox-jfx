@@ -78,6 +78,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		tree.setCellFactory(tv -> new AdministrationTreeCell());
 
 		getItems().addAll(tree, contentArea);
+		SplitPane.setResizableWithParent(tree, false);
 		setDividerPositions(0.25);
 
 		buildTree();
