@@ -33,10 +33,21 @@ public class QrCodeRenderer {
 	 * a warning if unrecognized). {@code moduleSize} defaults to 2 pixels per
 	 * module; if {@code targetSize} is given, the per-module pixel size is instead
 	 * derived from the matrix's module count to best fit that overall size, and
-	 * {@code moduleSize} is ignored.
+	 * {@code moduleSize} is ignored. Quiet-zone defaults to 2 modules.
 	 */
 	public static WritableImage render(String data, String errorCorrectionLevel, Integer moduleSize, Integer targetSize)
 			throws WriterException {
 		return SwingFXUtils.toFXImage(QRGenerator.render(data, errorCorrectionLevel, moduleSize, targetSize), null);
+	}
+
+	/**
+	 * Encodes {@code data} as a QR code and rasterizes it for iconspec use.
+	 * {@code border} sets the quiet-zone thickness in modules; {@code null} or
+	 * {@code ≤ 0} defaults to 2.
+	 */
+	public static WritableImage render(String data, String errorCorrectionLevel, Integer moduleSize, Integer targetSize,
+			Integer border) throws WriterException {
+		return SwingFXUtils.toFXImage(QRGenerator.render(data, errorCorrectionLevel, moduleSize, targetSize, border),
+				null);
 	}
 }

@@ -30,6 +30,7 @@ public class QRLabel extends Region {
 
 	private final StringProperty text = new SimpleStringProperty();
 	private final IntegerProperty modulusMultiplier = new SimpleIntegerProperty(4);
+	private final IntegerProperty quietZone = new SimpleIntegerProperty(2);
 	private final ObjectProperty<ErrorCorrectionLevel> errorCorrectionLevel = new SimpleObjectProperty<>(
 			ErrorCorrectionLevel.M);
 
@@ -43,6 +44,7 @@ public class QRLabel extends Region {
 
 		text.addListener((obs, o, n) -> render());
 		modulusMultiplier.addListener((obs, o, n) -> render());
+		quietZone.addListener((obs, o, n) -> render());
 		errorCorrectionLevel.addListener((obs, o, n) -> render());
 	}
 
@@ -70,6 +72,18 @@ public class QRLabel extends Region {
 		modulusMultiplier.set(value);
 	}
 
+	public IntegerProperty quietZoneProperty() {
+		return quietZone;
+	}
+
+	public int getQuietZone() {
+		return quietZone.get();
+	}
+
+	public void setQuietZone(int value) {
+		quietZone.set(value);
+	}
+
 	public ObjectProperty<ErrorCorrectionLevel> errorCorrectionLevelProperty() {
 		return errorCorrectionLevel;
 	}
@@ -95,7 +109,7 @@ public class QRLabel extends Region {
 		try {
 			Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
 			hints.put(EncodeHintType.ERROR_CORRECTION, getErrorCorrectionLevel());
-			hints.put(EncodeHintType.MARGIN, 0);
+			hints.put(EncodeHintType.MARGIN, getQuietZone());
 
 			BitMatrix matrix = new QRCodeWriter().encode(t, BarcodeFormat.QR_CODE, 0, 0, hints);
 			int mult = getModulusMultiplier();
