@@ -289,6 +289,18 @@
 					<attribute name="iconspec">svg/camera.svg|${button-size}|||${stroke-button}
 					</attribute>
 				</file>
+				<file name="crop">
+					<attribute name="iconspec">svg/crop.svg|${button-size}|||${stroke-button}
+					</attribute>
+				</file>
+				<file name="rotate-left">
+					<attribute name="iconspec">svg/rotate-2.svg|${button-size}|||${stroke-button}
+					</attribute>
+				</file>
+				<file name="rotate-right">
+					<attribute name="iconspec">svg/rotate-clockwise-2.svg|${button-size}|||${stroke-button}
+					</attribute>
+				</file>
 			</file>
 		</file>
 		<file name="availableActions">

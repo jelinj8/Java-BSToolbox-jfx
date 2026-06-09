@@ -207,8 +207,7 @@ public class ListEditor<V> extends VBox {
 		}, table.getSelectionModel().selectedIndexProperty(), entries));
 
 		table.setOnMouseClicked(e -> {
-			if (e.getClickCount() == 2 && itemAction != null
-					&& table.getSelectionModel().getSelectedItem() != null
+			if (e.getClickCount() == 2 && itemAction != null && table.getSelectionModel().getSelectedItem() != null
 					&& (itemAction.enabledProperty() == null || itemAction.enabledProperty().get()))
 				itemAction.execute();
 		});
@@ -426,9 +425,9 @@ public class ListEditor<V> extends VBox {
 			itemActionBtn.setTooltip(tt);
 		}
 		var notSelected = table.getSelectionModel().selectedItemProperty().isNull();
-		itemActionBtn.disableProperty().bind(action.enabledProperty() != null
-				? notSelected.or(Bindings.not(action.enabledProperty()))
-				: notSelected);
+		itemActionBtn.disableProperty()
+				.bind(action.enabledProperty() != null ? notSelected.or(Bindings.not(action.enabledProperty()))
+						: notSelected);
 		itemActionBtn.setVisible(true);
 		itemActionBtn.setManaged(true);
 	}
@@ -440,13 +439,11 @@ public class ListEditor<V> extends VBox {
 	 * to content rather than fill available space.
 	 */
 	public DoubleBinding prefHeightForContent() {
-		return Bindings.createDoubleBinding(
-				() -> {
-					double cellH = table.getFixedCellSize() > 0 ? table.getFixedCellSize() : DEFAULT_CELL_HEIGHT;
-					double tableH = entries.size() * cellH + 2; // +2 for border
-					return toolbar.prefHeight(-1) + getSpacing() + tableH;
-				},
-				entries);
+		return Bindings.createDoubleBinding(() -> {
+			double cellH = table.getFixedCellSize() > 0 ? table.getFixedCellSize() : DEFAULT_CELL_HEIGHT;
+			double tableH = entries.size() * cellH + 2; // +2 for border
+			return toolbar.prefHeight(-1) + getSpacing() + tableH;
+		}, entries);
 	}
 
 	private void firePreview() {

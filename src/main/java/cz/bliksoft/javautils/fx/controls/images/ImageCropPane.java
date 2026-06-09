@@ -15,7 +15,12 @@ import javafx.scene.input.MouseEvent;
 import java.awt.image.BufferedImage;
 import javafx.embed.swing.SwingFXUtils;
 
+import cz.bliksoft.javautils.images.ImageUtils;
+import cz.bliksoft.javautils.images.PixelOps;
+
 public class ImageCropPane extends StackPane {
+
+	private static final float AUTOCROP_THRESHOLD = 0.15f;
 
 	private final ImageView imageView = new ImageView();
 	private final Pane overlay = new Pane();
@@ -36,12 +41,28 @@ public class ImageCropPane extends StackPane {
 	private boolean selectionNormalizedValid = false;
 	private double rx, ry, rw, rh; // relative to displayed image bounds (0..1)
 
+	private enum DragMode {
+		DRAW, MOVE, RESIZE_N, RESIZE_S, RESIZE_E, RESIZE_W, RESIZE_NW, RESIZE_NE, RESIZE_SW, RESIZE_SE
+	}
+
+	private DragMode currentDragMode = DragMode.DRAW;
+	private double dragStartMouseX, dragStartMouseY;
+	private double dragStartSelX, dragStartSelY, dragStartSelW, dragStartSelH;
+
+	private static final double HANDLE_SIZE = 8.0;
+	private static final double MIN_SEL = 4.0;
+
 	/**
 	 * Optional limit for returned cropped image: 0 (default) = no limit. If &gt; 0,
 	 * the returned image will be downscaled so that
 	 * {@code max(width, height) <= limit}.
 	 */
 	private final IntegerProperty maxOutputPixels = new SimpleIntegerProperty(this, "maxOutputPixels", 0);
+
+	private final IntegerProperty maxResultWidth = new SimpleIntegerProperty(this, "maxResultWidth", 0);
+	private final IntegerProperty maxResultHeight = new SimpleIntegerProperty(this, "maxResultHeight", 0);
+
+	private final ReadOnlyIntegerWrapper rotation = new ReadOnlyIntegerWrapper(this, "rotation", 0);
 
 	public ImageCropPane() {
 		setMinSize(0, 0);
@@ -82,8 +103,8 @@ public class ImageCropPane extends StackPane {
 		overlay.addEventHandler(MouseEvent.MOUSE_PRESSED, this::onPress);
 		overlay.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::onDrag);
 		overlay.addEventHandler(MouseEvent.MOUSE_RELEASED, this::onRelease);
-
-		overlay.setCursor(Cursor.CROSSHAIR);
+		overlay.addEventHandler(MouseEvent.MOUSE_MOVED, e -> updateCursor(e.getX(), e.getY()));
+		overlay.addEventHandler(MouseEvent.MOUSE_EXITED, e -> overlay.setCursor(Cursor.CROSSHAIR));
 		clearSelection();
 	}
 
@@ -117,6 +138,182 @@ public class ImageCropPane extends StackPane {
 		maxOutputPixels.set(Math.max(0, maxPixels));
 	}
 
+	public IntegerProperty maxResultWidthProperty() {
+		return maxResultWidth;
+	}
+
+	public int getMaxResultWidth() {
+		return maxResultWidth.get();
+	}
+
+	public void setMaxResultWidth(int w) {
+		maxResultWidth.set(Math.max(0, w));
+	}
+
+	public IntegerProperty maxResultHeightProperty() {
+		return maxResultHeight;
+	}
+
+	public int getMaxResultHeight() {
+		return maxResultHeight.get();
+	}
+
+	public void setMaxResultHeight(int h) {
+		maxResultHeight.set(Math.max(0, h));
+	}
+
+	public ReadOnlyIntegerProperty rotationProperty() {
+		return rotation.getReadOnlyProperty();
+	}
+
+	public int getRotation() {
+		return rotation.get();
+	}
+
+	public void rotateRight() {
+		Image img = getImage();
+		if (img == null)
+			return;
+		setImage(ImageUtils.rotate(SwingFXUtils.fromFXImage(img, null), 90));
+		rotation.set((rotation.get() + 90) % 360);
+	}
+
+	public void rotateLeft() {
+		Image img = getImage();
+		if (img == null)
+			return;
+		setImage(ImageUtils.rotate(SwingFXUtils.fromFXImage(img, null), 270));
+		rotation.set((rotation.get() + 270) % 360);
+	}
+
+	public void autocrop() {
+		Image img = getImage();
+		if (img == null)
+			return;
+		PixelReader pr = img.getPixelReader();
+		if (pr == null)
+			return;
+
+		int w = (int) img.getWidth();
+		int h = (int) img.getHeight();
+		if (w <= 0 || h <= 0)
+			return;
+
+		// Sample background via corner-majority detection
+		int[] corners = { pr.getArgb(0, 0), pr.getArgb(w - 1, 0), pr.getArgb(0, h - 1), pr.getArgb(w - 1, h - 1) };
+		int bgRgb = PixelOps.cornerMajorityRgb(corners, 2, 2);
+
+		int minX = w, minY = h, maxX = 0, maxY = 0;
+
+		// Scan rows top→bottom
+		outer: for (int y = 0; y < h; y += 2) {
+			for (int x = 0; x < w; x += 2) {
+				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					minY = y;
+					break outer;
+				}
+			}
+		}
+		// Scan rows bottom→top
+		outer: for (int y = h - 1; y >= 0; y -= 2) {
+			for (int x = 0; x < w; x += 2) {
+				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					maxY = y;
+					break outer;
+				}
+			}
+		}
+		// Scan columns left→right
+		outer: for (int x = 0; x < w; x += 2) {
+			for (int y = 0; y < h; y += 2) {
+				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					minX = x;
+					break outer;
+				}
+			}
+		}
+		// Scan columns right→left
+		outer: for (int x = w - 1; x >= 0; x -= 2) {
+			for (int y = 0; y < h; y += 2) {
+				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					maxX = x;
+					break outer;
+				}
+			}
+		}
+
+		if (minX >= maxX || minY >= maxY)
+			return;
+
+		rx = (double) minX / w;
+		ry = (double) minY / h;
+		rw = (double) (maxX - minX) / w;
+		rh = (double) (maxY - minY) / h;
+
+		selectionNormalizedValid = true;
+		selection.setVisible(true);
+		applySelectionFromNormalized();
+		updateCropRectInImagePixels();
+		updateShades();
+	}
+
+	/**
+	 * Finds the content bounding box in a BufferedImage using the same
+	 * corner-sampling background-detection algorithm as {@link #autocrop()}.
+	 * Returns {@code null} if no content is found.
+	 */
+	static java.awt.Rectangle autocropRect(BufferedImage img) {
+		if (img == null)
+			return null;
+
+		int w = img.getWidth();
+		int h = img.getHeight();
+		if (w <= 0 || h <= 0)
+			return null;
+
+		int[] corners = { img.getRGB(0, 0), img.getRGB(w - 1, 0), img.getRGB(0, h - 1), img.getRGB(w - 1, h - 1) };
+		int bgRgb = PixelOps.cornerMajorityRgb(corners, 2, 2);
+
+		int minX = w, minY = h, maxX = 0, maxY = 0;
+
+		outer: for (int y = 0; y < h; y += 2) {
+			for (int x = 0; x < w; x += 2) {
+				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					minY = y;
+					break outer;
+				}
+			}
+		}
+		outer: for (int y = h - 1; y >= 0; y -= 2) {
+			for (int x = 0; x < w; x += 2) {
+				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					maxY = y;
+					break outer;
+				}
+			}
+		}
+		outer: for (int x = 0; x < w; x += 2) {
+			for (int y = 0; y < h; y += 2) {
+				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					minX = x;
+					break outer;
+				}
+			}
+		}
+		outer: for (int x = w - 1; x >= 0; x -= 2) {
+			for (int y = 0; y < h; y += 2) {
+				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
+					maxX = x;
+					break outer;
+				}
+			}
+		}
+
+		if (minX >= maxX || minY >= maxY)
+			return null;
+		return new java.awt.Rectangle(minX, minY, maxX - minX, maxY - minY);
+	}
+
 	public void clearSelection() {
 		selection.setVisible(false);
 		selection.setX(0);
@@ -129,7 +326,8 @@ public class ImageCropPane extends StackPane {
 	}
 
 	/**
-	 * Returns cropped image (possibly downscaled if maxOutputPixels > 0).
+	 * Returns cropped image (possibly downscaled if maxResultWidth/maxResultHeight
+	 * or maxOutputPixels > 0).
 	 */
 	public WritableImage getCroppedImage() {
 		Image img = imageView.getImage();
@@ -170,12 +368,23 @@ public class ImageCropPane extends StackPane {
 		if (imageView.getImage() == null)
 			return;
 
-		startX = clamp(e.getX(), 0, overlay.getWidth());
-		startY = clamp(e.getY(), 0, overlay.getHeight());
-		endX = startX;
-		endY = startY;
+		currentDragMode = hitTest(e.getX(), e.getY());
+		overlay.setCursor(cursorForDragMode(currentDragMode));
+		dragStartMouseX = e.getX();
+		dragStartMouseY = e.getY();
 
-		updateSelection();
+		if (currentDragMode == DragMode.DRAW) {
+			startX = clamp(e.getX(), 0, overlay.getWidth());
+			startY = clamp(e.getY(), 0, overlay.getHeight());
+			endX = startX;
+			endY = startY;
+			updateSelection();
+		} else {
+			dragStartSelX = selection.getX();
+			dragStartSelY = selection.getY();
+			dragStartSelW = selection.getWidth();
+			dragStartSelH = selection.getHeight();
+		}
 		e.consume();
 	}
 
@@ -183,11 +392,19 @@ public class ImageCropPane extends StackPane {
 		if (imageView.getImage() == null)
 			return;
 
-		endX = clamp(e.getX(), 0, overlay.getWidth());
-		endY = clamp(e.getY(), 0, overlay.getHeight());
+		double dx = e.getX() - dragStartMouseX;
+		double dy = e.getY() - dragStartMouseY;
 
-		updateSelection();
-		captureSelectionNormalized();
+		if (currentDragMode == DragMode.DRAW) {
+			endX = clamp(e.getX(), 0, overlay.getWidth());
+			endY = clamp(e.getY(), 0, overlay.getHeight());
+			updateSelection();
+			captureSelectionNormalized();
+		} else if (currentDragMode == DragMode.MOVE) {
+			applyMove(dx, dy);
+		} else {
+			applyResize(dx, dy);
+		}
 		e.consume();
 	}
 
@@ -195,13 +412,161 @@ public class ImageCropPane extends StackPane {
 		if (imageView.getImage() == null)
 			return;
 
-		endX = clamp(e.getX(), 0, overlay.getWidth());
-		endY = clamp(e.getY(), 0, overlay.getHeight());
+		double dx = e.getX() - dragStartMouseX;
+		double dy = e.getY() - dragStartMouseY;
 
-		updateSelection();
-		updateCropRectInImagePixels();
-		captureSelectionNormalized();
+		if (currentDragMode == DragMode.DRAW) {
+			endX = clamp(e.getX(), 0, overlay.getWidth());
+			endY = clamp(e.getY(), 0, overlay.getHeight());
+			updateSelection();
+			updateCropRectInImagePixels();
+			captureSelectionNormalized();
+		} else if (currentDragMode == DragMode.MOVE) {
+			applyMove(dx, dy);
+		} else {
+			applyResize(dx, dy);
+		}
+
+		currentDragMode = DragMode.DRAW;
+		updateCursor(e.getX(), e.getY());
 		e.consume();
+	}
+
+	private DragMode hitTest(double x, double y) {
+		if (!selection.isVisible())
+			return DragMode.DRAW;
+
+		double sx = selection.getX(), sy = selection.getY();
+		double sw = selection.getWidth(), sh = selection.getHeight();
+
+		// Outside the handle margin → start a new draw
+		if (x < sx - HANDLE_SIZE || x > sx + sw + HANDLE_SIZE || y < sy - HANDLE_SIZE || y > sy + sh + HANDLE_SIZE)
+			return DragMode.DRAW;
+
+		boolean onLeft = Math.abs(x - sx) <= HANDLE_SIZE;
+		boolean onRight = Math.abs(x - (sx + sw)) <= HANDLE_SIZE;
+		boolean onTop = Math.abs(y - sy) <= HANDLE_SIZE;
+		boolean onBottom = Math.abs(y - (sy + sh)) <= HANDLE_SIZE;
+
+		if (onLeft && onTop)
+			return DragMode.RESIZE_NW;
+		if (onRight && onTop)
+			return DragMode.RESIZE_NE;
+		if (onLeft && onBottom)
+			return DragMode.RESIZE_SW;
+		if (onRight && onBottom)
+			return DragMode.RESIZE_SE;
+		if (onTop)
+			return DragMode.RESIZE_N;
+		if (onBottom)
+			return DragMode.RESIZE_S;
+		if (onLeft)
+			return DragMode.RESIZE_W;
+		if (onRight)
+			return DragMode.RESIZE_E;
+
+		return DragMode.MOVE;
+	}
+
+	private Cursor cursorForDragMode(DragMode mode) {
+		return switch (mode) {
+		case DRAW -> Cursor.CROSSHAIR;
+		case MOVE -> Cursor.MOVE;
+		case RESIZE_N -> Cursor.N_RESIZE;
+		case RESIZE_S -> Cursor.S_RESIZE;
+		case RESIZE_E -> Cursor.E_RESIZE;
+		case RESIZE_W -> Cursor.W_RESIZE;
+		case RESIZE_NW -> Cursor.NW_RESIZE;
+		case RESIZE_NE -> Cursor.NE_RESIZE;
+		case RESIZE_SW -> Cursor.SW_RESIZE;
+		case RESIZE_SE -> Cursor.SE_RESIZE;
+		};
+	}
+
+	private void updateCursor(double x, double y) {
+		overlay.setCursor(cursorForDragMode(hitTest(x, y)));
+	}
+
+	private void applyMove(double dx, double dy) {
+		var ib = imageView.getBoundsInParent();
+		double bx = ib.getMinX(), by = ib.getMinY(), bw = ib.getWidth(), bh = ib.getHeight();
+
+		double newX = clamp(dragStartSelX + dx, bx, bx + Math.max(0, bw - dragStartSelW));
+		double newY = clamp(dragStartSelY + dy, by, by + Math.max(0, bh - dragStartSelH));
+
+		selection.setX(newX);
+		selection.setY(newY);
+		selection.setVisible(true);
+		captureSelectionNormalized();
+		updateCropRectInImagePixels();
+		updateShades();
+	}
+
+	private void applyResize(double dx, double dy) {
+		var ib = imageView.getBoundsInParent();
+		double bx = ib.getMinX(), by = ib.getMinY(), bw = ib.getWidth(), bh = ib.getHeight();
+
+		double x = dragStartSelX, y = dragStartSelY, w = dragStartSelW, h = dragStartSelH;
+
+		switch (currentDragMode) {
+		case RESIZE_N -> {
+			double newY = clamp(dragStartSelY + dy, by, dragStartSelY + dragStartSelH - MIN_SEL);
+			h = (dragStartSelY + dragStartSelH) - newY;
+			y = newY;
+		}
+		case RESIZE_S -> {
+			double newBottom = clamp(dragStartSelY + dragStartSelH + dy, dragStartSelY + MIN_SEL, by + bh);
+			h = newBottom - dragStartSelY;
+		}
+		case RESIZE_W -> {
+			double newX = clamp(dragStartSelX + dx, bx, dragStartSelX + dragStartSelW - MIN_SEL);
+			w = (dragStartSelX + dragStartSelW) - newX;
+			x = newX;
+		}
+		case RESIZE_E -> {
+			double newRight = clamp(dragStartSelX + dragStartSelW + dx, dragStartSelX + MIN_SEL, bx + bw);
+			w = newRight - dragStartSelX;
+		}
+		case RESIZE_NW -> {
+			double newX = clamp(dragStartSelX + dx, bx, dragStartSelX + dragStartSelW - MIN_SEL);
+			double newY = clamp(dragStartSelY + dy, by, dragStartSelY + dragStartSelH - MIN_SEL);
+			w = (dragStartSelX + dragStartSelW) - newX;
+			h = (dragStartSelY + dragStartSelH) - newY;
+			x = newX;
+			y = newY;
+		}
+		case RESIZE_NE -> {
+			double newY = clamp(dragStartSelY + dy, by, dragStartSelY + dragStartSelH - MIN_SEL);
+			double newRight = clamp(dragStartSelX + dragStartSelW + dx, dragStartSelX + MIN_SEL, bx + bw);
+			h = (dragStartSelY + dragStartSelH) - newY;
+			w = newRight - dragStartSelX;
+			y = newY;
+		}
+		case RESIZE_SW -> {
+			double newX = clamp(dragStartSelX + dx, bx, dragStartSelX + dragStartSelW - MIN_SEL);
+			double newBottom = clamp(dragStartSelY + dragStartSelH + dy, dragStartSelY + MIN_SEL, by + bh);
+			w = (dragStartSelX + dragStartSelW) - newX;
+			h = newBottom - dragStartSelY;
+			x = newX;
+		}
+		case RESIZE_SE -> {
+			double newRight = clamp(dragStartSelX + dragStartSelW + dx, dragStartSelX + MIN_SEL, bx + bw);
+			double newBottom = clamp(dragStartSelY + dragStartSelH + dy, dragStartSelY + MIN_SEL, by + bh);
+			w = newRight - dragStartSelX;
+			h = newBottom - dragStartSelY;
+		}
+		default -> {
+		}
+		}
+
+		selection.setX(x);
+		selection.setY(y);
+		selection.setWidth(w);
+		selection.setHeight(h);
+		selection.setVisible(true);
+		captureSelectionNormalized();
+		updateCropRectInImagePixels();
+		updateShades();
 	}
 
 	private void updateSelection() {
@@ -387,24 +752,39 @@ public class ImageCropPane extends StackPane {
 	}
 
 	private WritableImage downscaleIfNeeded(Image cropped) {
+		double w = cropped.getWidth();
+		double h = cropped.getHeight();
+
+		int mw = getMaxResultWidth();
+		int mh = getMaxResultHeight();
+
+		if (mw > 0 || mh > 0) {
+			double scaleW = (mw > 0) ? mw / w : Double.MAX_VALUE;
+			double scaleH = (mh > 0) ? mh / h : Double.MAX_VALUE;
+			double scale = Math.min(scaleW, scaleH);
+			if (scale < 1.0) {
+				return scaleImage(cropped, Math.max(1, (int) Math.round(w * scale)),
+						Math.max(1, (int) Math.round(h * scale)));
+			}
+			return (cropped instanceof WritableImage wi) ? wi : snapshotToWritable(cropped);
+		}
+
 		int limit = getMaxOutputPixels();
 		if (limit <= 0) {
 			return (cropped instanceof WritableImage wi) ? wi : snapshotToWritable(cropped);
 		}
 
-		double w = cropped.getWidth();
-		double h = cropped.getHeight();
 		double maxSide = Math.max(w, h);
-
 		if (maxSide <= limit) {
 			return (cropped instanceof WritableImage wi) ? wi : snapshotToWritable(cropped);
 		}
 
 		double scale = limit / maxSide;
-		int targetW = Math.max(1, (int) Math.round(w * scale));
-		int targetH = Math.max(1, (int) Math.round(h * scale));
+		return scaleImage(cropped, Math.max(1, (int) Math.round(w * scale)), Math.max(1, (int) Math.round(h * scale)));
+	}
 
-		ImageView iv = new ImageView(cropped);
+	private static WritableImage scaleImage(Image source, int targetW, int targetH) {
+		ImageView iv = new ImageView(source);
 		iv.setPreserveRatio(true);
 		iv.setSmooth(true);
 		iv.setFitWidth(targetW);
@@ -425,6 +805,13 @@ public class ImageCropPane extends StackPane {
 		WritableImage out = new WritableImage((int) img.getWidth(), (int) img.getHeight());
 		iv.snapshot(sp, out);
 		return out;
+	}
+
+	private static float colorDiff(int argb1, int argb2) {
+		float dr = ((argb1 >> 16 & 0xFF) - (argb2 >> 16 & 0xFF)) / 255f;
+		float dg = ((argb1 >> 8 & 0xFF) - (argb2 >> 8 & 0xFF)) / 255f;
+		float db = ((argb1 & 0xFF) - (argb2 & 0xFF)) / 255f;
+		return (float) Math.sqrt((dr * dr + dg * dg + db * db) / 3.0);
 	}
 
 	private static double clamp(double v, double min, double max) {

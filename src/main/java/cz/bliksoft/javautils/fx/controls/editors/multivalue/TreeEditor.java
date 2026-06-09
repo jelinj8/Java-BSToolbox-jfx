@@ -133,7 +133,8 @@ public class TreeEditor<N> extends VBox {
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn, itemActionBtn, previewBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn, itemActionBtn,
+				previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, treeView);
@@ -261,9 +262,9 @@ public class TreeEditor<N> extends VBox {
 			itemActionBtn.setTooltip(tt);
 		}
 		var notSelected = selectedItem.getReadOnlyProperty().isNull();
-		itemActionBtn.disableProperty().bind(action.enabledProperty() != null
-				? notSelected.or(Bindings.not(action.enabledProperty()))
-				: notSelected);
+		itemActionBtn.disableProperty()
+				.bind(action.enabledProperty() != null ? notSelected.or(Bindings.not(action.enabledProperty()))
+						: notSelected);
 		itemActionBtn.setVisible(true);
 		itemActionBtn.setManaged(true);
 	}

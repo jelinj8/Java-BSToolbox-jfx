@@ -56,9 +56,8 @@ public final class ShortcutFileLoader {
 			return kc;
 		if (kcc.getControl() != KeyCombination.ModifierValue.UP)
 			return kc;
-		return new KeyCodeCombination(kcc.getCode(),
-				kcc.getShift(), KeyCombination.ModifierValue.ANY,
-				kcc.getAlt(), kcc.getMeta(), kcc.getShortcut());
+		return new KeyCodeCombination(kcc.getCode(), kcc.getShift(), KeyCombination.ModifierValue.ANY, kcc.getAlt(),
+				kcc.getMeta(), kcc.getShortcut());
 	}
 
 	/**
