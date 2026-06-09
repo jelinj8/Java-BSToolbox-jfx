@@ -8,10 +8,14 @@ import java.util.Map;
 import java.util.function.Function;
 
 import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.ui.actions.IconBinder;
+import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleStringProperty;
@@ -63,6 +67,7 @@ public class TreeEditor<N> extends VBox {
 	private final Map<N, TreeItem<N>> itemMap = new IdentityHashMap<>();
 
 	private Runnable previewAction = null;
+	private IUIAction itemAction = null;
 
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
@@ -78,6 +83,7 @@ public class TreeEditor<N> extends VBox {
 	private final Button dialogBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
 	private final Button previewBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
+	private final Button itemActionBtn = new Button();
 
 	public TreeEditor(Function<N, ITreeNodeType<N>> typeResolver) {
 		this.typeResolver = typeResolver;
@@ -121,12 +127,22 @@ public class TreeEditor<N> extends VBox {
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 
+		itemActionBtn.setFocusTraversable(false);
+		itemActionBtn.setVisible(false);
+		itemActionBtn.setManaged(false);
+
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn, previewBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addSimpleBtn, addSplitBtn, delBtn, dialogBtn, itemActionBtn, previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, treeView);
+
+		treeView.setOnMouseClicked(e -> {
+			if (e.getClickCount() == 2 && itemAction != null && selectedItem.get() != null
+					&& (itemAction.enabledProperty() == null || itemAction.enabledProperty().get()))
+				itemAction.execute();
+		});
 
 		treeView.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
 			if (sel == null || sel.getValue() == null) {
@@ -219,6 +235,37 @@ public class TreeEditor<N> extends VBox {
 		previewAction = action;
 		previewBtn.setVisible(action != null);
 		previewBtn.setManaged(action != null);
+	}
+
+	/**
+	 * Binds an {@link IUIAction} as the primary item action, triggered by
+	 * double-clicking a node or pressing the item-action button that appears in the
+	 * toolbar when this is set. Pass {@code null} to remove.
+	 */
+	public void setItemAction(IUIAction action) {
+		itemActionBtn.disableProperty().unbind();
+		itemAction = action;
+		if (action == null) {
+			itemActionBtn.setVisible(false);
+			itemActionBtn.setManaged(false);
+			return;
+		}
+		itemActionBtn.setOnAction(e -> action.execute());
+		if (action instanceof IIconSpecPropertyProvider p)
+			IconBinder.bindToolbarIcon(itemActionBtn, p, IconspecUtils.getIconspecSize("edit-button-size", 16));
+		else if (action.textProperty() != null)
+			itemActionBtn.textProperty().bind(action.textProperty());
+		if (action.textProperty() != null) {
+			Tooltip tt = new Tooltip();
+			tt.textProperty().bind(action.textProperty());
+			itemActionBtn.setTooltip(tt);
+		}
+		var notSelected = selectedItem.getReadOnlyProperty().isNull();
+		itemActionBtn.disableProperty().bind(action.enabledProperty() != null
+				? notSelected.or(Bindings.not(action.enabledProperty()))
+				: notSelected);
+		itemActionBtn.setVisible(true);
+		itemActionBtn.setManaged(true);
 	}
 
 	private void firePreview() {

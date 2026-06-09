@@ -8,13 +8,17 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.ui.actions.IconBinder;
+import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.ITitleProvider;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -78,8 +82,11 @@ public class ListEditor<V> extends VBox {
 	private Supplier<V> addItemSupplier = null;
 	private Runnable editAction = null;
 	private Runnable previewAction = null;
+	private IUIAction itemAction = null;
 	private boolean orderingEnabled = false;
 	private boolean suppressEntrySync = false;
+
+	private static final double DEFAULT_CELL_HEIGHT = 26.0;
 
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
@@ -97,6 +104,7 @@ public class ListEditor<V> extends VBox {
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-up"))); //$NON-NLS-1$
 	private final Button moveDownBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-down"))); //$NON-NLS-1$
+	private final Button itemActionBtn = new Button();
 
 	private HBox toolbar;
 	private Node leadingToolbarNode;
@@ -175,6 +183,10 @@ public class ListEditor<V> extends VBox {
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
+		itemActionBtn.setFocusTraversable(false);
+		itemActionBtn.setVisible(false);
+		itemActionBtn.setManaged(false);
+
 		moveUpBtn.setFocusTraversable(false);
 		moveUpBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.moveUp")));
 		moveUpBtn.setVisible(false);
@@ -193,6 +205,13 @@ public class ListEditor<V> extends VBox {
 			int idx = table.getSelectionModel().getSelectedIndex();
 			return idx < 0 || idx >= entries.size() - 1;
 		}, table.getSelectionModel().selectedIndexProperty(), entries));
+
+		table.setOnMouseClicked(e -> {
+			if (e.getClickCount() == 2 && itemAction != null
+					&& table.getSelectionModel().getSelectedItem() != null
+					&& (itemAction.enabledProperty() == null || itemAction.enabledProperty().get()))
+				itemAction.execute();
+		});
 
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.ENTER) {
@@ -252,7 +271,7 @@ public class ListEditor<V> extends VBox {
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
 		toolbar = new HBox(4, titleLabel, spacer, addBtn, addSplitBtn, delBtn, moveUpBtn, moveDownBtn, editBtn,
-				previewBtn);
+				itemActionBtn, previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, table);
@@ -381,6 +400,53 @@ public class ListEditor<V> extends VBox {
 		previewAction = action;
 		previewBtn.setVisible(action != null);
 		previewBtn.setManaged(action != null);
+	}
+
+	/**
+	 * Binds an {@link IUIAction} as the primary item action, triggered by
+	 * double-clicking a row or pressing the item-action button that appears in the
+	 * toolbar when this is set. Pass {@code null} to remove.
+	 */
+	public void setItemAction(IUIAction action) {
+		itemActionBtn.disableProperty().unbind();
+		itemAction = action;
+		if (action == null) {
+			itemActionBtn.setVisible(false);
+			itemActionBtn.setManaged(false);
+			return;
+		}
+		itemActionBtn.setOnAction(e -> action.execute());
+		if (action instanceof IIconSpecPropertyProvider p)
+			IconBinder.bindToolbarIcon(itemActionBtn, p, IconspecUtils.getIconspecSize("edit-button-size", 16));
+		else if (action.textProperty() != null)
+			itemActionBtn.textProperty().bind(action.textProperty());
+		if (action.textProperty() != null) {
+			Tooltip tt = new Tooltip();
+			tt.textProperty().bind(action.textProperty());
+			itemActionBtn.setTooltip(tt);
+		}
+		var notSelected = table.getSelectionModel().selectedItemProperty().isNull();
+		itemActionBtn.disableProperty().bind(action.enabledProperty() != null
+				? notSelected.or(Bindings.not(action.enabledProperty()))
+				: notSelected);
+		itemActionBtn.setVisible(true);
+		itemActionBtn.setManaged(true);
+	}
+
+	/**
+	 * Returns a binding that evaluates to the preferred height needed to show all
+	 * current items without scrolling (toolbar height + row heights + spacing).
+	 * Bind this to {@code prefHeightProperty()} when the editor should size itself
+	 * to content rather than fill available space.
+	 */
+	public DoubleBinding prefHeightForContent() {
+		return Bindings.createDoubleBinding(
+				() -> {
+					double cellH = table.getFixedCellSize() > 0 ? table.getFixedCellSize() : DEFAULT_CELL_HEIGHT;
+					double tableH = entries.size() * cellH + 2; // +2 for border
+					return toolbar.prefHeight(-1) + getSpacing() + tableH;
+				},
+				entries);
 	}
 
 	private void firePreview() {
