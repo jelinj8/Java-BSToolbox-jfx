@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
+import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 
 public final class ShortcutFileLoader {
@@ -34,10 +35,30 @@ public final class ShortcutFileLoader {
 		if (keys == null || keys.isBlank())
 			return null;
 		try {
-			return KeyCombination.keyCombination(keys.trim());
+			// return KeyCombination.keyCombination(keys.trim());
+			return withAltGrSupport(KeyCombination.keyCombination(keys.trim()));
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+	/**
+	 * On Windows, the right Alt key (AltGr) is reported as Ctrl+Alt at the OS
+	 * level. A combination with {@code ALT_DOWN} and {@code CTRL_UP} would
+	 * therefore never match an AltGr keystroke. Replacing {@code CTRL_UP} with
+	 * {@code CTRL_ANY} makes the shortcut fire for both left Alt and right AltGr
+	 * without introducing a separate Ctrl+Alt binding.
+	 */
+	private static KeyCombination withAltGrSupport(KeyCombination kc) {
+		if (!(kc instanceof KeyCodeCombination kcc))
+			return kc;
+		if (kcc.getAlt() != KeyCombination.ModifierValue.DOWN)
+			return kc;
+		if (kcc.getControl() != KeyCombination.ModifierValue.UP)
+			return kc;
+		return new KeyCodeCombination(kcc.getCode(),
+				kcc.getShift(), KeyCombination.ModifierValue.ANY,
+				kcc.getAlt(), kcc.getMeta(), kcc.getShortcut());
 	}
 
 	/**
