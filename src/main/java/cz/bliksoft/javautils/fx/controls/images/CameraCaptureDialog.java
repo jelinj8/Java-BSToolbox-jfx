@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
@@ -29,6 +30,17 @@ import javafx.stage.Window;
  * This class lives in BSToolbox-jfx, which declares the Sarxos webcam-capture
  * dependency as {@code provided}. The consuming application must provide it at
  * runtime.
+ *
+ * <p>
+ * BSToolbox-jfx also declares {@code org.bytedeco:opencv-platform} as
+ * {@code provided}; if the consuming application provides it, captures use
+ * higher resolutions than Sarxos's 640x480 cap. See {@link CameraCapturePane}
+ * for details.
+ *
+ * <p>
+ * The camera source list also includes any {@link NetworkCameraSource}s
+ * registered for the application (HTTP snapshot endpoints, e.g. a phone running
+ * an IP camera app), with no extra dependency required.
  */
 public class CameraCaptureDialog extends Dialog<WritableImage> {
 
@@ -42,6 +54,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 		setTitle(BSAppMessages.getString("CameraCaptureDialog.title"));
 		getDialogPane().getButtonTypes().setAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);
 		getDialogPane().setContent(capturePane);
+		getDialogPane().setPrefSize(860, 520);
 
 		Button okButton = (Button) getDialogPane().lookupButton(BSButtonTypes.OK);
 		okButton.setDisable(true);
@@ -107,23 +120,22 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	}
 
 	/**
-	 * Captures an image from the last-used camera without showing any UI:
-	 * autocropping is applied and the result is downscaled if {@code maxWidth} or
-	 * {@code maxHeight} is &gt; 0.
+	 * Captures an image without showing any UI, using the camera, autocrop, and
+	 * max-dimension settings configured in the Cameras administration panel
+	 * ({@code CameraAdministrationProvider}). If no handsfree camera is configured,
+	 * falls back to the last camera used in the interactive dialog. Resolution and
+	 * pre-rotation are loaded the same way as in the dialog (per-camera saved
+	 * preferences).
 	 *
 	 * <p>
 	 * This method returns immediately; {@code onSuccess} (or {@code onError}) is
 	 * called on the JavaFX Application Thread when done.
 	 *
-	 * @param maxWidth  maximum result width in pixels, 0 = no limit
-	 * @param maxHeight maximum result height in pixels, 0 = no limit
 	 * @param onSuccess called with the resulting image on the FX thread
 	 * @param onError   called with an error message on the FX thread
 	 */
-	public static void captureHandsfree(int maxWidth, int maxHeight, Consumer<WritableImage> onSuccess,
-			Consumer<String> onError) {
-		Thread t = new Thread(() -> CameraCapturePane.doHandsfree(maxWidth, maxHeight, onSuccess, onError),
-				"camera-handsfree");
+	public static void captureHandsfree(Consumer<WritableImage> onSuccess, Consumer<String> onError) {
+		Thread t = new Thread(() -> CameraCapturePane.doHandsfree(onSuccess, onError), "camera-handsfree");
 		t.setDaemon(true);
 		t.start();
 	}

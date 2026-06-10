@@ -20,9 +20,14 @@ import com.github.sarxos.webcam.Webcam;
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
+import cz.bliksoft.javautils.fx.controls.images.cam.ICameraPreviewSession;
+import cz.bliksoft.javautils.fx.controls.images.cam.ICameraSource;
+import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
+import cz.bliksoft.javautils.fx.controls.images.cam.WebcamCameraSource;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.images.PixelOps;
+import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -36,8 +41,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
@@ -57,17 +62,35 @@ import javafx.scene.layout.VBox;
  * This class lives in BSToolbox-jfx, which declares the Sarxos webcam-capture
  * dependency as {@code provided}. The consuming application must provide it at
  * runtime.
+ *
+ * <p>
+ * BSToolbox-jfx also declares {@code org.bytedeco:opencv-platform} as
+ * {@code provided}. When the consuming application provides it at runtime, this
+ * pane uses OpenCV to discover and capture at resolutions beyond the 640x480
+ * cap of Sarxos's default driver. If absent, capture silently falls back to
+ * Sarxos's default behavior (max 640x480).
+ *
+ * <p>
+ * In addition to physical webcams, the source combo also lists any
+ * {@link NetworkCameraSource}s registered via the {@code /singletons}
+ * XmlFilesystem registry — HTTP snapshot endpoints (e.g. a phone running an IP
+ * camera app) captured via a plain HTTP GET, requiring no extra dependency. See
+ * {@link NetworkCameraSource} for the registration format.
  */
 public class CameraCapturePane extends VBox {
 
 	private static final Logger log = LogManager.getLogger(CameraCapturePane.class);
 
 	static final String PREF_CAMERA = "camera.lastSource";
-	static final String PREF_RESOLUTION_PREFIX = "camera.resolution."; // + cameraName, stored as "WxH"
-	static final String PREF_ROTATION_PREFIX = "camera.rotation."; // + cameraName, stored as 0/90/180/270
+	static final String PREF_RESOLUTION_PREFIX = "camera.resolution."; // + sourceId, stored as "WxH"
+	static final String PREF_ROTATION_PREFIX = "camera.rotation."; // + sourceId, stored as 0/90/180/270
+
+	static final String PREF_HANDSFREE_SOURCE = "camera.handsfree.source";
+	static final String PREF_HANDSFREE_AUTOCROP = "camera.handsfree.autocrop"; // "true"/"false", default true
+	static final String PREF_HANDSFREE_MAX_DIMENSION = "camera.handsfree.maxDimension"; // int, 0/absent = no limit
 
 	// ---- Controls ----
-	private final ComboBox<Webcam> sourceCombo = new ComboBox<>();
+	private final ComboBox<ICameraSource> sourceCombo = new ComboBox<>();
 	private final Button captureBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
 	private final ComboBox<Dimension> camResCombo = new ComboBox<>();
@@ -91,6 +114,9 @@ public class CameraCapturePane extends VBox {
 	private final SplitMenuButton captureSplitBtn = new SplitMenuButton();
 	private final MenuItem previewToggleItem = new MenuItem();
 	private volatile boolean previewRunning = false;
+
+	// ---- External hooks ----
+	private Consumer<List<ICameraSource>> sourcesLoadedListener;
 
 	// =========================================================================
 	// Constructor
@@ -146,6 +172,16 @@ public class CameraCapturePane extends VBox {
 	}
 
 	/**
+	 * Registers a listener invoked on the FX thread once the camera source list
+	 * (webcams + registered {@link ICameraSource} singletons) has been enumerated,
+	 * letting callers populate additional, independent source selectors with the
+	 * same list.
+	 */
+	public void setSourcesLoadedListener(Consumer<List<ICameraSource>> listener) {
+		this.sourcesLoadedListener = listener;
+	}
+
+	/**
 	 * Configures the output-size preset list shown in the toolbar. When the user
 	 * picks a preset the cropped result will be downscaled to fit within those
 	 * dimensions. Must be called before the pane is shown.
@@ -183,22 +219,22 @@ public class CameraCapturePane extends VBox {
 
 	private void buildContent() {
 		sourceCombo.setPromptText(BSAppMessages.getString("CameraCaptureDialog.sourceCombo.prompt"));
-		sourceCombo.setCellFactory(lv -> new WebcamListCell());
-		sourceCombo.setButtonCell(new WebcamListCell());
+		sourceCombo.setCellFactory(lv -> new CameraSourceListCell());
+		sourceCombo.setButtonCell(new CameraSourceListCell());
 		sourceCombo.setMinWidth(200);
 
 		sourceCombo.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
 			if (previewRunning)
 				stopPreview();
 			if (n != null) {
-				BSApp.setLocalProperty(PREF_CAMERA, n.getName());
+				BSApp.setLocalProperty(PREF_CAMERA, n.getId());
 				try {
 					BSApp.saveLocalProperties();
 				} catch (ViewableException ex) {
 					log.warn("Failed to save camera preference", ex);
 				}
 				loadCameraResolutionsAsync(n);
-				restoreCameraRotation(n.getName());
+				restoreCameraRotation(n.getId());
 			}
 		});
 
@@ -208,9 +244,9 @@ public class CameraCapturePane extends VBox {
 		camResCombo.setVisible(false);
 		camResCombo.setManaged(false);
 		camResCombo.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
-			Webcam cam = sourceCombo.getValue();
-			if (n != null && cam != null) {
-				BSApp.setLocalProperty(PREF_RESOLUTION_PREFIX + cam.getName(), n.width + "x" + n.height);
+			ICameraSource src = sourceCombo.getValue();
+			if (n != null && src != null) {
+				BSApp.setLocalProperty(PREF_RESOLUTION_PREFIX + src.getId(), n.width + "x" + n.height);
 				try {
 					BSApp.saveLocalProperties();
 				} catch (ViewableException ex) {
@@ -224,9 +260,9 @@ public class CameraCapturePane extends VBox {
 		camRotationCombo.setCellFactory(lv -> new RotationListCell());
 		camRotationCombo.setButtonCell(new RotationListCell());
 		camRotationCombo.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
-			Webcam cam = sourceCombo.getValue();
-			if (n != null && cam != null) {
-				BSApp.setLocalProperty(PREF_ROTATION_PREFIX + cam.getName(), String.valueOf(n));
+			ICameraSource src = sourceCombo.getValue();
+			if (n != null && src != null) {
+				BSApp.setLocalProperty(PREF_ROTATION_PREFIX + src.getId(), String.valueOf(n));
 				try {
 					BSApp.saveLocalProperties();
 				} catch (ViewableException ex) {
@@ -295,14 +331,16 @@ public class CameraCapturePane extends VBox {
 				new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")), camRotationCombo,
 				spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn, rotateRightBtn);
 
-		cropPane.setMinHeight(400);
+		cropPane.setMinHeight(100);
 		VBox.setVgrow(cropPane, Priority.ALWAYS);
 
 		statusLabel.getStyleClass().add("error-label");
 
 		getChildren().addAll(toolbar, statusLabel, cropPane);
-		setPrefWidth(860);
-		setPrefHeight(520);
+
+		// Ensure the toolbar can always show the source/rotation combos plus its
+		// overflow button, even if the rest of the window shrinks further.
+		setMinWidth(360);
 
 		updateOutResCombo();
 
@@ -344,33 +382,42 @@ public class CameraCapturePane extends VBox {
 		};
 		task.setOnSucceeded(e -> {
 			java.util.List<Webcam> cams = task.getValue();
-			sourceCombo.setItems(FXCollections.observableArrayList(cams));
-			if (cams.isEmpty())
+
+			List<ICameraSource> sources = new ArrayList<>();
+			for (int i = 0; i < cams.size(); i++)
+				sources.add(new WebcamCameraSource(cams.get(i), i));
+			sources.addAll(Singletons.<ICameraSource>getSingletons(ICameraSource.class));
+
+			sourceCombo.setItems(FXCollections.observableArrayList(sources));
+			if (sourcesLoadedListener != null)
+				sourcesLoadedListener.accept(sources);
+			if (sources.isEmpty())
 				return;
-			// Restore last-used camera by name
-			String lastName = (String) BSApp.getProperty(PREF_CAMERA);
-			Webcam preferred = cams.stream().filter(c -> c.getName().equals(lastName)).findFirst().orElse(cams.get(0));
+			// Restore last-used source by id
+			String lastId = (String) BSApp.getProperty(PREF_CAMERA);
+			ICameraSource preferred = sources.stream().filter(c -> c.getId().equals(lastId)).findFirst()
+					.orElse(sources.get(0));
 			sourceCombo.getSelectionModel().select(preferred);
 		});
 		task.setOnFailed(e -> log.warn("Failed to enumerate cameras", task.getException()));
 		new Thread(task, "camera-enumerate").start();
 	}
 
-	private void loadCameraResolutionsAsync(Webcam cam) {
+	private void loadCameraResolutionsAsync(ICameraSource src) {
 		new Thread(() -> {
 			Dimension[] sizes;
 			try {
-				sizes = cam.getViewSizes();
+				sizes = src.getAvailableResolutions();
 			} catch (Exception ex) {
-				log.debug("Could not retrieve view sizes for camera {}", cam.getName(), ex);
+				log.debug("Could not retrieve resolutions for camera {}", src.getDisplayName(), ex);
 				sizes = new Dimension[0];
 			}
 			final Dimension[] finalSizes = sizes;
-			Platform.runLater(() -> applyCameraResolutions(finalSizes, cam.getName()));
+			Platform.runLater(() -> applyCameraResolutions(finalSizes, src.getId()));
 		}, "camera-res-load").start();
 	}
 
-	private void applyCameraResolutions(Dimension[] sizes, String cameraName) {
+	private void applyCameraResolutions(Dimension[] sizes, String sourceId) {
 		if (sizes.length <= 1) {
 			camResCombo.setVisible(false);
 			camResCombo.setManaged(false);
@@ -378,22 +425,14 @@ public class CameraCapturePane extends VBox {
 		}
 		camResCombo.setItems(FXCollections.observableArrayList(sizes));
 
-		// Restore per-camera saved resolution
-		String saved = (String) BSApp.getProperty(PREF_RESOLUTION_PREFIX + cameraName);
+		// Restore per-source saved resolution
+		Dimension saved = parseDimension((String) BSApp.getProperty(PREF_RESOLUTION_PREFIX + sourceId));
 		Dimension toSelect = null;
 		if (saved != null) {
-			String[] parts = saved.split("x", 2);
-			if (parts.length == 2) {
-				try {
-					int sw = Integer.parseInt(parts[0]);
-					int sh = Integer.parseInt(parts[1]);
-					for (Dimension d : sizes) {
-						if (d.width == sw && d.height == sh) {
-							toSelect = d;
-							break;
-						}
-					}
-				} catch (NumberFormatException ignore) {
+			for (Dimension d : sizes) {
+				if (d.width == saved.width && d.height == saved.height) {
+					toSelect = d;
+					break;
 				}
 			}
 		}
@@ -402,8 +441,8 @@ public class CameraCapturePane extends VBox {
 		camResCombo.setManaged(true);
 	}
 
-	private void restoreCameraRotation(String cameraName) {
-		String saved = (String) BSApp.getProperty(PREF_ROTATION_PREFIX + cameraName);
+	private void restoreCameraRotation(String sourceId) {
+		String saved = (String) BSApp.getProperty(PREF_ROTATION_PREFIX + sourceId);
 		Integer rot = null;
 		if (saved != null) {
 			try {
@@ -435,8 +474,8 @@ public class CameraCapturePane extends VBox {
 	}
 
 	private void doCapture() {
-		Webcam cam = sourceCombo.getValue();
-		if (cam == null)
+		ICameraSource src = sourceCombo.getValue();
+		if (src == null)
 			return;
 		captureBtn.setDisable(true);
 		captureSplitBtn.setDisable(true);
@@ -451,12 +490,10 @@ public class CameraCapturePane extends VBox {
 				t.setDaemon(true);
 				return t;
 			});
-			Future<BufferedImage> future = exec.submit(() -> {
-				if (selectedRes != null)
-					cam.setViewSize(selectedRes);
-				cam.open();
-				return cam.getImage();
-			});
+			// cam.close() (run by ICameraSource implementations on capture) may block
+			// for a while (~20 s with OBS Virtual Camera), so capture runs with a 10 s
+			// timeout and the close happens on its own daemon thread.
+			Future<BufferedImage> future = exec.submit(() -> src.grabFrame(selectedRes));
 			try {
 				img = future.get(10, TimeUnit.SECONDS);
 				if (img == null)
@@ -466,23 +503,12 @@ public class CameraCapturePane extends VBox {
 			} catch (TimeoutException ex) {
 				future.cancel(true);
 				error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
-				log.warn("Camera capture timed out for {}", cam.getName());
+				log.warn("Camera capture timed out for {}", src.getDisplayName());
 			} catch (Exception ex) {
 				error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
 				log.warn("Camera capture failed", ex);
 			} finally {
 				exec.shutdownNow();
-				// cam.close() blocks while Sarxos' internal capture thread winds down
-				// (~20 s with OBS Virtual Camera). Run it on a daemon thread so the
-				// UI error message appears immediately after the 10 s timeout.
-				Thread closer = new Thread(() -> {
-					try {
-						cam.close();
-					} catch (Exception ignore) {
-					}
-				}, "camera-close");
-				closer.setDaemon(true);
-				closer.start();
 			}
 			final BufferedImage finalImg = img;
 			final String finalError = error;
@@ -501,8 +527,8 @@ public class CameraCapturePane extends VBox {
 	}
 
 	private void startPreview() {
-		Webcam cam = sourceCombo.getValue();
-		if (cam == null)
+		ICameraSource src = sourceCombo.getValue();
+		if (src == null)
 			return;
 		previewRunning = true;
 		sourceCombo.setDisable(true);
@@ -512,38 +538,28 @@ public class CameraCapturePane extends VBox {
 		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStop"));
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
+
 		Thread t = new Thread(() -> {
+			ICameraPreviewSession session = null;
 			try {
-				if (selectedRes != null)
-					cam.setViewSize(selectedRes);
-				cam.open();
+				session = src.openPreview(selectedRes);
+				if (session == null)
+					throw new IllegalStateException("Could not open camera " + src.getDisplayName());
 				while (previewRunning) {
-					BufferedImage frame = cam.getImage();
+					BufferedImage frame = session.readFrame();
 					if (frame != null) {
 						final BufferedImage rotated = preRotation != 0 ? applyRotation(frame, preRotation) : frame;
 						Platform.runLater(() -> cropPane.setImage(rotated));
 					}
-					try {
-						Thread.sleep(33); // ~30 fps cap
-					} catch (InterruptedException ie) {
-						Thread.currentThread().interrupt();
-						break;
-					}
 				}
 			} catch (Exception ex) {
-				log.warn("Camera preview failed for {}", cam.getName(), ex);
+				log.warn("Camera preview failed for {}", src.getDisplayName(), ex);
 				final String msg = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
 				Platform.runLater(() -> statusLabel.setText(msg));
 			} finally {
 				previewRunning = false;
-				Thread closer = new Thread(() -> {
-					try {
-						cam.close();
-					} catch (Exception ignore) {
-					}
-				}, "camera-close");
-				closer.setDaemon(true);
-				closer.start();
+				if (session != null)
+					session.close();
 				Platform.runLater(this::resetPreviewControls);
 			}
 		}, "camera-preview");
@@ -568,77 +584,31 @@ public class CameraCapturePane extends VBox {
 	// Handsfree (package-private, called from CameraCaptureDialog)
 	// =========================================================================
 
-	static void doHandsfree(int maxWidth, int maxHeight, Consumer<WritableImage> onSuccess, Consumer<String> onError) {
-		String cameraName = (String) BSApp.getProperty(PREF_CAMERA);
-		if (cameraName == null) {
+	private record CaptureOutcome(BufferedImage image, String error) {
+	}
+
+	static void doHandsfree(Consumer<WritableImage> onSuccess, Consumer<String> onError) {
+		String sourceId = (String) BSApp.getProperty(PREF_HANDSFREE_SOURCE);
+		if (sourceId == null)
+			sourceId = (String) BSApp.getProperty(PREF_CAMERA);
+		if (sourceId == null) {
 			Platform.runLater(() -> onError.accept(BSAppMessages.getString("CameraCaptureDialog.error.noSavedCamera")));
 			return;
 		}
 
-		List<Webcam> cams;
-		try {
-			cams = Webcam.getWebcams();
-		} catch (Exception ex) {
-			log.warn("Handsfree: failed to enumerate cameras", ex);
-			Platform.runLater(
-					() -> onError.accept(BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage())));
-			return;
-		}
-
-		Webcam cam = cams.stream().filter(c -> c.getName().equals(cameraName)).findFirst().orElse(null);
-		if (cam == null) {
+		ICameraSource src = findSource(sourceId);
+		if (src == null) {
+			final String missingId = sourceId;
 			Platform.runLater(() -> onError
-					.accept(BSAppMessages.getString("CameraCaptureDialog.error.cameraNotFound", cameraName)));
+					.accept(BSAppMessages.getString("CameraCaptureDialog.error.cameraNotFound", missingId)));
 			return;
 		}
 
-		// Apply saved capture resolution if available
-		String savedRes = (String) BSApp.getProperty(PREF_RESOLUTION_PREFIX + cameraName);
-		if (savedRes != null) {
-			String[] parts = savedRes.split("x", 2);
-			if (parts.length == 2) {
-				try {
-					cam.setViewSize(new Dimension(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])));
-				} catch (Exception ignore) {
-				}
-			}
-		}
+		Dimension savedRes = parseDimension((String) BSApp.getProperty(PREF_RESOLUTION_PREFIX + sourceId));
+		CaptureOutcome outcome = captureFrame(src, savedRes);
 
-		BufferedImage captured = null;
-		String error = null;
-
-		ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
-			Thread t = new Thread(r, "camera-capture");
-			t.setDaemon(true);
-			return t;
-		});
-		Future<BufferedImage> future = exec.submit(() -> {
-			cam.open();
-			return cam.getImage();
-		});
-		try {
-			captured = future.get(10, TimeUnit.SECONDS);
-			if (captured == null)
-				error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
-		} catch (TimeoutException ex) {
-			future.cancel(true);
-			error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
-			log.warn("Handsfree capture timed out for {}", cameraName);
-		} catch (Exception ex) {
-			error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
-			log.warn("Handsfree capture failed", ex);
-		} finally {
-			exec.shutdownNow();
-			Thread closer = new Thread(() -> {
-				try {
-					cam.close();
-				} catch (Exception ignore) {
-				}
-			}, "camera-close");
-			closer.setDaemon(true);
-			closer.start();
-		}
-
+		BufferedImage captured = outcome.image();
+		String error = outcome.error();
 		if (captured == null || error != null) {
 			final String msg = error != null ? error : BSAppMessages.getString("CameraCaptureDialog.error.unknown");
 			Platform.runLater(() -> onError.accept(msg));
@@ -646,7 +616,7 @@ public class CameraCapturePane extends VBox {
 		}
 
 		// Pre-rotation
-		String savedRotStr = (String) BSApp.getProperty(PREF_ROTATION_PREFIX + cameraName);
+		String savedRotStr = (String) BSApp.getProperty(PREF_ROTATION_PREFIX + sourceId);
 		if (savedRotStr != null) {
 			try {
 				int rot = Integer.parseInt(savedRotStr);
@@ -657,21 +627,93 @@ public class CameraCapturePane extends VBox {
 		}
 
 		// Autocrop
-		java.awt.Rectangle cropRect = ImageCropPane.autocropRect(captured);
-		BufferedImage result;
-		if (cropRect != null && cropRect.width > 0 && cropRect.height > 0) {
-			result = captured.getSubimage(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
-		} else {
-			result = captured;
+		BufferedImage result = captured;
+		boolean autocrop = !"false".equals(BSApp.getProperty(PREF_HANDSFREE_AUTOCROP, "true"));
+		if (autocrop) {
+			java.awt.Rectangle cropRect = ImageCropPane.autocropRect(captured);
+			if (cropRect != null && cropRect.width > 0 && cropRect.height > 0) {
+				result = captured.getSubimage(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
+			}
 		}
 
-		// Downscale if limits specified
-		if (maxWidth > 0 || maxHeight > 0) {
-			result = scaleAWT(result, maxWidth, maxHeight);
+		// Downscale if a max dimension is configured
+		int maxDimension = 0;
+		try {
+			maxDimension = Integer.parseInt((String) BSApp.getProperty(PREF_HANDSFREE_MAX_DIMENSION, "0"));
+		} catch (NumberFormatException ignore) {
+		}
+		if (maxDimension > 0) {
+			result = scaleAWT(result, maxDimension, maxDimension);
 		}
 
 		final BufferedImage finalResult = result;
 		Platform.runLater(() -> onSuccess.accept(SwingFXUtils.toFXImage(finalResult, null)));
+	}
+
+	/**
+	 * Resolves a saved {@link #PREF_CAMERA} id back to an {@link ICameraSource}:
+	 * first among the registered {@code ICameraSource} singletons, then among
+	 * currently-connected webcams. Returns {@code null} if neither matches.
+	 */
+	private static ICameraSource findSource(String sourceId) {
+		for (ICameraSource src : Singletons.<ICameraSource>getSingletons(ICameraSource.class)) {
+			if (src.getId().equals(sourceId))
+				return src;
+		}
+		try {
+			List<Webcam> cams = Webcam.getWebcams();
+			for (int i = 0; i < cams.size(); i++) {
+				if (cams.get(i).getName().equals(sourceId))
+					return new WebcamCameraSource(cams.get(i), i);
+			}
+		} catch (Exception ex) {
+			log.warn("Handsfree: failed to enumerate cameras", ex);
+		}
+		return null;
+	}
+
+	private static CaptureOutcome captureFrame(ICameraSource src, Dimension resolution) {
+		BufferedImage captured = null;
+		String error = null;
+
+		ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
+			Thread t = new Thread(r, "camera-capture");
+			t.setDaemon(true);
+			return t;
+		});
+		Future<BufferedImage> future = exec.submit(() -> src.grabFrame(resolution));
+		try {
+			captured = future.get(10, TimeUnit.SECONDS);
+			if (captured == null)
+				error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
+		} catch (TimeoutException ex) {
+			future.cancel(true);
+			error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
+			log.warn("Handsfree capture timed out for {}", src.getDisplayName());
+		} catch (Exception ex) {
+			error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
+			log.warn("Handsfree capture failed", ex);
+		} finally {
+			exec.shutdownNow();
+		}
+		return new CaptureOutcome(captured, error);
+	}
+
+	/**
+	 * Parses a {@code "WxH"} string as saved by {@link #PREF_RESOLUTION_PREFIX}, or
+	 * {@code null}.
+	 */
+	private static Dimension parseDimension(String s) {
+		if (s == null)
+			return null;
+		String[] parts = s.split("x", 2);
+		if (parts.length != 2)
+			return null;
+		try {
+			return new Dimension(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+		} catch (NumberFormatException ex) {
+			return null;
+		}
 	}
 
 	static BufferedImage applyRotation(BufferedImage img, int degrees) {
@@ -709,11 +751,11 @@ public class CameraCapturePane extends VBox {
 		}
 	}
 
-	private static class WebcamListCell extends ListCell<Webcam> {
+	static class CameraSourceListCell extends ListCell<ICameraSource> {
 		@Override
-		protected void updateItem(Webcam item, boolean empty) {
+		protected void updateItem(ICameraSource item, boolean empty) {
 			super.updateItem(item, empty);
-			setText(empty || item == null ? null : item.getName());
+			setText(empty || item == null ? null : item.getDisplayName());
 		}
 	}
 

@@ -20,7 +20,10 @@ import cz.bliksoft.javautils.images.PixelOps;
 
 public class ImageCropPane extends StackPane {
 
-	private static final float AUTOCROP_THRESHOLD = 0.15f;
+	private static final double AUTOCROP_SIGMA = 4.0;
+	private static final double AUTOCROP_MIN_CONTENT_FRACTION = 0.015;
+	private static final double AUTOCROP_BORDER_FRACTION = 0.06;
+	private static final double AUTOCROP_MARGIN_FRACTION = 0.02;
 
 	private final ImageView imageView = new ImageView();
 	private final Pane overlay = new Pane();
@@ -199,56 +202,18 @@ public class ImageCropPane extends StackPane {
 		if (w <= 0 || h <= 0)
 			return;
 
-		// Sample background via corner-majority detection
-		int[] corners = { pr.getArgb(0, 0), pr.getArgb(w - 1, 0), pr.getArgb(0, h - 1), pr.getArgb(w - 1, h - 1) };
-		int bgRgb = PixelOps.cornerMajorityRgb(corners, 2, 2);
+		int[] argb = new int[w * h];
+		pr.getPixels(0, 0, w, h, javafx.scene.image.PixelFormat.getIntArgbInstance(), argb, 0, w);
 
-		int minX = w, minY = h, maxX = 0, maxY = 0;
-
-		// Scan rows top→bottom
-		outer: for (int y = 0; y < h; y += 2) {
-			for (int x = 0; x < w; x += 2) {
-				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					minY = y;
-					break outer;
-				}
-			}
-		}
-		// Scan rows bottom→top
-		outer: for (int y = h - 1; y >= 0; y -= 2) {
-			for (int x = 0; x < w; x += 2) {
-				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					maxY = y;
-					break outer;
-				}
-			}
-		}
-		// Scan columns left→right
-		outer: for (int x = 0; x < w; x += 2) {
-			for (int y = 0; y < h; y += 2) {
-				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					minX = x;
-					break outer;
-				}
-			}
-		}
-		// Scan columns right→left
-		outer: for (int x = w - 1; x >= 0; x -= 2) {
-			for (int y = 0; y < h; y += 2) {
-				if (colorDiff(pr.getArgb(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					maxX = x;
-					break outer;
-				}
-			}
-		}
-
-		if (minX >= maxX || minY >= maxY)
+		int[] box = PixelOps.foregroundBoundingBox(argb, w, h, AUTOCROP_SIGMA, AUTOCROP_MIN_CONTENT_FRACTION,
+				AUTOCROP_BORDER_FRACTION, AUTOCROP_MARGIN_FRACTION);
+		if (box == null)
 			return;
 
-		rx = (double) minX / w;
-		ry = (double) minY / h;
-		rw = (double) (maxX - minX) / w;
-		rh = (double) (maxY - minY) / h;
+		rx = (double) box[0] / w;
+		ry = (double) box[1] / h;
+		rw = (double) (box[2] - box[0]) / w;
+		rh = (double) (box[3] - box[1]) / h;
 
 		selectionNormalizedValid = true;
 		selection.setVisible(true);
@@ -259,8 +224,8 @@ public class ImageCropPane extends StackPane {
 
 	/**
 	 * Finds the content bounding box in a BufferedImage using the same
-	 * corner-sampling background-detection algorithm as {@link #autocrop()}.
-	 * Returns {@code null} if no content is found.
+	 * background-detection algorithm as {@link #autocrop()}. Returns {@code null}
+	 * if no content is found.
 	 */
 	static java.awt.Rectangle autocropRect(BufferedImage img) {
 		if (img == null)
@@ -271,47 +236,13 @@ public class ImageCropPane extends StackPane {
 		if (w <= 0 || h <= 0)
 			return null;
 
-		int[] corners = { img.getRGB(0, 0), img.getRGB(w - 1, 0), img.getRGB(0, h - 1), img.getRGB(w - 1, h - 1) };
-		int bgRgb = PixelOps.cornerMajorityRgb(corners, 2, 2);
+		int[] argb = img.getRGB(0, 0, w, h, null, 0, w);
 
-		int minX = w, minY = h, maxX = 0, maxY = 0;
-
-		outer: for (int y = 0; y < h; y += 2) {
-			for (int x = 0; x < w; x += 2) {
-				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					minY = y;
-					break outer;
-				}
-			}
-		}
-		outer: for (int y = h - 1; y >= 0; y -= 2) {
-			for (int x = 0; x < w; x += 2) {
-				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					maxY = y;
-					break outer;
-				}
-			}
-		}
-		outer: for (int x = 0; x < w; x += 2) {
-			for (int y = 0; y < h; y += 2) {
-				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					minX = x;
-					break outer;
-				}
-			}
-		}
-		outer: for (int x = w - 1; x >= 0; x -= 2) {
-			for (int y = 0; y < h; y += 2) {
-				if (colorDiff(img.getRGB(x, y), bgRgb) > AUTOCROP_THRESHOLD) {
-					maxX = x;
-					break outer;
-				}
-			}
-		}
-
-		if (minX >= maxX || minY >= maxY)
+		int[] box = PixelOps.foregroundBoundingBox(argb, w, h, AUTOCROP_SIGMA, AUTOCROP_MIN_CONTENT_FRACTION,
+				AUTOCROP_BORDER_FRACTION, AUTOCROP_MARGIN_FRACTION);
+		if (box == null)
 			return null;
-		return new java.awt.Rectangle(minX, minY, maxX - minX, maxY - minY);
+		return new java.awt.Rectangle(box[0], box[1], box[2] - box[0], box[3] - box[1]);
 	}
 
 	public void clearSelection() {
@@ -805,13 +736,6 @@ public class ImageCropPane extends StackPane {
 		WritableImage out = new WritableImage((int) img.getWidth(), (int) img.getHeight());
 		iv.snapshot(sp, out);
 		return out;
-	}
-
-	private static float colorDiff(int argb1, int argb2) {
-		float dr = ((argb1 >> 16 & 0xFF) - (argb2 >> 16 & 0xFF)) / 255f;
-		float dg = ((argb1 >> 8 & 0xFF) - (argb2 >> 8 & 0xFF)) / 255f;
-		float db = ((argb1 & 0xFF) - (argb2 & 0xFF)) / 255f;
-		return (float) Math.sqrt((dr * dr + dg * dg + db * db) / 3.0);
 	}
 
 	private static double clamp(double v, double min, double max) {

@@ -4,6 +4,15 @@
     -fx-font-weight: bold;
 }
 
+/* ---- administration-panel-header: title bar above an admin provider's content ---- */
+.administration-panel-header {
+    -fx-padding: 8 12 8 12;
+}
+
+.administration-panel-title {
+    -fx-padding: 0 0 0 4;
+}
+
 /* ---- ui-section-title: subsection header within a panel ---- */
 .ui-section-title {
     -fx-font-size: 1.05em;

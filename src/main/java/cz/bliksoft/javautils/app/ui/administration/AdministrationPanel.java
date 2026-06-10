@@ -6,6 +6,7 @@ import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.permissions.Permission;
 import cz.bliksoft.javautils.app.permissions.Permissions;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
+import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IClose;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.ISaveAll;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
@@ -76,6 +77,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 
 		tree.setShowRoot(false);
 		tree.setCellFactory(tv -> new AdministrationTreeCell());
+		tree.setMinWidth(120);
 
 		getItems().addAll(tree, contentArea);
 		SplitPane.setResizableWithParent(tree, false);
@@ -153,6 +155,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		contentArea.setTop(null);
 		contentArea.setCenter(null);
 		providerContextHolder.replaceContext(null);
+		StageAutoSizer.autoSize();
 	}
 
 	private void activateProvider(IAdministrationProvider provider) {
@@ -169,6 +172,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		}
 
 		attachSaveListener(provider);
+		StageAutoSizer.autoSize();
 	}
 
 	private Node buildHeader(IAdministrationProvider provider) {
