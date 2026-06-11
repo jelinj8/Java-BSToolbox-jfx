@@ -29,7 +29,7 @@ import cz.bliksoft.javautils.fx.controls.images.cam.WebcamCameraSource;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.images.PixelOps;
-import cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons;
+import cz.bliksoft.javautils.xmlfilesystem.singletons.Services;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -406,7 +406,7 @@ public class CameraCapturePane extends VBox {
 			List<ICameraSource> sources = new ArrayList<>();
 			for (int i = 0; i < cams.size(); i++)
 				sources.add(new WebcamCameraSource(cams.get(i), i));
-			sources.addAll(Singletons.<ICameraSource>getSingletons(ICameraSource.class));
+			sources.addAll(Services.<ICameraSource>getServices(ICameraSource.class));
 
 			sourceCombo.setItems(FXCollections.observableArrayList(sources));
 			if (sourcesLoadedListener != null)
@@ -716,7 +716,7 @@ public class CameraCapturePane extends VBox {
 	 * currently-connected webcams. Returns {@code null} if neither matches.
 	 */
 	private static ICameraSource findSource(String sourceId) {
-		for (ICameraSource src : Singletons.<ICameraSource>getSingletons(ICameraSource.class)) {
+		for (ICameraSource src : Services.<ICameraSource>getServices(ICameraSource.class)) {
 			if (src.getId().equals(sourceId))
 				return src;
 		}

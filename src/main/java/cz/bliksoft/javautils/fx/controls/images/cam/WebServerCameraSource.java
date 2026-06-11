@@ -29,22 +29,44 @@ import cz.bliksoft.javautils.xmlfilesystem.FileObject;
  * embedded {@link BSHttpServer}, instead of polling a device.
  *
  * <p>
- * Registered declaratively via the {@code /singletons} XmlFilesystem registry,
- * the same way as {@link FolderMonitorCameraSource}. Example registration in
- * the application's local configuration:
+ * Because the upload listener must be ready to accept the very first handsfree
+ * capture, this class is registered eagerly via the {@code /services}
+ * XmlFilesystem registry ({@code type="Class"}, instantiated at application
+ * startup - see {@code Services.loadServices()}), rather than the
+ * lazily-instantiated {@code /singletons} registry used by
+ * {@link FolderMonitorCameraSource} and {@link NetworkCameraSource}. It
+ * self-registers as an {@link ICameraSource} via {@code Services} (looked up
+ * with {@code Services.getServices(ICameraSource.class)} from
+ * {@code CameraCapturePane}).
+ *
+ * <p>
+ * It reuses a shared {@link BSHttpServer} singleton, registered separately
+ * under {@code /singletons} (looked up via
+ * {@link BSHttpServer#getSingleton()}):
  *
  * <pre>{@code
  * <file name="singletons">
- *     <file name="phone-pusher" type=
-"cz.bliksoft.javautils.fx.controls.images.cam.WebServerCameraSource">
- *         <attribute name="name" value="Phone pusher"/>
+ *     <file name="webserver" type=
+"cz.bliksoft.javautils.net.http.BSHttpServer">
  *         <attribute name="port" value="8090"/>
+ *     </file>
+ * </file>
+ * <file name="services">
+ *     <file name="phone-pusher" type="Class">
+ *         <attribute name="class" value=
+"cz.bliksoft.javautils.fx.controls.images.cam.WebServerCameraSource"/>
+ *         <attribute name="name" value="Phone pusher"/>
  *         <attribute name="path" value="/upload"/>
  *         <attribute name="comment" value=
 "Use the back camera and hold the phone steady."/>
  *     </file>
  * </file>
  * }</pre>
+ *
+ * <p>
+ * If no {@link BSHttpServer} singleton is registered, a dedicated server is
+ * started instead, using the mandatory {@code port} attribute (legacy fallback,
+ * port-per-source).
  *
  * <p>
  * A remote device POSTs a JPEG/PNG image to {@code http://<host>:<port><path>};
@@ -76,6 +98,7 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 	private final String path;
 
 	private final BSHttpServer server;
+	private final boolean ownsServer;
 
 	private final Object lock = new Object();
 	private BufferedImage latestFrame;
@@ -90,19 +113,30 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 		this.comment = fo.getLocalizedAttribute("comment", null);
 		this.path = fo.getAttribute("path", DEFAULT_PATH);
 
-		int port = Integer.parseInt(fo.getAttribute("port", null));
+		BSHttpServer shared = BSHttpServer.getSingleton();
+		if (shared != null) {
+			this.server = shared;
+			this.ownsServer = false;
+			server.addHandler(path, new UploadHandler());
+		} else {
+			int port = Integer.parseInt(fo.getAttribute("port", null));
 
-		this.server = new BSHttpServer(port);
-		server.addHandler(path, new UploadHandler());
-		try {
-			server.start();
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to start WebServerCameraSource HTTP server on port " + port, e);
+			this.server = new BSHttpServer(port);
+			this.ownsServer = true;
+			server.addHandler(path, new UploadHandler());
+			try {
+				server.start();
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to start WebServerCameraSource HTTP server on port " + port, e);
+			}
 		}
 	}
 
 	@Override
 	public void close() {
+		server.removeHandler(path);
+		if (!ownsServer)
+			return;
 		try {
 			server.stop();
 		} catch (Exception e) {
