@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -20,6 +21,7 @@ import com.github.sarxos.webcam.Webcam;
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.BSAppMessages;
 import cz.bliksoft.javautils.app.exceptions.ViewableException;
+import cz.bliksoft.javautils.fx.controls.images.cam.CameraNativeLock;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraPreviewSession;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
@@ -115,6 +117,9 @@ public class CameraCapturePane extends VBox {
 	private final MenuItem previewToggleItem = new MenuItem();
 	private volatile boolean previewRunning = false;
 
+	// ---- Raw bytes of the last capture (if pass-through is possible) ----
+	private volatile byte[] lastCaptureRawBytes;
+
 	// ---- External hooks ----
 	private Consumer<List<ICameraSource>> sourcesLoadedListener;
 
@@ -163,7 +168,17 @@ public class CameraCapturePane extends VBox {
 	 * capture).
 	 */
 	public void setExistingImage(Image img) {
+		lastCaptureRawBytes = null;
 		cropPane.setImage(img);
+	}
+
+	/**
+	 * Returns the original source bytes for the current image, if it is exactly the
+	 * last captured frame with no crop/resize/rotation applied; otherwise
+	 * {@code null} (caller should re-encode {@link #getImageAsWritable()}).
+	 */
+	public byte[] getResultRawBytes() {
+		return cropPane.hasActiveSelection() ? null : lastCaptureRawBytes;
 	}
 
 	/** Starts background enumeration of available cameras. */
@@ -377,7 +392,12 @@ public class CameraCapturePane extends VBox {
 		Task<java.util.List<Webcam>> task = new Task<>() {
 			@Override
 			protected java.util.List<Webcam> call() {
-				return Webcam.getWebcams();
+				CameraNativeLock.acquire();
+				try {
+					return Webcam.getWebcams();
+				} finally {
+					CameraNativeLock.release();
+				}
 			}
 		};
 		task.setOnSucceeded(e -> {
@@ -484,6 +504,8 @@ public class CameraCapturePane extends VBox {
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
 		new Thread(() -> {
 			BufferedImage img = null;
+			byte[] rawBytes = null;
+			boolean autocropRequested = false;
 			String error = null;
 			ExecutorService exec = Executors.newSingleThreadExecutor(r -> {
 				Thread t = new Thread(r, "camera-capture");
@@ -498,8 +520,14 @@ public class CameraCapturePane extends VBox {
 				img = future.get(10, TimeUnit.SECONDS);
 				if (img == null)
 					error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
-				else if (preRotation != 0)
-					img = applyRotation(img, preRotation);
+				else {
+					if (preRotation != 0)
+						img = applyRotation(img, preRotation);
+					else
+						rawBytes = grabFrameBytesQuietly(src, selectedRes);
+					autocropRequested = Boolean.TRUE
+							.equals(grabFrameMetadataQuietly(src, selectedRes).get(ICameraSource.METADATA_AUTOCROP));
+				}
 			} catch (TimeoutException ex) {
 				future.cancel(true);
 				error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
@@ -511,12 +539,18 @@ public class CameraCapturePane extends VBox {
 				exec.shutdownNow();
 			}
 			final BufferedImage finalImg = img;
+			final byte[] finalRawBytes = rawBytes;
+			final boolean finalAutocropRequested = autocropRequested;
 			final String finalError = error;
 			Platform.runLater(() -> {
 				if (finalImg != null && finalError == null) {
+					lastCaptureRawBytes = finalRawBytes;
 					cropPane.setImage(finalImg);
+					if (finalAutocropRequested)
+						cropPane.autocrop();
 					statusLabel.setText("");
 				} else {
+					lastCaptureRawBytes = null;
 					statusLabel.setText(finalError != null ? finalError
 							: BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
 				}
@@ -526,10 +560,38 @@ public class CameraCapturePane extends VBox {
 		}, "camera-capture-ctrl").start();
 	}
 
+	/**
+	 * Calls {@link ICameraSource#grabFrameBytes(Dimension)}, swallowing any
+	 * exception as {@code null}.
+	 */
+	private static byte[] grabFrameBytesQuietly(ICameraSource src, Dimension resolution) {
+		try {
+			return src.grabFrameBytes(resolution);
+		} catch (Exception ex) {
+			log.debug("grabFrameBytes failed for {}", src.getDisplayName(), ex);
+			return null;
+		}
+	}
+
+	/**
+	 * Calls {@link ICameraSource#grabFrameMetadata(Dimension)}, swallowing any
+	 * exception as an empty map.
+	 */
+	private static Map<String, Object> grabFrameMetadataQuietly(ICameraSource src, Dimension resolution) {
+		try {
+			Map<String, Object> meta = src.grabFrameMetadata(resolution);
+			return meta != null ? meta : Map.of();
+		} catch (Exception ex) {
+			log.debug("grabFrameMetadata failed for {}", src.getDisplayName(), ex);
+			return Map.of();
+		}
+	}
+
 	private void startPreview() {
 		ICameraSource src = sourceCombo.getValue();
 		if (src == null)
 			return;
+		lastCaptureRawBytes = null;
 		previewRunning = true;
 		sourceCombo.setDisable(true);
 		camResCombo.setDisable(true);
@@ -587,20 +649,18 @@ public class CameraCapturePane extends VBox {
 	private record CaptureOutcome(BufferedImage image, String error) {
 	}
 
-	static void doHandsfree(Consumer<WritableImage> onSuccess, Consumer<String> onError) {
+	static void doHandsfree(Consumer<WritableImage> onSuccess, Runnable onUnavailable, Consumer<String> onError) {
 		String sourceId = (String) BSApp.getProperty(PREF_HANDSFREE_SOURCE);
 		if (sourceId == null)
 			sourceId = (String) BSApp.getProperty(PREF_CAMERA);
 		if (sourceId == null) {
-			Platform.runLater(() -> onError.accept(BSAppMessages.getString("CameraCaptureDialog.error.noSavedCamera")));
+			Platform.runLater(onUnavailable);
 			return;
 		}
 
 		ICameraSource src = findSource(sourceId);
 		if (src == null) {
-			final String missingId = sourceId;
-			Platform.runLater(() -> onError
-					.accept(BSAppMessages.getString("CameraCaptureDialog.error.cameraNotFound", missingId)));
+			Platform.runLater(onUnavailable);
 			return;
 		}
 

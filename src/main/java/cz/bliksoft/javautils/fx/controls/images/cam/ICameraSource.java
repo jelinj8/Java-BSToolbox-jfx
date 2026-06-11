@@ -2,8 +2,10 @@ package cz.bliksoft.javautils.fx.controls.images.cam;
 
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+import java.util.Map;
 
 import cz.bliksoft.javautils.fx.controls.images.CameraCapturePane;
+import cz.bliksoft.javautils.fx.controls.images.ImageCropPane;
 
 /**
  * A source of capture frames selectable in {@link CameraCapturePane}'s source
@@ -53,4 +55,31 @@ public interface ICameraSource {
 	 * called from a background thread.
 	 */
 	ICameraPreviewSession openPreview(Dimension resolution) throws Exception;
+
+	/**
+	 * Returns the original encoded bytes (e.g. JPEG) of the most recently grabbed
+	 * frame, iff they represent the exact same pixels as that {@link #grabFrame}
+	 * result - i.e. no source-side transform (such as EXIF-orientation correction)
+	 * was applied when decoding. Returns {@code null} if unavailable, or if
+	 * {@link #grabFrame}'s pixels differ from the source bytes.
+	 */
+	default byte[] grabFrameBytes(Dimension resolution) throws Exception {
+		return null;
+	}
+
+	/**
+	 * Well-known {@link #grabFrameMetadata} key: a {@link Boolean} - if
+	 * {@code true}, the caller should run {@link ImageCropPane#autocrop()} on the
+	 * captured image.
+	 */
+	String METADATA_AUTOCROP = "autocrop";
+
+	/**
+	 * Returns additional metadata about the most recently grabbed frame (e.g.
+	 * whether the uploader requested auto-crop via {@link #METADATA_AUTOCROP}).
+	 * Returns an empty map if the source has no metadata to offer.
+	 */
+	default Map<String, Object> grabFrameMetadata(Dimension resolution) throws Exception {
+		return Map.of();
+	}
 }

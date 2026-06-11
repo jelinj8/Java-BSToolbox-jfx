@@ -61,11 +61,14 @@ public final class OpenCvResolutionProbe {
 	}
 
 	private static boolean check() {
+		CameraNativeLock.acquire();
 		try (VideoCapture cap = new VideoCapture()) {
 			return true;
 		} catch (Throwable t) {
 			log.info("OpenCV not available - camera resolution probing limited to Sarxos defaults (max 640x480)", t);
 			return false;
+		} finally {
+			CameraNativeLock.release();
 		}
 	}
 
@@ -85,6 +88,7 @@ public final class OpenCvResolutionProbe {
 	 * by area. Returns {@code null} if the device could not be opened.
 	 */
 	public static Dimension[] probeResolutions(int deviceIndex) {
+		CameraNativeLock.acquire();
 		try (VideoCapture cap = new VideoCapture(deviceIndex, backend())) {
 			if (!cap.isOpened()) {
 				log.debug("OpenCV could not open camera device index {}", deviceIndex);
@@ -102,6 +106,8 @@ public final class OpenCvResolutionProbe {
 			Dimension[] result = found.toArray(new Dimension[0]);
 			java.util.Arrays.sort(result, (a, b) -> (a.width * a.height) - (b.width * b.height));
 			return result;
+		} finally {
+			CameraNativeLock.release();
 		}
 	}
 }

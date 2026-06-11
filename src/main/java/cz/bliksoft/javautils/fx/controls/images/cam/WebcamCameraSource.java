@@ -60,10 +60,13 @@ public final class WebcamCameraSource implements ICameraSource {
 	@Override
 	public Dimension[] getAvailableResolutions() {
 		Dimension[] sizes;
+		CameraNativeLock.acquire();
 		try {
 			sizes = webcam.getViewSizes();
 		} catch (Exception ex) {
 			sizes = new Dimension[0];
+		} finally {
+			CameraNativeLock.release();
 		}
 		if (useOpenCv()) {
 			try {
@@ -78,27 +81,47 @@ public final class WebcamCameraSource implements ICameraSource {
 
 	@Override
 	public BufferedImage grabFrame(Dimension resolution) throws Exception {
-		if (useOpenCv())
-			return OpenCvCapture.grabFrame(openCvIndex, resolution);
+		if (useOpenCv()) {
+			CameraNativeLock.acquire();
+			try {
+				return OpenCvCapture.grabFrame(openCvIndex, resolution);
+			} finally {
+				CameraNativeLock.release();
+			}
+		}
 		if (resolution != null)
 			webcam.setViewSize(resolution);
-		webcam.open();
+		CameraNativeLock.acquire();
 		try {
+			webcam.open();
 			return webcam.getImage();
 		} finally {
-			closeAsync(webcam);
+			// Hands the lock off to the closer thread - released once webcam.close()
+			// completes.
+			closeAsync(webcam, true);
 		}
 	}
 
 	@Override
 	public ICameraPreviewSession openPreview(Dimension resolution) {
 		if (useOpenCv()) {
-			VideoCapture cap = OpenCvCapture.openForPreview(openCvIndex, resolution);
+			CameraNativeLock.acquire();
+			VideoCapture cap;
+			try {
+				cap = OpenCvCapture.openForPreview(openCvIndex, resolution);
+			} finally {
+				CameraNativeLock.release();
+			}
 			return cap == null ? null : new OpenCvPreviewSession(cap);
 		}
 		if (resolution != null)
 			webcam.setViewSize(resolution);
-		webcam.open();
+		CameraNativeLock.acquire();
+		try {
+			webcam.open();
+		} finally {
+			CameraNativeLock.release();
+		}
 		return new WebcamPreviewSession(webcam);
 	}
 
@@ -106,12 +129,20 @@ public final class WebcamCameraSource implements ICameraSource {
 	 * Closes {@code webcam} on a daemon thread - {@link Webcam#close()} blocks
 	 * while Sarxos's internal capture thread winds down (~20 s with OBS Virtual
 	 * Camera).
+	 *
+	 * @param releaseLock if {@code true}, releases {@link CameraNativeLock} once
+	 *                    {@link Webcam#close()} completes - used when the caller
+	 *                    already held the lock for the preceding open/capture and
+	 *                    hands it off here.
 	 */
-	static void closeAsync(Webcam webcam) {
+	static void closeAsync(Webcam webcam, boolean releaseLock) {
 		Thread closer = new Thread(() -> {
 			try {
 				webcam.close();
 			} catch (Exception ignore) {
+			} finally {
+				if (releaseLock)
+					CameraNativeLock.release();
 			}
 		}, "camera-close");
 		closer.setDaemon(true);
@@ -150,7 +181,7 @@ public final class WebcamCameraSource implements ICameraSource {
 
 		@Override
 		public void close() {
-			closeAsync(webcam);
+			closeAsync(webcam, false);
 		}
 	}
 }

@@ -78,6 +78,15 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	}
 
 	/**
+	 * Returns the original source bytes (e.g. JPEG) for the result image, iff it is
+	 * exactly the last captured frame with no crop/resize/rotation applied;
+	 * otherwise {@code null} (caller should re-encode the result image).
+	 */
+	public byte[] getResultRawBytes() {
+		return capturePane.getResultRawBytes();
+	}
+
+	/**
 	 * Configures the output-size preset list shown in the toolbar. When the user
 	 * picks a preset the cropped result will be downscaled to fit within those
 	 * dimensions. Must be called before the dialog is shown.
@@ -128,14 +137,22 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	 * preferences).
 	 *
 	 * <p>
-	 * This method returns immediately; {@code onSuccess} (or {@code onError}) is
-	 * called on the JavaFX Application Thread when done.
+	 * This method returns immediately; {@code onSuccess}, {@code onUnavailable} or
+	 * {@code onError} is called on the JavaFX Application Thread when done.
 	 *
-	 * @param onSuccess called with the resulting image on the FX thread
-	 * @param onError   called with an error message on the FX thread
+	 * @param onSuccess     called with the resulting image on the FX thread
+	 * @param onUnavailable called on the FX thread if no camera is configured for
+	 *                      handsfree capture, or the configured camera can't be
+	 *                      found (caller should fall back to the interactive
+	 *                      dialog)
+	 * @param onError       called with an error message on the FX thread if a
+	 *                      configured camera was found but the capture itself
+	 *                      failed (timeout, empty frame, exception)
 	 */
-	public static void captureHandsfree(Consumer<WritableImage> onSuccess, Consumer<String> onError) {
-		Thread t = new Thread(() -> CameraCapturePane.doHandsfree(onSuccess, onError), "camera-handsfree");
+	public static void captureHandsfree(Consumer<WritableImage> onSuccess, Runnable onUnavailable,
+			Consumer<String> onError) {
+		Thread t = new Thread(() -> CameraCapturePane.doHandsfree(onSuccess, onUnavailable, onError),
+				"camera-handsfree");
 		t.setDaemon(true);
 		t.start();
 	}

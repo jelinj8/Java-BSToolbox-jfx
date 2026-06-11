@@ -86,6 +86,14 @@ public class ImageCropPane extends StackPane {
 		selection.setStrokeWidth(2);
 		selection.getStrokeDashArray().setAll(6.0, 4.0);
 
+		// Absolutely-positioned overlay shapes must not participate in layout
+		// sizing, otherwise their bounds (set from the image's bounds in
+		// updateShades()) feed back into the overlay's/StackPane's preferred
+		// size, which can change the image's bounds again - causing an
+		// oscillating resize loop.
+		for (Rectangle shape : new Rectangle[] { topShade, leftShade, rightShade, bottomShade, selection })
+			shape.setManaged(false);
+
 		overlay.getChildren().addAll(topShade, leftShade, rightShade, bottomShade, selection);
 		getChildren().addAll(imageView, overlay);
 
@@ -284,6 +292,11 @@ public class ImageCropPane extends StackPane {
 		return (w == null) ? null : SwingFXUtils.fromFXImage(w, null);
 	}
 
+	/** Returns {@code true} if the user has selected a crop region. */
+	public boolean hasActiveSelection() {
+		return cropRectInImagePixels.get() != null;
+	}
+
 	// ------------------- Internals -------------------
 
 	private static Rectangle shadeRect() {
@@ -305,8 +318,9 @@ public class ImageCropPane extends StackPane {
 		dragStartMouseY = e.getY();
 
 		if (currentDragMode == DragMode.DRAW) {
-			startX = clamp(e.getX(), 0, overlay.getWidth());
-			startY = clamp(e.getY(), 0, overlay.getHeight());
+			var ib = imageView.getBoundsInParent();
+			startX = clamp(e.getX(), ib.getMinX(), ib.getMaxX());
+			startY = clamp(e.getY(), ib.getMinY(), ib.getMaxY());
 			endX = startX;
 			endY = startY;
 			updateSelection();
@@ -327,8 +341,9 @@ public class ImageCropPane extends StackPane {
 		double dy = e.getY() - dragStartMouseY;
 
 		if (currentDragMode == DragMode.DRAW) {
-			endX = clamp(e.getX(), 0, overlay.getWidth());
-			endY = clamp(e.getY(), 0, overlay.getHeight());
+			var ib = imageView.getBoundsInParent();
+			endX = clamp(e.getX(), ib.getMinX(), ib.getMaxX());
+			endY = clamp(e.getY(), ib.getMinY(), ib.getMaxY());
 			updateSelection();
 			captureSelectionNormalized();
 		} else if (currentDragMode == DragMode.MOVE) {
@@ -347,8 +362,9 @@ public class ImageCropPane extends StackPane {
 		double dy = e.getY() - dragStartMouseY;
 
 		if (currentDragMode == DragMode.DRAW) {
-			endX = clamp(e.getX(), 0, overlay.getWidth());
-			endY = clamp(e.getY(), 0, overlay.getHeight());
+			var ib = imageView.getBoundsInParent();
+			endX = clamp(e.getX(), ib.getMinX(), ib.getMaxX());
+			endY = clamp(e.getY(), ib.getMinY(), ib.getMaxY());
 			updateSelection();
 			updateCropRectInImagePixels();
 			captureSelectionNormalized();
@@ -535,13 +551,9 @@ public class ImageCropPane extends StackPane {
 		double W = b.getWidth();
 		double H = b.getHeight();
 
-		// If selection is hidden, shade the whole image area
+		// If selection is hidden, there's nothing to shade
 		if (!selection.isVisible()) {
-			topShade.setX(X);
-			topShade.setY(Y);
-			topShade.setWidth(W);
-			topShade.setHeight(H);
-
+			topShade.setWidth(0);
 			leftShade.setWidth(0);
 			rightShade.setWidth(0);
 			bottomShade.setWidth(0);

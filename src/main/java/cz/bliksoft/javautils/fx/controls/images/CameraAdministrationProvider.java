@@ -105,7 +105,7 @@ public class CameraAdministrationProvider implements IAdministrationProvider {
 	/**
 	 * Builds the "Handsfree capture" settings section: camera selection, autocrop
 	 * toggle, and optional max-dimension downscaling, used by
-	 * {@link CameraCaptureDialog#captureHandsfree(java.util.function.Consumer, java.util.function.Consumer)}.
+	 * {@link CameraCaptureDialog#captureHandsfree(java.util.function.Consumer, Runnable, java.util.function.Consumer)}.
 	 */
 	private Node buildHandsfreeSection(CameraCapturePane pane) {
 		Label title = new Label(BSAppAdministrationMessages.getString("CameraAdministrationProvider.handsfree.title"));
