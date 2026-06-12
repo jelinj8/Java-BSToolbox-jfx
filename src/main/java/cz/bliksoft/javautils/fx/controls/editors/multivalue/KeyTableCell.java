@@ -8,6 +8,7 @@ import cz.bliksoft.javautils.fx.controls.codebooks.CodebookField;
 import cz.bliksoft.javautils.fx.controls.codebooks.providers.ListCodebookPopupProvider;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -25,13 +26,16 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
 	private final ObjectProperty<Map<String, Class<?>>> registryProperty;
 	private final TableColumn<KVEntry<V>, ?> valueColumn;
+	private final ObservableBooleanValue editable;
 
 	private KVEntry<V> currentEntry = null;
 	private String originalKey;
 
-	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty, TableColumn<KVEntry<V>, ?> valueColumn) {
+	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty, TableColumn<KVEntry<V>, ?> valueColumn,
+			ObservableBooleanValue editable) {
 		this.registryProperty = registryProperty;
 		this.valueColumn = valueColumn;
+		this.editable = editable;
 
 		setOnMouseClicked(e -> {
 			if (e.getClickCount() == 2 && !isEmpty())
@@ -41,7 +45,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
 	@Override
 	public void startEdit() {
-		if (isEmpty() || getTableRow() == null || getTableRow().getItem() == null)
+		if (!editable.get() || isEmpty() || getTableRow() == null || getTableRow().getItem() == null)
 			return;
 		originalKey = getItem() != null ? getItem() : "";
 		super.startEdit();

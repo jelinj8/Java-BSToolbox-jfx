@@ -80,6 +80,9 @@ public class ListEditor<V> extends VBox {
 	private TableView<ListEntry<V>> table;
 
 	private Supplier<V> addItemSupplier = null;
+	private Runnable addAction;
+	private Runnable removeAction;
+	private boolean addEnabled = true;
 	private Runnable editAction = null;
 	private Runnable previewAction = null;
 	private IUIAction itemAction = null;
@@ -97,6 +100,7 @@ public class ListEditor<V> extends VBox {
 			KeyCombination.ALT_DOWN);
 	private final Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 	private final SplitMenuButton addSplitBtn = new SplitMenuButton();
+	private final Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 	private final Button editBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
 	private final Button previewBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
@@ -161,7 +165,6 @@ public class ListEditor<V> extends VBox {
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 
-		Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 		delBtn.setFocusTraversable(false);
 		delBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.remove")));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
@@ -248,7 +251,7 @@ public class ListEditor<V> extends VBox {
 			}
 		});
 
-		addBtn.setOnAction(e -> {
+		addAction = () -> {
 			if (addItemSupplier != null) {
 				insertNewItem(addItemSupplier.get());
 			} else {
@@ -259,12 +262,20 @@ public class ListEditor<V> extends VBox {
 				table.requestFocus();
 				javafx.application.Platform.runLater(() -> table.edit(entries.indexOf(entry), valCol));
 			}
+		};
+		addBtn.setOnAction(e -> {
+			if (addAction != null)
+				addAction.run();
 		});
-		delBtn.setOnAction(e -> {
+		removeAction = () -> {
 			ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
 			if (sel != null)
 				entries.remove(sel);
 			table.requestFocus();
+		};
+		delBtn.setOnAction(e -> {
+			if (removeAction != null)
+				removeAction.run();
 		});
 
 		Region spacer = new Region();
@@ -321,6 +332,13 @@ public class ListEditor<V> extends VBox {
 	}
 
 	private void updateAddButton() {
+		if (!addEnabled) {
+			addBtn.setVisible(false);
+			addBtn.setManaged(false);
+			addSplitBtn.setVisible(false);
+			addSplitBtn.setManaged(false);
+			return;
+		}
 		if (addItemChoices == null || addItemChoices.isEmpty()) {
 			addSplitBtn.setVisible(false);
 			addSplitBtn.setManaged(false);
@@ -387,6 +405,31 @@ public class ListEditor<V> extends VBox {
 	public void setAddItemChoices(List<AddChoice<V>> choices) {
 		addItemChoices = choices;
 		updateAddButton();
+	}
+
+	/**
+	 * Sets the action run by the add button, replacing the default (insert a new
+	 * item via {@link #setAddItemSupplier} or a blank entry). Pass {@code null} to
+	 * hide the add button entirely, e.g. when the set of items is fixed.
+	 * <p>
+	 * Has no effect on the choice-driven behavior configured via
+	 * {@link #setAddItemChoices}, beyond hiding the button when {@code null}.
+	 */
+	public void setAddAction(Runnable action) {
+		addAction = action;
+		addEnabled = action != null;
+		updateAddButton();
+	}
+
+	/**
+	 * Sets the action run by the remove button, replacing the default (remove the
+	 * selected item). Pass {@code null} to hide the remove button entirely, e.g.
+	 * when the set of items is fixed.
+	 */
+	public void setRemoveAction(Runnable action) {
+		removeAction = action;
+		delBtn.setVisible(action != null);
+		delBtn.setManaged(action != null);
 	}
 
 	public void setEditAction(Runnable action) {

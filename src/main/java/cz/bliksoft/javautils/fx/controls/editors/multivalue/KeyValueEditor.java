@@ -11,6 +11,7 @@ import javafx.scene.Node;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -74,6 +75,11 @@ public class KeyValueEditor<V> extends VBox {
 	private TableView<KVEntry<V>> table;
 	private HBox toolbar;
 	private Node leadingToolbarNode;
+	private Button addBtn;
+	private Button delBtn;
+	private Runnable addAction;
+	private Runnable removeAction;
+	private final SimpleBooleanProperty keysEditable = new SimpleBooleanProperty(true);
 
 	public KeyValueEditor() {
 		this(null);
@@ -109,14 +115,14 @@ public class KeyValueEditor<V> extends VBox {
 		TableColumn<KVEntry<V>, String> keyCol = new TableColumn<>();
 		keyCol.setEditable(true);
 		keyCol.setCellValueFactory(r -> r.getValue().key);
-		keyCol.setCellFactory(col -> new KeyTableCell<>(propertyRegistry, valCol));
+		keyCol.setCellFactory(col -> new KeyTableCell<>(propertyRegistry, valCol, keysEditable));
 
 		table.getColumns().addAll(keyCol, valCol);
 
-		Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
+		addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addBtn.setFocusTraversable(false);
 		addBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
-		Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
+		delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 		delBtn.setFocusTraversable(false);
 		delBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.remove")));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
@@ -128,13 +134,17 @@ public class KeyValueEditor<V> extends VBox {
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
-		addBtn.setOnAction(e -> {
+		addAction = () -> {
 			KVEntry<V> entry = new KVEntry<>("", null);
 			entries.add(entry);
 			table.getSelectionModel().select(entry);
 			table.scrollTo(entry);
 			table.requestFocus();
 			Platform.runLater(() -> table.edit(entries.indexOf(entry), keyCol));
+		};
+		addBtn.setOnAction(e -> {
+			if (addAction != null)
+				addAction.run();
 		});
 
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
@@ -164,11 +174,15 @@ public class KeyValueEditor<V> extends VBox {
 				firePreview();
 			}
 		});
-		delBtn.setOnAction(e -> {
+		removeAction = () -> {
 			KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
 			if (sel != null)
 				entries.remove(sel);
 			table.requestFocus();
+		};
+		delBtn.setOnAction(e -> {
+			if (removeAction != null)
+				removeAction.run();
 		});
 
 		Region spacer = new Region();
@@ -211,6 +225,36 @@ public class KeyValueEditor<V> extends VBox {
 
 	public void setTitle(String t) {
 		title.set(t);
+	}
+
+	/**
+	 * Sets the action run by the add button, replacing the default (insert a blank
+	 * row and start editing its key). Pass {@code null} to hide the button
+	 * entirely, e.g. when the set of keys is fixed.
+	 */
+	public void setAddAction(Runnable action) {
+		addAction = action;
+		addBtn.setVisible(action != null);
+		addBtn.setManaged(action != null);
+	}
+
+	/**
+	 * Sets the action run by the remove button, replacing the default (remove the
+	 * selected row). Pass {@code null} to hide the button entirely, e.g. when the
+	 * set of keys is fixed.
+	 */
+	public void setRemoveAction(Runnable action) {
+		removeAction = action;
+		delBtn.setVisible(action != null);
+		delBtn.setManaged(action != null);
+	}
+
+	/**
+	 * Controls whether the key column can be edited. Set to {@code false} when the
+	 * set of keys is fixed and only the values may be edited.
+	 */
+	public void setKeysEditable(boolean editable) {
+		keysEditable.set(editable);
 	}
 
 	public void setPreviewAction(Runnable action) {
