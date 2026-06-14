@@ -39,6 +39,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -50,6 +51,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public final class UIComposer {
 	static Logger log = LogManager.getLogger();
@@ -138,6 +140,8 @@ public final class UIComposer {
 	}
 
 	private static void attachToStage(Stage stage, UiProduct product, FileObject file, UIBuildContext ctx) {
+		applyStageAttribs(stage, file);
+
 		if (product instanceof UiSceneProduct sp) {
 			stage.setScene(sp.scene());
 			ctx.accelerators().attach(sp.scene());
@@ -321,6 +325,52 @@ public final class UIComposer {
 	// entry.getName());
 	// return p.getNodeContext();
 	// }
+
+	/**
+	 * Applies stage-level attributes from the main UI definition file:
+	 * <ul>
+	 * <li>{@code style} — a {@link StageStyle} name, e.g. {@code
+	 * "UNDECORATED"}. Must be applied before the stage is first shown.</li>
+	 * <li>{@code fullScreen} — boolean.</li>
+	 * <li>{@code fullScreenExitKey} — a {@link KeyCombination} string (see
+	 * {@link KeyCombination#keyCombination(String)}), or {@code "NONE"} /
+	 * {@code "NO_MATCH"} to disable the exit shortcut entirely (kiosk mode).</li>
+	 * <li>{@code fullScreenExitHint} — text shown when entering full-screen; an
+	 * empty string suppresses the hint.</li>
+	 * </ul>
+	 */
+	private static void applyStageAttribs(Stage stage, FileObject definition) {
+		String style = definition.getAttribute("style", null);
+		if (style != null && !style.isBlank()) {
+			try {
+				stage.initStyle(StageStyle.valueOf(style.trim().toUpperCase()));
+			} catch (IllegalArgumentException e) {
+				log.warn("Unknown stage style '" + style + "' in " + definition.getFullPath());
+			}
+		}
+
+		Boolean fullScreen = definition.getBool("fullScreen");
+		if (fullScreen != null)
+			stage.setFullScreen(fullScreen);
+
+		String exitKey = definition.getAttribute("fullScreenExitKey", null);
+		if (exitKey != null && !exitKey.isBlank()) {
+			String trimmed = exitKey.trim();
+			if ("NONE".equalsIgnoreCase(trimmed) || "NO_MATCH".equalsIgnoreCase(trimmed)) {
+				stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+			} else {
+				try {
+					stage.setFullScreenExitKeyCombination(KeyCombination.keyCombination(trimmed));
+				} catch (Exception e) {
+					log.warn("Invalid fullScreenExitKey '" + exitKey + "' in " + definition.getFullPath());
+				}
+			}
+		}
+
+		String exitHint = definition.getAttribute("fullScreenExitHint", null);
+		if (exitHint != null)
+			stage.setFullScreenExitHint(exitHint);
+	}
 
 	private static void applySceneAttribs(Scene scene, FileObject definition) {
 		String styles = definition.getAttribute("stylesheets", null);
