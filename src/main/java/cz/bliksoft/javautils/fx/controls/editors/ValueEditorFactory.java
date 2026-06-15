@@ -10,6 +10,7 @@ import cz.bliksoft.javautils.fx.controls.editors.providers.EnumEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.IntegerEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.LocalDateEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.LocalDateTimeEditorProvider;
+import cz.bliksoft.javautils.fx.controls.editors.providers.StringBridgingEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.StringEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.TimestampEditorProvider;
 
@@ -45,5 +46,23 @@ public final class ValueEditorFactory {
 
 	public static IValueEditorProvider<String> stringProvider() {
 		return new StringEditorProvider();
+	}
+
+	/**
+	 * Resolves a provider that edits a {@link String}-backed value (as stored in a
+	 * {@code Map<String,String>}) using the inline editor/dialog appropriate for
+	 * {@code type}. For non-{@code String} types (e.g. {@code Integer.class},
+	 * {@code Boolean.class}), the corresponding typed provider is wrapped with
+	 * {@link StringBridgingEditorProvider} so it can be used where the underlying
+	 * value is actually a {@link String}.
+	 */
+	public static IValueEditorProvider<String> forStringType(Class<?> type) {
+		if (type == null || type == String.class || type == Object.class)
+			return new StringEditorProvider();
+		return bridge(forType(type));
+	}
+
+	private static <T> IValueEditorProvider<String> bridge(IValueEditorProvider<T> inner) {
+		return new StringBridgingEditorProvider<>(inner);
 	}
 }

@@ -9,6 +9,7 @@ import cz.bliksoft.javautils.fx.controls.codebooks.providers.ListCodebookPopupPr
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -25,15 +26,17 @@ import javafx.scene.input.KeyEvent;
 final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
 	private final ObjectProperty<Map<String, Class<?>>> registryProperty;
+	private final ObservableBooleanValue keysRestrictedToRegistry;
 	private final TableColumn<KVEntry<V>, ?> valueColumn;
 	private final ObservableBooleanValue editable;
 
 	private KVEntry<V> currentEntry = null;
 	private String originalKey;
 
-	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty, TableColumn<KVEntry<V>, ?> valueColumn,
-			ObservableBooleanValue editable) {
+	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty, ObservableBooleanValue keysRestrictedToRegistry,
+			TableColumn<KVEntry<V>, ?> valueColumn, ObservableBooleanValue editable) {
 		this.registryProperty = registryProperty;
+		this.keysRestrictedToRegistry = keysRestrictedToRegistry;
 		this.valueColumn = valueColumn;
 		this.editable = editable;
 
@@ -51,7 +54,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 		super.startEdit();
 
 		Map<String, Class<?>> registry = registryProperty.get();
-		if (registry != null) {
+		if (registry != null && keysRestrictedToRegistry.get()) {
 			CodebookField<String> field = new CodebookField<>(
 					new ListCodebookPopupProvider<>(List.copyOf(registry.keySet())));
 			field.setMaxWidth(Double.MAX_VALUE);
@@ -74,6 +77,26 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setGraphic(field);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 			Platform.runLater(field::requestFocus);
+		} else if (registry != null) {
+			ComboBox<String> combo = new ComboBox<>(
+					javafx.collections.FXCollections.observableArrayList(registry.keySet()));
+			combo.setEditable(true);
+			combo.setMaxWidth(Double.MAX_VALUE);
+			if (!originalKey.isBlank())
+				combo.getEditor().setText(originalKey);
+			combo.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+				if (e.getCode() == KeyCode.ESCAPE) {
+					e.consume();
+					cancelEdit();
+				} else if (e.getCode() == KeyCode.ENTER || e.getCode() == KeyCode.TAB) {
+					e.consume();
+					doCommit(combo.getEditor().getText());
+				}
+			});
+			setText(null);
+			setGraphic(combo);
+			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+			Platform.runLater(combo::requestFocus);
 		} else {
 			TextField tf = new TextField(originalKey);
 			tf.setMaxWidth(Double.MAX_VALUE);

@@ -149,9 +149,17 @@ Map<String, Class<?>> registry = Map.of(
 editor.propertyRegistryProperty().set(registry);
 ```
 
-When a registry is set, the key column uses a codebook popup to restrict keys to
-the defined names, and the value editor is switched automatically to match the
-key's declared type.
+When a registry is set, the key column uses a codebook popup, and the value
+editor is switched automatically to match the key's declared type (falling back
+to the default/string editor for keys not in the registry).
+
+By default (`keysRestrictedToRegistry` = `true`), the popup *restricts* keys to
+the registry's names. Set it to `false` to use the registry's names as
+*suggestions only* — the popup offers them, but any typed key is accepted:
+
+```java
+editor.setKeysRestrictedToRegistry(false);
+```
 
 Keyboard: Insert to add, Delete to remove, F3 to preview (when a preview action is set),
 Enter to start/commit edit. Shortcuts are loaded from `core/key-bindings/multivalue-editors/`

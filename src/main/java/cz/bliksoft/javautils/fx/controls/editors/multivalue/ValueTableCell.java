@@ -249,7 +249,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		if (registry != null && key != null && !key.isBlank()) {
 			Class<?> type = registry.get(key);
 			if (type != null)
-				return (IValueEditorProvider<V>) ValueEditorFactory.forType(type);
+				return (IValueEditorProvider<V>) ValueEditorFactory.forStringType(type);
 		}
 		IValueEditorProvider<V> def = defaultProviderProperty.get();
 		if (def != null)

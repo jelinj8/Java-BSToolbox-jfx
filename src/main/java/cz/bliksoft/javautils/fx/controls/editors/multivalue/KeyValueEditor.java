@@ -56,6 +56,7 @@ public class KeyValueEditor<V> extends VBox {
 	private final StringProperty title = new SimpleStringProperty();
 	private final ObjectProperty<Map<String, Class<?>>> propertyRegistry = new SimpleObjectProperty<>();
 	private final ObjectProperty<IValueEditorProvider<V>> defaultValueProvider = new SimpleObjectProperty<>();
+	private final SimpleBooleanProperty keysRestrictedToRegistry = new SimpleBooleanProperty(true);
 
 	private final ObservableMap<String, V> values = FXCollections.observableHashMap();
 
@@ -115,7 +116,7 @@ public class KeyValueEditor<V> extends VBox {
 		TableColumn<KVEntry<V>, String> keyCol = new TableColumn<>();
 		keyCol.setEditable(true);
 		keyCol.setCellValueFactory(r -> r.getValue().key);
-		keyCol.setCellFactory(col -> new KeyTableCell<>(propertyRegistry, valCol, keysEditable));
+		keyCol.setCellFactory(col -> new KeyTableCell<>(propertyRegistry, keysRestrictedToRegistry, valCol, keysEditable));
 
 		table.getColumns().addAll(keyCol, valCol);
 
@@ -283,6 +284,25 @@ public class KeyValueEditor<V> extends VBox {
 
 	public ObjectProperty<Map<String, Class<?>>> propertyRegistryProperty() {
 		return propertyRegistry;
+	}
+
+	/**
+	 * Controls how a non-null {@link #propertyRegistryProperty() propertyRegistry}
+	 * is used by the key column. When {@code true} (default), keys are restricted
+	 * to the registry's names via a codebook popup. When {@code false}, the
+	 * registry's names are offered as popup suggestions only — any typed key is
+	 * accepted.
+	 */
+	public SimpleBooleanProperty keysRestrictedToRegistryProperty() {
+		return keysRestrictedToRegistry;
+	}
+
+	public void setKeysRestrictedToRegistry(boolean value) {
+		keysRestrictedToRegistry.set(value);
+	}
+
+	public boolean isKeysRestrictedToRegistry() {
+		return keysRestrictedToRegistry.get();
 	}
 
 	public ObjectProperty<IValueEditorProvider<V>> defaultValueProviderProperty() {
