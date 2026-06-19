@@ -82,4 +82,12 @@ public interface ICameraSource {
 	default Map<String, Object> grabFrameMetadata(Dimension resolution) throws Exception {
 		return Map.of();
 	}
+
+	default String getStatusInfo() {
+		return null;
+	}
+
+	default String getQrUrl() {
+		return null;
+	}
 }

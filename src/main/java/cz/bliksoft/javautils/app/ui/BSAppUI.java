@@ -44,6 +44,9 @@ public class BSAppUI extends ModuleBase {
 
 	public static final String CTX_MAIN_COMPONENT = "MainDesktopComponent"; //$NON-NLS-1$
 
+	public static final String CTX_MAIN_TITLE = "MainTitle"; //$NON-NLS-1$
+	public static final String CTX_MAIN_SUBTITLE = "MainSubtitle"; //$NON-NLS-1$
+
 	public static final String FS_UI_ROOT = "/core/ui"; //$NON-NLS-1$
 
 	public static final String PROP_THEME = "ui.theme"; //$NON-NLS-1$
@@ -57,6 +60,10 @@ public class BSAppUI extends ModuleBase {
 	}
 
 	private static Stage mainStage = null;
+
+	private static String originalTitle = null;
+	private static String mainTitle = null;
+	private static String mainSubtitle = null;
 
 	// public SimpleObjectProperty<Node> rootNode = new
 	// SimpleObjectProperty<Node>();
@@ -164,6 +171,26 @@ public class BSAppUI extends ModuleBase {
 		uiContext.addContext(uiContextHolder);
 
 		Context.setCurrentContext(uiContext);
+
+		originalTitle = mainStage.getTitle();
+
+		Context.getCurrentContext()
+				.addContextListener(new AbstractContextListener<String>(CTX_MAIN_TITLE, "Main window title") {
+					@Override
+					public void fired(ContextChangedEvent<String> event) {
+						mainTitle = event.getNewValue();
+						updateStageTitle();
+					}
+				}, true);
+
+		Context.getCurrentContext()
+				.addContextListener(new AbstractContextListener<String>(CTX_MAIN_SUBTITLE, "Main window subtitle") {
+					@Override
+					public void fired(ContextChangedEvent<String> event) {
+						mainSubtitle = event.getNewValue();
+						updateStageTitle();
+					}
+				}, true);
 
 		if (mainPane != null) {
 			Context.getCurrentContext().addContextListener(
@@ -337,6 +364,16 @@ public class BSAppUI extends ModuleBase {
 			if (workingTask instanceof ProgressTask t)
 				t.updateProgress(total == 0 ? -1 : done, total == 0 ? 1 : total);
 		});
+	}
+
+	private static void updateStageTitle() {
+		if (mainTitle == null && mainSubtitle == null) {
+			mainStage.setTitle(originalTitle);
+		} else {
+			String t = mainTitle != null ? mainTitle : originalTitle;
+			String s = mainSubtitle != null ? mainSubtitle : "";
+			mainStage.setTitle(StringUtils.hasLength(s) ? t + " - " + s : t);
+		}
 	}
 
 	private static void runOnFx(Runnable r) {

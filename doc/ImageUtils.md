@@ -214,15 +214,15 @@ Creates a synthetic canvas and pushes it. `h` may be blank to default to `w`. `c
 ### QR codes — `*QR`
 
 ```
-*QR|ec|module_size|target_size|data
+*QR|ec|module_size|target_size|border|data
 ```
 
-Generates a QR code from `data` and pushes it onto the stack as a synthetic image, analogous to `*EMPTY`. `ec` is the error-correction level (`L`, `M` — default, `Q`, `H`). `module_size` is the pixel size of each QR module (default `2`); if `target_size` is given, the per-module pixel size is instead computed to best fit the encoded matrix into roughly that overall pixel size, and `module_size` is ignored. `data` is the text/URL to encode and is required — like other parameters, it may not contain `|` or `#`.
+Generates a QR code from `data` and pushes it onto the stack as a synthetic image, analogous to `*EMPTY`. `ec` is the error-correction level (`L`, `M` — default, `Q`, `H`). `module_size` is the pixel size of each QR module (default `2`); if `target_size` is given, the per-module pixel size is instead computed to best fit the encoded matrix into roughly that overall pixel size, and `module_size` is ignored. `border` is the quiet-zone thickness in modules (default `2`). `data` is the text/URL to encode and is required — like other parameters, it may not contain `|` or `#`.
 
 ```
-*QR||||https://example.com           # defaults: EC level M, 2px modules
-*QR|H|3||https://example.com         # EC level H, 3px modules
-*QR|M||128|https://example.com       # ~128×128px overall, module size auto-computed
+*QR|||||https://example.com           # defaults: EC level M, 2px modules, 2-module border
+*QR|H|3|||https://example.com         # EC level H, 3px modules
+*QR|M||128||https://example.com       # ~128×128px overall, module size auto-computed
 ```
 
 ### Text rendering — `*TEXT`

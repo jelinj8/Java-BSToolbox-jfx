@@ -33,8 +33,9 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 	private KVEntry<V> currentEntry = null;
 	private String originalKey;
 
-	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty, ObservableBooleanValue keysRestrictedToRegistry,
-			TableColumn<KVEntry<V>, ?> valueColumn, ObservableBooleanValue editable) {
+	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty,
+			ObservableBooleanValue keysRestrictedToRegistry, TableColumn<KVEntry<V>, ?> valueColumn,
+			ObservableBooleanValue editable) {
 		this.registryProperty = registryProperty;
 		this.keysRestrictedToRegistry = keysRestrictedToRegistry;
 		this.valueColumn = valueColumn;

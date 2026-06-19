@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -99,6 +100,8 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 
 	private final BSHttpServer server;
 	private final boolean ownsServer;
+	private final String mdnsName;
+	private final Object mdnsInfo;
 
 	private final Object lock = new Object();
 	private BufferedImage latestFrame;
@@ -130,10 +133,15 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 				throw new RuntimeException("Failed to start WebServerCameraSource HTTP server on port " + port, e);
 			}
 		}
+
+		this.mdnsName = fo.getAttribute("mdnsName", null);
+		this.mdnsInfo = mdnsName != null ? server.registerMdnsService(mdnsName, path) : null;
 	}
 
 	@Override
 	public void close() {
+		if (mdnsInfo != null)
+			server.unregisterMdnsService(mdnsInfo);
 		server.removeHandler(path);
 		if (!ownsServer)
 			return;
@@ -152,6 +160,31 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 	@Override
 	public String getDisplayName() {
 		return displayName;
+	}
+
+	@Override
+	public String getStatusInfo() {
+		try {
+			int port = server.getServer().getAddress().getPort();
+			String ipUrl = "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + path;
+			if (mdnsName != null)
+				return "http://" + mdnsName + ".local:" + port + path + "  |  " + ipUrl;
+			return ipUrl;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	@Override
+	public String getQrUrl() {
+		try {
+			int port = server.getServer().getAddress().getPort();
+			if (mdnsName != null)
+				return "http://" + mdnsName + ".local:" + port + path;
+			return "http://" + InetAddress.getLocalHost().getHostAddress() + ":" + port + path;
+		} catch (Exception e) {
+			return null;
+		}
 	}
 
 	@Override

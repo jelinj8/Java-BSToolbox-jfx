@@ -116,7 +116,8 @@ public class KeyValueEditor<V> extends VBox {
 		TableColumn<KVEntry<V>, String> keyCol = new TableColumn<>();
 		keyCol.setEditable(true);
 		keyCol.setCellValueFactory(r -> r.getValue().key);
-		keyCol.setCellFactory(col -> new KeyTableCell<>(propertyRegistry, keysRestrictedToRegistry, valCol, keysEditable));
+		keyCol.setCellFactory(
+				col -> new KeyTableCell<>(propertyRegistry, keysRestrictedToRegistry, valCol, keysEditable));
 
 		table.getColumns().addAll(keyCol, valCol);
 

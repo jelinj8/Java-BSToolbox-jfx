@@ -27,6 +27,7 @@ import cz.bliksoft.javautils.fx.controls.images.cam.ICameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.WebcamCameraSource;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
+import cz.bliksoft.javautils.fx.controls.images.qr.QrCodeRenderer;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.images.PixelOps;
 import cz.bliksoft.javautils.xmlfilesystem.singletons.Services;
@@ -44,6 +45,8 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.image.ImageView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
@@ -106,6 +109,7 @@ public class CameraCapturePane extends VBox {
 			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/rotate-right")));
 	private final ImageCropPane cropPane = new ImageCropPane();
 	private final Label statusLabel = new Label();
+	private final Label runtimeStatusLabel = new Label();
 
 	// ---- Output size presets ----
 	private final List<Dimension> outputPresets = new ArrayList<>();
@@ -250,6 +254,7 @@ public class CameraCapturePane extends VBox {
 				}
 				loadCameraResolutionsAsync(n);
 				restoreCameraRotation(n.getId());
+				restoreStatusInfo();
 			}
 		});
 
@@ -344,12 +349,13 @@ public class CameraCapturePane extends VBox {
 		ToolBar toolbar = new ToolBar(new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
 				sourceCombo, captureBtn, captureSplitBtn, camResCombo,
 				new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")), camRotationCombo,
-				spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn, rotateRightBtn);
+				runtimeStatusLabel, spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn, rotateRightBtn);
+
+		statusLabel.setVisible(false);
+		statusLabel.setManaged(false);
 
 		cropPane.setMinHeight(100);
 		VBox.setVgrow(cropPane, Priority.ALWAYS);
-
-		statusLabel.getStyleClass().add("error-label");
 
 		getChildren().addAll(toolbar, statusLabel, cropPane);
 
@@ -499,7 +505,7 @@ public class CameraCapturePane extends VBox {
 			return;
 		captureBtn.setDisable(true);
 		captureSplitBtn.setDisable(true);
-		statusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.capturing"));
+		runtimeStatusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.capturing"));
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
 		new Thread(() -> {
@@ -548,10 +554,10 @@ public class CameraCapturePane extends VBox {
 					cropPane.setImage(finalImg);
 					if (finalAutocropRequested)
 						cropPane.autocrop();
-					statusLabel.setText("");
+					restoreStatusInfo();
 				} else {
 					lastCaptureRawBytes = null;
-					statusLabel.setText(finalError != null ? finalError
+					runtimeStatusLabel.setText(finalError != null ? finalError
 							: BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
 				}
 				captureBtn.setDisable(false);
@@ -596,7 +602,7 @@ public class CameraCapturePane extends VBox {
 		sourceCombo.setDisable(true);
 		camResCombo.setDisable(true);
 		camRotationCombo.setDisable(true);
-		statusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.previewing"));
+		runtimeStatusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.previewing"));
 		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStop"));
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
@@ -617,7 +623,7 @@ public class CameraCapturePane extends VBox {
 			} catch (Exception ex) {
 				log.warn("Camera preview failed for {}", src.getDisplayName(), ex);
 				final String msg = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
-				Platform.runLater(() -> statusLabel.setText(msg));
+				Platform.runLater(() -> runtimeStatusLabel.setText(msg));
 			} finally {
 				previewRunning = false;
 				if (session != null)
@@ -631,8 +637,35 @@ public class CameraCapturePane extends VBox {
 
 	private void stopPreview() {
 		previewRunning = false;
-		statusLabel.setText("");
+		restoreStatusInfo();
 		resetPreviewControls();
+	}
+
+	private void restoreStatusInfo() {
+		runtimeStatusLabel.setText("");
+		Object sel = sourceCombo.getSelectionModel().getSelectedItem();
+		String info = null;
+		String qrUrl = null;
+		if (sel instanceof ICameraSource) {
+			info = ((ICameraSource) sel).getStatusInfo();
+			qrUrl = ((ICameraSource) sel).getQrUrl();
+		}
+		boolean hasInfo = info != null && !info.isBlank();
+		statusLabel.setText(hasInfo ? info : "");
+		statusLabel.setVisible(hasInfo);
+		statusLabel.setManaged(hasInfo);
+		if (qrUrl != null) {
+			try {
+				Tooltip tip = new Tooltip(qrUrl);
+				tip.setGraphic(new ImageView(QrCodeRenderer.render(qrUrl, null, null, 200)));
+				tip.setContentDisplay(ContentDisplay.TOP);
+				statusLabel.setTooltip(tip);
+			} catch (Exception e) {
+				statusLabel.setTooltip(null);
+			}
+		} else {
+			statusLabel.setTooltip(null);
+		}
 	}
 
 	private void resetPreviewControls() {

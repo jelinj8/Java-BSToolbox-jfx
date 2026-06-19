@@ -79,9 +79,10 @@ public enum IconspecCommand {
 	 * default, {@code Q}, {@code H}). {@code module_size} is the pixel size of each
 	 * QR module (default 2). If {@code target_size} is given, the per-module pixel
 	 * size is instead computed to best fit the encoded matrix into that overall
-	 * pixel size, and the supplied {@code module_size} is ignored.
+	 * pixel size, and the supplied {@code module_size} is ignored. {@code border}
+	 * is the quiet-zone thickness in modules (default 2).
 	 */
-	QR("QR", "ec", "moduleSize", "targetSize", "data"),
+	QR("QR", "ec", "moduleSize", "targetSize", "border", "data"),
 
 	/** Pushes a copy of the top-of-stack image (top remains). */
 	PUSH("PUSH"),
