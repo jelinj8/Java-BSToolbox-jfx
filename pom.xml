@@ -124,6 +124,11 @@
 				<artifactId>common-java-utils</artifactId>
 				<version>0.7-SNAPSHOT</version>
 			</dependency>
+			<dependency>
+				<groupId>cz.bliksoft.java</groupId>
+				<artifactId>bsdataflow</artifactId>
+				<version>0.1-SNAPSHOT</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -131,6 +136,11 @@
 		<dependency>
 			<groupId>cz.bliksoft.java</groupId>
 			<artifactId>common-java-utils</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>cz.bliksoft.java</groupId>
+			<artifactId>bsdataflow</artifactId>
+			<optional>true</optional>
 		</dependency>
 		<dependency>
 			<groupId>cz.bliksoft.java</groupId>

@@ -1,0 +1,788 @@
+package cz.bliksoft.javautils.fx.controls.graph;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import cz.bliksoft.dataflow.model.Edge;
+import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.JoinPoint;
+import cz.bliksoft.dataflow.model.Node;
+import cz.bliksoft.dataflow.model.Point2D;
+import cz.bliksoft.dataflow.types.EdgeType;
+import cz.bliksoft.dataflow.types.EdgeTypeRegistry;
+import cz.bliksoft.dataflow.types.NodeType;
+import cz.bliksoft.dataflow.types.NodeTypeRegistry;
+import cz.bliksoft.javautils.fx.controls.graph.command.GraphCommandHistory;
+import cz.bliksoft.javautils.fx.controls.graph.group.GroupInteractionHandler;
+import cz.bliksoft.javautils.fx.controls.graph.group.GroupRenderer;
+import cz.bliksoft.javautils.fx.controls.graph.interaction.ClipboardHandler;
+import cz.bliksoft.javautils.fx.controls.graph.interaction.ConnectionHandler;
+import cz.bliksoft.javautils.fx.controls.graph.interaction.GraphContextMenus;
+import cz.bliksoft.javautils.fx.controls.graph.interaction.GraphSelectionModel;
+import cz.bliksoft.javautils.fx.controls.graph.interaction.NodeInteractionHandler;
+import cz.bliksoft.javautils.fx.controls.graph.render.EdgeRendererRegistry;
+import cz.bliksoft.javautils.fx.controls.graph.render.IEdgeRenderer;
+import cz.bliksoft.javautils.fx.controls.graph.render.INodeRenderer;
+import cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer;
+import cz.bliksoft.javautils.fx.controls.graph.render.NodeRendererRegistry;
+import cz.bliksoft.javautils.fx.controls.graph.render.RenderContext;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+
+public class GraphCanvas extends Region {
+
+	private static final double MIN_ZOOM = 0.1;
+	private static final double MAX_ZOOM = 4.0;
+	private static final double ZOOM_STEP = 1.1;
+	private static final double SCROLL_SPEED = 20.0;
+
+	private final DoubleProperty zoom = new SimpleDoubleProperty(1.0);
+	private final DoubleProperty scrollX = new SimpleDoubleProperty(0);
+	private final DoubleProperty scrollY = new SimpleDoubleProperty(0);
+	private final ObjectProperty<GridStyle> gridStyle = new SimpleObjectProperty<>(GridStyle.DOT);
+	private final DoubleProperty gridSpacing = new SimpleDoubleProperty(20);
+	private final BooleanProperty snapToGrid = new SimpleBooleanProperty(false);
+
+	private final Canvas backgroundCanvas;
+	private final Pane edgePane;
+	private final Pane groupPane;
+	private final Pane nodePane;
+	private final Pane contentPane;
+	private final Map<UUID, Region> nodeVisuals = new HashMap<>();
+	private final Map<UUID, javafx.scene.Group> edgeVisuals = new HashMap<>();
+	private final GraphSelectionModel selectionModel = new GraphSelectionModel();
+	private final GraphCommandHistory commandHistory = new GraphCommandHistory();
+	private final NodeInteractionHandler interactionHandler;
+	private final ConnectionHandler connectionHandler;
+	private final ClipboardHandler clipboardHandler;
+	private final GraphContextMenus contextMenus;
+	private final GroupInteractionHandler groupHandler;
+
+	private Graph graph;
+
+	private double panStartX, panStartY;
+	private double panStartScrollX, panStartScrollY;
+	private boolean panning;
+
+	private javafx.scene.shape.Rectangle rubberBand;
+	private double rubberStartX, rubberStartY;
+
+	public GraphCanvas() {
+		getStyleClass().add("graph-canvas");
+		getStylesheets().add(getClass().getResource("/css/graph-canvas.css").toExternalForm());
+
+		backgroundCanvas = new Canvas();
+		backgroundCanvas.getStyleClass().add("graph-background");
+		backgroundCanvas.setManaged(false);
+
+		edgePane = new Pane();
+		edgePane.setPickOnBounds(false);
+
+		groupPane = new Pane();
+		groupPane.setPickOnBounds(false);
+
+		nodePane = new Pane();
+		nodePane.setPickOnBounds(false);
+
+		contentPane = new Pane(edgePane, groupPane, nodePane);
+		contentPane.getStyleClass().add("graph-content");
+		contentPane.setManaged(false);
+		contentPane.setPickOnBounds(false);
+
+		getChildren().addAll(backgroundCanvas, contentPane);
+
+		bindContentTransform();
+		setupScrollHandlers();
+		setupPanHandlers();
+		setupSelectionHandlers();
+		setupRedrawTriggers();
+
+		interactionHandler = new NodeInteractionHandler(this, commandHistory);
+		connectionHandler = new ConnectionHandler(this);
+		clipboardHandler = new ClipboardHandler(this);
+		contextMenus = new GraphContextMenus(this);
+		groupHandler = new GroupInteractionHandler(this);
+	}
+
+	private void bindContentTransform() {
+		contentPane.scaleXProperty().bind(zoom);
+		contentPane.scaleYProperty().bind(zoom);
+		contentPane.translateXProperty().bind(scrollX);
+		contentPane.translateYProperty().bind(scrollY);
+	}
+
+	private void setupScrollHandlers() {
+		addEventFilter(ScrollEvent.SCROLL, e -> {
+			if (e.isControlDown()) {
+				handleZoom(e);
+			} else {
+				handleScroll(e);
+			}
+			e.consume();
+		});
+	}
+
+	private void handleZoom(ScrollEvent e) {
+		double oldZoom = zoom.get();
+		double factor = e.getDeltaY() > 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP;
+		double newZoom = clampZoom(oldZoom * factor);
+
+		if (newZoom == oldZoom)
+			return;
+
+		// zoom centered on cursor position
+		double mouseX = e.getX();
+		double mouseY = e.getY();
+
+		double contentX = (mouseX - scrollX.get()) / oldZoom;
+		double contentY = (mouseY - scrollY.get()) / oldZoom;
+
+		zoom.set(newZoom);
+		scrollX.set(mouseX - contentX * newZoom);
+		scrollY.set(mouseY - contentY * newZoom);
+	}
+
+	private void handleScroll(ScrollEvent e) {
+		if (e.isShiftDown()) {
+			scrollX.set(scrollX.get() + e.getDeltaY() * SCROLL_SPEED / zoom.get());
+		} else {
+			scrollY.set(scrollY.get() + e.getDeltaY() * SCROLL_SPEED / zoom.get());
+		}
+	}
+
+	private void setupPanHandlers() {
+		addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+			if (e.getButton() == MouseButton.MIDDLE) {
+				panning = true;
+				panStartX = e.getScreenX();
+				panStartY = e.getScreenY();
+				panStartScrollX = scrollX.get();
+				panStartScrollY = scrollY.get();
+				e.consume();
+			}
+		});
+
+		addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
+			if (panning) {
+				double dx = e.getScreenX() - panStartX;
+				double dy = e.getScreenY() - panStartY;
+				scrollX.set(panStartScrollX + dx);
+				scrollY.set(panStartScrollY + dy);
+				e.consume();
+			}
+		});
+
+		addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
+			if (e.getButton() == MouseButton.MIDDLE && panning) {
+				panning = false;
+				e.consume();
+			}
+		});
+	}
+
+	private void setupSelectionHandlers() {
+		addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+			requestFocus();
+
+			if (e.getButton() != MouseButton.PRIMARY || panning)
+				return;
+
+			UUID clickedId = findElementAt(e);
+			if (clickedId != null) {
+				if (e.isControlDown()) {
+					selectionModel.toggle(clickedId);
+				} else if (!selectionModel.isSelected(clickedId)) {
+					selectionModel.select(clickedId);
+				}
+				e.consume();
+			} else {
+				if (!e.isControlDown())
+					selectionModel.clear();
+				startRubberBand(e);
+			}
+			updateSelectionVisuals();
+		});
+
+		addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
+			if (rubberBand != null)
+				updateRubberBand(e);
+		});
+
+		addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
+			if (rubberBand != null) {
+				finishRubberBand(e);
+				updateSelectionVisuals();
+			}
+		});
+	}
+
+	private UUID findElementAt(MouseEvent e) {
+		javafx.scene.Node target = e.getPickResult().getIntersectedNode();
+		while (target != null && target != contentPane) {
+			Object nodeId = target.getProperties().get("nodeId");
+			if (nodeId instanceof UUID)
+				return (UUID) nodeId;
+			Object edgeId = target.getProperties().get("edgeId");
+			if (edgeId instanceof UUID)
+				return (UUID) edgeId;
+			Object groupId = target.getProperties().get("groupId");
+			if (groupId instanceof UUID)
+				return (UUID) groupId;
+			target = target.getParent();
+		}
+		return null;
+	}
+
+	private void startRubberBand(MouseEvent e) {
+		javafx.geometry.Point2D local = contentPane.screenToLocal(e.getScreenX(), e.getScreenY());
+		if (local == null)
+			return;
+		rubberStartX = local.getX();
+		rubberStartY = local.getY();
+		rubberBand = new javafx.scene.shape.Rectangle(rubberStartX, rubberStartY, 0, 0);
+		rubberBand.getStyleClass().add("selection-rect");
+		rubberBand.setMouseTransparent(true);
+		contentPane.getChildren().add(rubberBand);
+	}
+
+	private void updateRubberBand(MouseEvent e) {
+		javafx.geometry.Point2D local = contentPane.screenToLocal(e.getScreenX(), e.getScreenY());
+		if (local == null)
+			return;
+		double x = Math.min(rubberStartX, local.getX());
+		double y = Math.min(rubberStartY, local.getY());
+		double w = Math.abs(local.getX() - rubberStartX);
+		double h = Math.abs(local.getY() - rubberStartY);
+		rubberBand.setX(x);
+		rubberBand.setY(y);
+		rubberBand.setWidth(w);
+		rubberBand.setHeight(h);
+	}
+
+	private void finishRubberBand(MouseEvent e) {
+		javafx.geometry.Bounds rubberBounds = rubberBand.getBoundsInParent();
+		contentPane.getChildren().remove(rubberBand);
+
+		if (rubberBounds.getWidth() > 3 || rubberBounds.getHeight() > 3) {
+			Set<UUID> selected = new java.util.LinkedHashSet<>();
+			for (var entry : nodeVisuals.entrySet()) {
+				javafx.geometry.Bounds nodeBounds = entry.getValue().getBoundsInParent();
+				if (rubberBounds.intersects(nodeBounds))
+					selected.add(entry.getKey());
+			}
+			if (e.isControlDown()) {
+				selected.forEach(selectionModel::addToSelection);
+			} else {
+				selectionModel.selectAll(selected);
+			}
+		}
+
+		rubberBand = null;
+	}
+
+	private static final double RESIZE_HANDLE_SIZE = 6;
+
+	public void updateSelectionVisuals() {
+		for (var entry : nodeVisuals.entrySet()) {
+			Region visual = entry.getValue();
+			boolean selected = selectionModel.isSelected(entry.getKey());
+			if (selected) {
+				if (!visual.getStyleClass().contains("graph-node-selected"))
+					visual.getStyleClass().add("graph-node-selected");
+				addResizeHandle(visual, entry.getKey());
+			} else {
+				visual.getStyleClass().remove("graph-node-selected");
+				removeResizeHandle(visual);
+			}
+		}
+		for (var entry : edgeVisuals.entrySet()) {
+			javafx.scene.Group visual = entry.getValue();
+			if (selectionModel.isSelected(entry.getKey())) {
+				if (!visual.getStyleClass().contains("graph-edge-selected"))
+					visual.getStyleClass().add("graph-edge-selected");
+			} else {
+				visual.getStyleClass().remove("graph-edge-selected");
+			}
+		}
+	}
+
+	private void addResizeHandle(Region visual, UUID elementId) {
+		if (!(visual instanceof Pane pane))
+			return;
+		for (javafx.scene.Node child : pane.getChildren()) {
+			if (child.getProperties().containsKey("resizeNodeId") || child.getProperties().containsKey("resizeGroupId"))
+				return;
+		}
+		double w = pane.getPrefWidth();
+		double h = pane.getPrefHeight();
+		javafx.scene.shape.Rectangle handle = new javafx.scene.shape.Rectangle(w - RESIZE_HANDLE_SIZE,
+				h - RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE);
+		handle.setFill(javafx.scene.paint.Color.web("#3399ff"));
+		handle.setOpacity(0.6);
+		handle.setCursor(javafx.scene.Cursor.SE_RESIZE);
+
+		boolean isGroup = visual.getStyleClass().contains("graph-group-expanded")
+				|| visual.getStyleClass().contains("graph-group-collapsed");
+		handle.getProperties().put(isGroup ? "resizeGroupId" : "resizeNodeId", elementId);
+		pane.getChildren().add(handle);
+	}
+
+	private void removeResizeHandle(Region visual) {
+		if (!(visual instanceof Pane pane))
+			return;
+		pane.getChildren().removeIf(child -> child.getProperties().containsKey("resizeNodeId")
+				|| child.getProperties().containsKey("resizeGroupId"));
+	}
+
+	private void setupRedrawTriggers() {
+		widthProperty().addListener((obs, o, n) -> redrawGrid());
+		heightProperty().addListener((obs, o, n) -> redrawGrid());
+		zoom.addListener((obs, o, n) -> redrawGrid());
+		scrollX.addListener((obs, o, n) -> redrawGrid());
+		scrollY.addListener((obs, o, n) -> redrawGrid());
+		gridStyle.addListener((obs, o, n) -> redrawGrid());
+		gridSpacing.addListener((obs, o, n) -> redrawGrid());
+	}
+
+	@Override
+	protected void layoutChildren() {
+		double w = getWidth();
+		double h = getHeight();
+		backgroundCanvas.setWidth(w);
+		backgroundCanvas.setHeight(h);
+		backgroundCanvas.relocate(0, 0);
+		contentPane.relocate(0, 0);
+		redrawGrid();
+	}
+
+	private void redrawGrid() {
+		double w = backgroundCanvas.getWidth();
+		double h = backgroundCanvas.getHeight();
+		if (w <= 0 || h <= 0)
+			return;
+
+		GraphicsContext gc = backgroundCanvas.getGraphicsContext2D();
+		gc.clearRect(0, 0, w, h);
+
+		GridStyle style = gridStyle.get();
+		if (style == GridStyle.NONE)
+			return;
+
+		double spacing = gridSpacing.get() * zoom.get();
+		if (spacing < 4)
+			return;
+
+		double offsetX = scrollX.get() % spacing;
+		double offsetY = scrollY.get() % spacing;
+
+		gc.setFill(Color.rgb(180, 180, 180));
+		gc.setStroke(Color.rgb(210, 210, 210));
+		gc.setLineWidth(0.5);
+
+		if (style == GridStyle.DOT) {
+			double dotSize = Math.max(1.0, zoom.get());
+			for (double x = offsetX; x < w; x += spacing) {
+				for (double y = offsetY; y < h; y += spacing) {
+					gc.fillOval(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
+				}
+			}
+		} else if (style == GridStyle.LINE) {
+			for (double x = offsetX; x < w; x += spacing) {
+				gc.strokeLine(x, 0, x, h);
+			}
+			for (double y = offsetY; y < h; y += spacing) {
+				gc.strokeLine(0, y, w, y);
+			}
+		}
+	}
+
+	// --- public API ---
+
+	public void setGraph(Graph graph) {
+		this.graph = graph;
+		selectionModel.clear();
+		renderGraph();
+	}
+
+	public Graph getGraph() {
+		return graph;
+	}
+
+	public GraphSelectionModel getSelectionModel() {
+		return selectionModel;
+	}
+
+	private void renderGraph() {
+		edgePane.getChildren().clear();
+		nodePane.getChildren().clear();
+		nodeVisuals.clear();
+		edgeVisuals.clear();
+
+		if (graph == null)
+			return;
+
+		NodeRendererRegistry rendererRegistry = NodeRendererRegistry.getInstance();
+		RenderContext ctx = new RenderContext(zoom.get(), false);
+
+		java.util.List<Node> sortedNodes = new java.util.ArrayList<>(graph.getNodes());
+		sortedNodes.sort(java.util.Comparator.comparingInt(Node::getzOrder));
+
+		for (Node node : sortedNodes) {
+			NodeType type = NodeTypeRegistry.getInstance().get(node.getTypeId());
+			INodeRenderer renderer = rendererRegistry.get(node.getTypeId());
+			if (renderer == null || type == null)
+				continue;
+
+			Region visual = renderer.createNodeVisual(node, type, ctx);
+			visual.setLayoutX(0);
+			visual.setLayoutY(0);
+			visual.getProperties().put("nodeId", node.getId());
+
+			Pane wrapper = new Pane(visual);
+			wrapper.setManaged(false);
+			wrapper.setLayoutX(node.getX());
+			wrapper.setLayoutY(node.getY());
+			wrapper.setPrefSize(node.getWidth(), node.getHeight());
+			wrapper.getProperties().put("nodeId", node.getId());
+
+			JoinPointRenderer.renderJoinPoints(wrapper, node.getJoinPoints(), node.getWidth(), node.getHeight(),
+					type.isShowJoinPointLabels());
+
+			nodeVisuals.put(node.getId(), wrapper);
+			nodePane.getChildren().add(wrapper);
+		}
+
+		renderEdges();
+		renderGroups();
+	}
+
+	private void renderGroups() {
+		groupPane.getChildren().clear();
+
+		if (graph == null)
+			return;
+
+		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
+			Region groupVisual;
+			if (group.isCollapsed()) {
+				groupVisual = GroupRenderer.renderCollapsed(group);
+				nodePane.getChildren().add(groupVisual);
+			} else {
+				groupVisual = GroupRenderer.renderExpanded(group, graph);
+				groupPane.getChildren().add(groupVisual);
+			}
+			nodeVisuals.put(group.getId(), groupVisual);
+		}
+	}
+
+	private void renderEdges() {
+		edgePane.getChildren().clear();
+		edgeVisuals.clear();
+
+		if (graph == null)
+			return;
+
+		EdgeRendererRegistry rendererRegistry = EdgeRendererRegistry.getInstance();
+		RenderContext ctx = new RenderContext(zoom.get(), false);
+
+		for (Edge edge : graph.getEdges()) {
+			EdgeType type = EdgeTypeRegistry.getInstance().get(edge.getTypeId());
+			IEdgeRenderer renderer = rendererRegistry.get(edge.getTypeId());
+			if (renderer == null)
+				continue;
+
+			Point2D sourcePos = resolveJoinPointPosition(edge.getSourceJoinPointId());
+			Point2D targetPos = resolveJoinPointPosition(edge.getTargetJoinPointId());
+			if (sourcePos == null || targetPos == null)
+				continue;
+
+			javafx.scene.Group edgeVisual = renderer.createEdgeVisual(edge, type, sourcePos, targetPos,
+					edge.getWaypoints().isEmpty() ? null : edge.getWaypoints(), ctx);
+
+			edgeVisuals.put(edge.getId(), edgeVisual);
+			edgePane.getChildren().add(edgeVisual);
+		}
+	}
+
+	private Point2D resolveJoinPointPosition(UUID joinPointId) {
+		if (graph == null)
+			return null;
+		for (Node node : graph.getNodes()) {
+			for (JoinPoint jp : node.getJoinPoints()) {
+				if (jp.getId().equals(joinPointId)) {
+					double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(),
+							node.getWidth(), node.getHeight());
+					return new Point2D(node.getX() + rel[0], node.getY() + rel[1]);
+				}
+			}
+		}
+		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
+			for (JoinPoint jp : group.getExposedJoinPoints()) {
+				if (jp.getId().equals(joinPointId)) {
+					double w = Math.max(group.getWidth(), 80);
+					double h = Math.max(group.getHeight(), 50);
+					double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(),
+							w, h);
+					return new Point2D(group.getX() + rel[0], group.getY() + rel[1]);
+				}
+			}
+		}
+		return null;
+	}
+
+	public Region getNodeVisual(UUID nodeId) {
+		return nodeVisuals.get(nodeId);
+	}
+
+	public javafx.scene.Group getEdgeVisual(UUID edgeId) {
+		return edgeVisuals.get(edgeId);
+	}
+
+	public void refreshGraph() {
+		Set<UUID> selected = new java.util.LinkedHashSet<>(selectionModel.getSelection());
+		renderGraph();
+		selectionModel.selectAll(selected);
+		updateSelectionVisuals();
+	}
+
+	public void refreshNodeVisual(UUID nodeId) {
+		if (graph == null)
+			return;
+
+		Node node = graph.getNodes().stream().filter(n -> n.getId().equals(nodeId)).findFirst().orElse(null);
+		if (node == null)
+			return;
+
+		Region oldVisual = nodeVisuals.get(nodeId);
+		if (oldVisual == null)
+			return;
+
+		NodeType type = NodeTypeRegistry.getInstance().get(node.getTypeId());
+		INodeRenderer renderer = NodeRendererRegistry.getInstance().get(node.getTypeId());
+		if (renderer == null || type == null)
+			return;
+
+		int index = nodePane.getChildren().indexOf(oldVisual);
+		nodePane.getChildren().remove(oldVisual);
+
+		Region visual = renderer.createNodeVisual(node, type, new RenderContext(zoom.get(), false));
+		visual.setLayoutX(0);
+		visual.setLayoutY(0);
+		visual.getProperties().put("nodeId", node.getId());
+
+		Pane wrapper = new Pane(visual);
+		wrapper.setManaged(false);
+		wrapper.setLayoutX(node.getX());
+		wrapper.setLayoutY(node.getY());
+		wrapper.setPrefSize(node.getWidth(), node.getHeight());
+		wrapper.getProperties().put("nodeId", node.getId());
+
+		JoinPointRenderer.renderJoinPoints(wrapper, node.getJoinPoints(), node.getWidth(), node.getHeight(),
+				type.isShowJoinPointLabels());
+
+		nodeVisuals.put(nodeId, wrapper);
+		if (index >= 0 && index < nodePane.getChildren().size())
+			nodePane.getChildren().add(index, wrapper);
+		else
+			nodePane.getChildren().add(wrapper);
+
+		if (selectionModel.isSelected(nodeId)) {
+			if (!wrapper.getStyleClass().contains("graph-node-selected"))
+				wrapper.getStyleClass().add("graph-node-selected");
+		}
+
+		renderEdges();
+		renderGroups();
+	}
+
+	public void refreshEdges() {
+		renderEdges();
+		renderGroups();
+	}
+
+	public Pane getContentPane() {
+		return contentPane;
+	}
+
+	public GraphCommandHistory getCommandHistory() {
+		return commandHistory;
+	}
+
+	public GroupInteractionHandler getGroupHandler() {
+		return groupHandler;
+	}
+
+	public void zoomToFit() {
+		if (graph == null || graph.getNodes().isEmpty()) {
+			zoom.set(1.0);
+			scrollX.set(0);
+			scrollY.set(0);
+			return;
+		}
+
+		double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
+		double maxX = Double.MIN_VALUE, maxY = Double.MIN_VALUE;
+		for (Node n : graph.getNodes()) {
+			minX = Math.min(minX, n.getX());
+			minY = Math.min(minY, n.getY());
+			maxX = Math.max(maxX, n.getX() + n.getWidth());
+			maxY = Math.max(maxY, n.getY() + n.getHeight());
+		}
+
+		double contentW = maxX - minX;
+		double contentH = maxY - minY;
+		if (contentW <= 0 || contentH <= 0)
+			return;
+
+		double padding = 40;
+		double viewW = getWidth() - padding * 2;
+		double viewH = getHeight() - padding * 2;
+		if (viewW <= 0 || viewH <= 0)
+			return;
+
+		double fitZoom = clampZoom(Math.min(viewW / contentW, viewH / contentH));
+		zoom.set(fitZoom);
+		scrollX.set(padding - minX * fitZoom + (viewW - contentW * fitZoom) / 2);
+		scrollY.set(padding - minY * fitZoom + (viewH - contentH * fitZoom) / 2);
+	}
+
+	public void resetZoom() {
+		zoom.set(1.0);
+	}
+
+	public void zoomIn() {
+		double w = getWidth() / 2;
+		double h = getHeight() / 2;
+		double oldZoom = zoom.get();
+		double newZoom = clampZoom(oldZoom * ZOOM_STEP);
+		if (newZoom == oldZoom)
+			return;
+
+		double cx = (w - scrollX.get()) / oldZoom;
+		double cy = (h - scrollY.get()) / oldZoom;
+		zoom.set(newZoom);
+		scrollX.set(w - cx * newZoom);
+		scrollY.set(h - cy * newZoom);
+	}
+
+	public void zoomOut() {
+		double w = getWidth() / 2;
+		double h = getHeight() / 2;
+		double oldZoom = zoom.get();
+		double newZoom = clampZoom(oldZoom / ZOOM_STEP);
+		if (newZoom == oldZoom)
+			return;
+
+		double cx = (w - scrollX.get()) / oldZoom;
+		double cy = (h - scrollY.get()) / oldZoom;
+		zoom.set(newZoom);
+		scrollX.set(w - cx * newZoom);
+		scrollY.set(h - cy * newZoom);
+	}
+
+	private static double clampZoom(double v) {
+		return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, v));
+	}
+
+	// --- properties ---
+
+	public DoubleProperty zoomProperty() {
+		return zoom;
+	}
+
+	public double getZoom() {
+		return zoom.get();
+	}
+
+	public void setZoom(double value) {
+		zoom.set(clampZoom(value));
+	}
+
+	public DoubleProperty scrollXProperty() {
+		return scrollX;
+	}
+
+	public double getScrollX() {
+		return scrollX.get();
+	}
+
+	public void setScrollX(double value) {
+		scrollX.set(value);
+	}
+
+	public DoubleProperty scrollYProperty() {
+		return scrollY;
+	}
+
+	public double getScrollY() {
+		return scrollY.get();
+	}
+
+	public void setScrollY(double value) {
+		scrollY.set(value);
+	}
+
+	public ObjectProperty<GridStyle> gridStyleProperty() {
+		return gridStyle;
+	}
+
+	public GridStyle getGridStyle() {
+		return gridStyle.get();
+	}
+
+	public void setGridStyle(GridStyle style) {
+		gridStyle.set(style);
+	}
+
+	public DoubleProperty gridSpacingProperty() {
+		return gridSpacing;
+	}
+
+	public double getGridSpacing() {
+		return gridSpacing.get();
+	}
+
+	public void setGridSpacing(double spacing) {
+		gridSpacing.set(spacing);
+	}
+
+	public BooleanProperty snapToGridProperty() {
+		return snapToGrid;
+	}
+
+	public boolean isSnapToGrid() {
+		return snapToGrid.get();
+	}
+
+	public void setSnapToGrid(boolean snap) {
+		snapToGrid.set(snap);
+	}
+
+	public double snapX(double x) {
+		if (!snapToGrid.get())
+			return x;
+		double spacing = gridSpacing.get();
+		return Math.round(x / spacing) * spacing;
+	}
+
+	public double snapY(double y) {
+		if (!snapToGrid.get())
+			return y;
+		double spacing = gridSpacing.get();
+		return Math.round(y / spacing) * spacing;
+	}
+}

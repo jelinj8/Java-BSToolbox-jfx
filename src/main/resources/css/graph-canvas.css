@@ -1,0 +1,113 @@
+.graph-canvas {
+    -fx-background-color: #f8f8f8;
+}
+
+.graph-canvas .graph-background {
+    -fx-background-color: transparent;
+}
+
+.graph-canvas .graph-content {
+    -fx-background-color: transparent;
+}
+
+.graph-canvas .selection-rect {
+    -fx-fill: rgba(51, 153, 255, 0.15);
+    -fx-stroke: #3399ff;
+    -fx-stroke-width: 1;
+    -fx-stroke-dash-array: 4 4;
+}
+
+.graph-node {
+    -fx-cursor: hand;
+}
+
+.graph-node-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #333333;
+    -fx-alignment: center;
+}
+
+.graph-node-selected .graph-node-shape {
+    -fx-stroke: #3399ff;
+    -fx-stroke-width: 2.5;
+    -fx-effect: dropshadow(gaussian, rgba(51, 153, 255, 0.4), 8, 0, 0, 0);
+}
+
+.graph-join-point {
+    -fx-cursor: crosshair;
+}
+
+.graph-edge-line {
+    -fx-stroke: #555555;
+    -fx-stroke-width: 1.5;
+}
+
+.graph-edge-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666666;
+    -fx-background-color: rgba(248, 248, 248, 0.85);
+    -fx-padding: 1 4 1 4;
+}
+
+.graph-edge-selected .graph-edge-line {
+    -fx-stroke: #3399ff;
+    -fx-stroke-width: 2.5;
+}
+
+.graph-edge-selected .graph-edge-arrow {
+    -fx-fill: #3399ff;
+}
+
+/* Palette */
+
+.graph-palette {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 0 1 0 0;
+}
+
+.graph-palette-entry {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+}
+
+.graph-palette-entry:hover {
+    -fx-background-color: #e8f0fe;
+    -fx-border-color: #3399ff;
+}
+
+/* Groups */
+
+.graph-group-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #777777;
+    -fx-font-style: italic;
+}
+
+.graph-group-collapsed .graph-node-label {
+    -fx-font-weight: bold;
+}
+
+.graph-breadcrumb-bar {
+    -fx-background-color: #f4f4f4;
+    -fx-alignment: center-left;
+}
+
+.graph-breadcrumb-separator {
+    -fx-text-fill: #999999;
+}
+
+.graph-breadcrumb-current {
+    -fx-font-weight: bold;
+}
+
+.graph-group-expanded.graph-node-selected {
+    -fx-effect: dropshadow(gaussian, rgba(51, 153, 255, 0.5), 12, 0, 0, 0);
+}
+
+.graph-group-collapsed.graph-node-selected {
+    -fx-effect: dropshadow(gaussian, rgba(51, 153, 255, 0.5), 12, 0, 0, 0);
+}
