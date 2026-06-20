@@ -1,0 +1,275 @@
+package cz.bliksoft.javautils.fx.controls.graph.runtime;
+
+import java.util.UUID;
+
+import cz.bliksoft.dataflow.engine.GraphExecutor;
+import cz.bliksoft.dataflow.engine.GraphExecutorListener;
+import cz.bliksoft.dataflow.engine.GraphInstance;
+import cz.bliksoft.dataflow.engine.Message;
+import cz.bliksoft.dataflow.engine.NodeState;
+import cz.bliksoft.dataflow.engine.SteppingController;
+import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+
+public class GraphRuntimeBridge {
+
+	private final GraphCanvas canvas;
+	private final GraphExecutor executor;
+	private final NodeStateOverlay stateOverlay;
+	private final BreakpointManager breakpointManager;
+
+	private final BooleanProperty paused = new SimpleBooleanProperty(false);
+	private final BooleanProperty running = new SimpleBooleanProperty(false);
+
+	private GraphInstance lastInstance;
+
+	public GraphRuntimeBridge(GraphCanvas canvas, GraphExecutor executor) {
+		this.canvas = canvas;
+		this.executor = executor;
+		this.stateOverlay = new NodeStateOverlay(canvas);
+		this.breakpointManager = new BreakpointManager();
+
+		canvas.addPostRefreshCallback(() -> {
+			stateOverlay.reapplyAll();
+			updateBreakpointVisuals();
+		});
+
+		executor.addListener(new GraphExecutorListener() {
+			@Override
+			public void onNodeStarted(UUID nodeId) {
+				stateOverlay.updateNodeState(nodeId, NodeState.RUNNING);
+				checkPaused();
+			}
+
+			@Override
+			public void onNodeCompleted(UUID nodeId) {
+				stateOverlay.updateNodeState(nodeId, NodeState.COMPLETED);
+			}
+
+			@Override
+			public void onNodeFailed(UUID nodeId, Throwable error) {
+				stateOverlay.updateNodeState(nodeId, NodeState.FAILED);
+			}
+
+			@Override
+			public void onNodeSkipped(UUID nodeId) {
+				stateOverlay.updateNodeState(nodeId, NodeState.SKIPPED);
+			}
+
+			@Override
+			public void onEdgeTraversed(UUID edgeId, Message message) {
+				highlightEdge(edgeId);
+			}
+
+			@Override
+			public void onExecutionCompleted(GraphInstance instance) {
+				Platform.runLater(() -> {
+					running.set(false);
+					paused.set(false);
+				});
+			}
+		});
+	}
+
+	public void execute(Message initialMessage) {
+		startExecution(initialMessage, SteppingController.Mode.RUN);
+	}
+
+	public void executeStepByStep(Message initialMessage) {
+		startExecution(initialMessage, SteppingController.Mode.STEP);
+	}
+
+	private void startExecution(Message initialMessage, SteppingController.Mode mode) {
+		Graph graph = canvas.getGraph();
+		if (graph == null)
+			return;
+
+		stateOverlay.clear();
+		updateBreakpointVisuals();
+		SteppingController sc = executor.getSteppingController();
+		sc.reset();
+		sc.setMode(mode);
+		sc.setBreakpoints(breakpointManager.getBreakpoints());
+		running.set(true);
+		paused.set(false);
+
+		Thread executionThread = new Thread(() -> {
+			lastInstance = executor.execute(graph, initialMessage);
+			Platform.runLater(() -> {
+				running.set(false);
+				paused.set(false);
+			});
+		}, "GraphExecutor");
+		executionThread.setDaemon(true);
+		executionThread.start();
+	}
+
+	public void stepOver() {
+		var sel = canvas.getSelectionModel().getSelection();
+		SteppingController sc = executor.getSteppingController();
+		if (sel.size() == 1 && sc.getPausedNodes().contains(sel.iterator().next())) {
+			sc.stepOver(sel.iterator().next());
+		} else {
+			sc.stepAll();
+		}
+	}
+
+	public void stepAll() {
+		executor.getSteppingController().stepAll();
+	}
+
+	public void resume() {
+		executor.getSteppingController().resume();
+		Platform.runLater(() -> paused.set(false));
+	}
+
+	public void resumeToBreakpoints() {
+		executor.getSteppingController().setBreakpoints(breakpointManager.getBreakpoints());
+		executor.getSteppingController().resumeToBreakpoints();
+		Platform.runLater(() -> paused.set(false));
+	}
+
+	public void pause() {
+		executor.getSteppingController().setMode(SteppingController.Mode.STEP);
+	}
+
+	public void stop() {
+		executor.getSteppingController().stop();
+		Platform.runLater(() -> {
+			running.set(false);
+			paused.set(false);
+			stateOverlay.clear();
+		});
+	}
+
+	public BooleanProperty runningProperty() {
+		return running;
+	}
+
+	public boolean isRunning() {
+		return running.get();
+	}
+
+	public BooleanProperty pausedProperty() {
+		return paused;
+	}
+
+	public boolean isPaused() {
+		return paused.get();
+	}
+
+	public GraphInstance getLastInstance() {
+		return lastInstance;
+	}
+
+	public void toggleBreakpoint(UUID nodeId) {
+		breakpointManager.toggleBreakpoint(nodeId);
+		updateBreakpointVisual(nodeId);
+	}
+
+	public void updateBreakpointVisuals() {
+		if (canvas.getGraph() == null)
+			return;
+		for (var node : canvas.getGraph().getNodes())
+			updateBreakpointVisual(node.getId());
+	}
+
+	private void updateBreakpointVisual(UUID nodeId) {
+		javafx.scene.layout.Region visual = canvas.getNodeVisual(nodeId);
+		if (visual == null)
+			return;
+		if (breakpointManager.hasBreakpoint(nodeId)) {
+			if (!visual.getStyleClass().contains("graph-node-breakpoint"))
+				visual.getStyleClass().add("graph-node-breakpoint");
+			addBreakpointDot(visual, nodeId);
+		} else {
+			visual.getStyleClass().remove("graph-node-breakpoint");
+			removeBreakpointDot(visual);
+		}
+	}
+
+	private void addBreakpointDot(javafx.scene.layout.Region visual, UUID nodeId) {
+		if (!(visual instanceof javafx.scene.layout.Pane pane))
+			return;
+		for (javafx.scene.Node child : pane.getChildren()) {
+			if (child.getProperties().containsKey("breakpointDot"))
+				return;
+		}
+		javafx.scene.shape.Circle dot = new javafx.scene.shape.Circle(5);
+		dot.setFill(javafx.scene.paint.Color.web("#F44336"));
+		dot.setStroke(javafx.scene.paint.Color.WHITE);
+		dot.setStrokeWidth(1);
+		dot.setLayoutX(5);
+		dot.setLayoutY(5);
+		dot.setMouseTransparent(true);
+		dot.getProperties().put("breakpointDot", true);
+		pane.getChildren().add(dot);
+	}
+
+	private void removeBreakpointDot(javafx.scene.layout.Region visual) {
+		if (!(visual instanceof javafx.scene.layout.Pane pane))
+			return;
+		pane.getChildren().removeIf(child -> child.getProperties().containsKey("breakpointDot"));
+	}
+
+	public NodeStateOverlay getStateOverlay() {
+		return stateOverlay;
+	}
+
+	public BreakpointManager getBreakpointManager() {
+		return breakpointManager;
+	}
+
+	public GraphExecutor getExecutor() {
+		return executor;
+	}
+
+	private void checkPaused() {
+		SteppingController sc = executor.getSteppingController();
+		javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.millis(50));
+		delay.setOnFinished(e -> {
+			paused.set(sc.isPaused());
+			if (sc.isPaused()) {
+				var sel = canvas.getSelectionModel().getSelection();
+				boolean selectionIsPaused = sel.size() == 1 && sc.getPausedNodes().contains(sel.iterator().next());
+				if (!selectionIsPaused) {
+					UUID first = sc.getFirstPausedNode();
+					if (first != null) {
+						canvas.getSelectionModel().select(first);
+						canvas.updateSelectionVisuals();
+					}
+				}
+				if (onPauseInspector != null)
+					onPauseInspector.run();
+			}
+		});
+		Platform.runLater(delay::play);
+	}
+
+	private Runnable onPauseInspector;
+
+	public void setOnPauseInspector(Runnable inspector) {
+		this.onPauseInspector = inspector;
+	}
+
+	private void inspectNode(UUID nodeId) {
+		if (onPauseInspector != null)
+			onPauseInspector.run();
+	}
+
+	private void highlightEdge(UUID edgeId) {
+		Platform.runLater(() -> {
+			javafx.scene.Group edgeVisual = canvas.getEdgeVisual(edgeId);
+			if (edgeVisual != null) {
+				edgeVisual.getStyleClass().add("graph-edge-active");
+				javafx.animation.PauseTransition pt = new javafx.animation.PauseTransition(
+						javafx.util.Duration.millis(500));
+				pt.setOnFinished(e -> edgeVisual.getStyleClass().remove("graph-edge-active"));
+				pt.play();
+			}
+		});
+	}
+}

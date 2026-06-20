@@ -25,7 +25,7 @@ public class GraphDocumentState {
 	}
 
 	public void newDocument() {
-		Graph g = new Graph("New Graph");
+		Graph g = new Graph("");
 		graph.set(g);
 		file.set(null);
 		status.set(ObjectStatus.NEW);
@@ -48,13 +48,17 @@ public class GraphDocumentState {
 			status.set(ObjectStatus.MODIFIED);
 	}
 
+	public void refreshTitle() {
+		updateTitle();
+	}
+
 	public boolean isModified() {
 		return status.get() == ObjectStatus.MODIFIED;
 	}
 
 	private void updateTitle() {
 		Graph g = graph.get();
-		String name = g != null ? g.getName() : "Untitled";
+		String name = g != null && g.getName() != null && !g.getName().isEmpty() ? g.getName() : "Untitled";
 		File f = file.get();
 		String path = f != null ? f.getName() : name;
 

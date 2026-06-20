@@ -199,8 +199,6 @@ public class NodeInteractionHandler {
 		if (moved) {
 			MoveNodesCommand cmd = new MoveNodesCommand(canvas.getGraph(), dragStartPositions, newPositions);
 			commandHistory.execute(cmd);
-			if (!dragIncludesGroup())
-				GroupBuilder.expandAllAncestors(canvas.getGraph());
 			canvas.refreshGraph();
 		}
 
@@ -469,22 +467,36 @@ public class NodeInteractionHandler {
 		if (graph == null)
 			return new double[] { dx, dy };
 
+		double padding = 10;
+
 		for (UUID id : dragStartPositions.keySet()) {
-			Group movedGroup = GroupBuilder.findGroupById(graph, id);
-			if (movedGroup == null)
-				continue;
-
-			Group parent = findParentGroupOf(graph, movedGroup.getId());
-			if (parent == null)
-				continue;
-
 			double[] startPos = dragStartPositions.get(id);
-			double padding = 10;
+			double elemW = 0, elemH = 0;
+			Group container = null;
 
-			double minX = parent.getX() + padding;
-			double minY = parent.getY() + padding;
-			double maxX = parent.getX() + parent.getWidth() - movedGroup.getWidth() - padding;
-			double maxY = parent.getY() + parent.getHeight() - movedGroup.getHeight() - padding;
+			Group movedGroup = GroupBuilder.findGroupById(graph, id);
+			if (movedGroup != null) {
+				elemW = movedGroup.getWidth();
+				elemH = movedGroup.getHeight();
+				container = findParentGroupOf(graph, movedGroup.getId());
+			} else {
+				for (Node node : graph.getNodes()) {
+					if (node.getId().equals(id)) {
+						elemW = node.getWidth();
+						elemH = node.getHeight();
+						container = GroupBuilder.findGroupContaining(graph, id);
+						break;
+					}
+				}
+			}
+
+			if (container == null)
+				continue;
+
+			double minX = container.getX() + padding;
+			double minY = container.getY() + padding;
+			double maxX = container.getX() + container.getWidth() - elemW - padding;
+			double maxY = container.getY() + container.getHeight() - elemH - padding;
 
 			double newX = startPos[0] + dx;
 			double newY = startPos[1] + dy;

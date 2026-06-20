@@ -35,6 +35,7 @@ public class GraphPropertyPanel extends VBox {
 	private final ScrollPane scrollPane = new ScrollPane(propertiesBox);
 	private GraphCanvas canvas;
 	private UUID currentElementId;
+	private Runnable onGraphNameChanged;
 
 	public GraphPropertyPanel() {
 		getStyleClass().add("graph-property-panel");
@@ -51,24 +52,29 @@ public class GraphPropertyPanel extends VBox {
 		VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
 		getChildren().addAll(titleLabel, scrollPane);
-		showEmpty();
+		showGraphProperties();
+	}
+
+	public void setOnGraphNameChanged(Runnable callback) {
+		this.onGraphNameChanged = callback;
 	}
 
 	public void setCanvas(GraphCanvas canvas) {
 		this.canvas = canvas;
 		canvas.getSelectionModel().observableSelection().addListener(
 				(javafx.collections.SetChangeListener.Change<? extends UUID> change) -> onSelectionChanged());
+		showGraphProperties();
 	}
 
 	private void onSelectionChanged() {
 		if (canvas == null || canvas.getGraph() == null) {
-			showEmpty();
+			showGraphProperties();
 			return;
 		}
 
 		var selection = canvas.getSelectionModel().getSelection();
 		if (selection.size() != 1) {
-			showEmpty();
+			showGraphProperties();
 			return;
 		}
 
@@ -76,10 +82,43 @@ public class GraphPropertyPanel extends VBox {
 		showElement(id);
 	}
 
-	private void showEmpty() {
+	private void showGraphProperties() {
 		currentElementId = null;
-		titleLabel.setText("No selection");
 		propertiesBox.getChildren().clear();
+
+		if (canvas == null || canvas.getGraph() == null) {
+			titleLabel.setText("No graph");
+			return;
+		}
+
+		titleLabel.setText("Graph");
+
+		cz.bliksoft.dataflow.model.Graph g = canvas.getGraph();
+		addDirectPropertyRow("name", g.getName() != null ? g.getName() : "", val -> {
+			g.setName(val);
+			if (onGraphNameChanged != null)
+				onGraphNameChanged.run();
+		});
+
+		addReadOnlyRow("id", g.getId().toString());
+
+		addDirectPropertyRow("grid", canvas.getGridStyle() != null ? canvas.getGridStyle().name() : "DOT", val -> {
+			try {
+				canvas.setGridStyle(cz.bliksoft.javautils.fx.controls.graph.GridStyle.valueOf(val.toUpperCase()));
+			} catch (IllegalArgumentException ignore) {
+			}
+		});
+
+		addDirectPropertyRow("grid spacing", String.valueOf((int) canvas.getGridSpacing()), val -> {
+			try {
+				canvas.setGridSpacing(Double.parseDouble(val));
+			} catch (NumberFormatException ignore) {
+			}
+		});
+
+		addDirectPropertyRow("snap to grid", String.valueOf(canvas.isSnapToGrid()), val -> {
+			canvas.setSnapToGrid(Boolean.parseBoolean(val));
+		});
 	}
 
 	public void showElement(UUID elementId) {
@@ -88,7 +127,7 @@ public class GraphPropertyPanel extends VBox {
 
 		Graph graph = canvas != null ? canvas.getGraph() : null;
 		if (graph == null) {
-			showEmpty();
+			showGraphProperties();
 			return;
 		}
 
@@ -110,7 +149,7 @@ public class GraphPropertyPanel extends VBox {
 			return;
 		}
 
-		showEmpty();
+		showGraphProperties();
 	}
 
 	private void showNodeProperties(Node node) {
@@ -166,11 +205,23 @@ public class GraphPropertyPanel extends VBox {
 	private void addReadOnlyRow(String key, String value) {
 		Label label = new Label(key);
 		label.getStyleClass().add("graph-property-label");
-		javafx.scene.control.TextField tf = new javafx.scene.control.TextField(value);
-		tf.setEditable(false);
-		tf.setStyle("-fx-background-color: #f0f0f0; -fx-text-fill: #888888; -fx-font-size: 11px;");
-		tf.setMaxWidth(Double.MAX_VALUE);
-		VBox fieldBox = new VBox(2, label, tf);
+		Label valueLabel = new Label(value);
+		valueLabel.setStyle(
+				"-fx-background-color: #f0f0f0; -fx-text-fill: #888888; -fx-font-size: 11px; -fx-padding: 4; -fx-cursor: hand;");
+		valueLabel.setMaxWidth(Double.MAX_VALUE);
+		valueLabel.setOnMouseClicked(e -> {
+			javafx.scene.input.ClipboardContent cc = new javafx.scene.input.ClipboardContent();
+			cc.putString(value);
+			javafx.scene.input.Clipboard.getSystemClipboard().setContent(cc);
+			valueLabel.setStyle(
+					"-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-font-size: 11px; -fx-padding: 4; -fx-cursor: hand;");
+			javafx.animation.PauseTransition flash = new javafx.animation.PauseTransition(
+					javafx.util.Duration.millis(600));
+			flash.setOnFinished(ev -> valueLabel.setStyle(
+					"-fx-background-color: #f0f0f0; -fx-text-fill: #888888; -fx-font-size: 11px; -fx-padding: 4; -fx-cursor: hand;"));
+			flash.play();
+		});
+		VBox fieldBox = new VBox(2, label, valueLabel);
 		propertiesBox.getChildren().add(fieldBox);
 	}
 
@@ -321,6 +372,6 @@ public class GraphPropertyPanel extends VBox {
 		if (currentElementId != null)
 			showElement(currentElementId);
 		else
-			showEmpty();
+			showGraphProperties();
 	}
 }

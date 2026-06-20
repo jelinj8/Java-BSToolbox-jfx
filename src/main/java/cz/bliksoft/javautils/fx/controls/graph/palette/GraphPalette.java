@@ -184,6 +184,14 @@ public class GraphPalette extends VBox {
 	}
 
 	private void addToContainingGroup(GraphCanvas canvas, Node node) {
+		var sel = canvas.getSelectionModel().getSelection();
+		if (sel.size() == 1) {
+			Group selectedGroup = GroupBuilder.findGroupById(canvas.getGraph(), sel.iterator().next());
+			if (selectedGroup != null && !selectedGroup.isCollapsed()) {
+				GroupBuilder.addNodeToGroup(selectedGroup, node);
+				return;
+			}
+		}
 		Group group = GroupBuilder.findExpandedGroupAtPoint(canvas.getGraph(), node.getX() + node.getWidth() / 2,
 				node.getY() + node.getHeight() / 2);
 		if (group != null)

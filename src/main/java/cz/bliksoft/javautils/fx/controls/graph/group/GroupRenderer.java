@@ -10,6 +10,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
@@ -31,7 +32,7 @@ public abstract class GroupRenderer {
 			return new Pane();
 
 		Rectangle border = new Rectangle(w, h);
-		border.setFill(Color.TRANSPARENT);
+		border.setFill(Color.rgb(232, 232, 240, 0.3));
 		border.setStroke(BOUNDARY_COLOR);
 		border.setStrokeWidth(1.5);
 		border.getStrokeDashArray().addAll(6.0, 4.0);
@@ -88,10 +89,27 @@ public abstract class GroupRenderer {
 
 		Label nameLabel = new Label(group.getName());
 		nameLabel.getStyleClass().add("graph-node-label");
+		nameLabel.setStyle("-fx-font-weight: bold;");
 		nameLabel.setMaxWidth(w - 10);
 		nameLabel.setWrapText(true);
 
-		StackPane shape = new StackPane(outer, inner, nameLabel);
+		String desc = group.getProperties() != null
+				? String.valueOf(group.getProperties().getOrDefault("description", ""))
+				: "";
+		VBox labelBox;
+		if (desc != null && !desc.isEmpty() && !"".equals(desc)) {
+			Label descLabel = new Label(desc);
+			descLabel.getStyleClass().add("graph-node-label");
+			descLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #888888;");
+			descLabel.setMaxWidth(w - 10);
+			descLabel.setWrapText(true);
+			labelBox = new VBox(2, nameLabel, descLabel);
+		} else {
+			labelBox = new VBox(nameLabel);
+		}
+		labelBox.setAlignment(Pos.CENTER);
+
+		StackPane shape = new StackPane(outer, inner, labelBox);
 		shape.setAlignment(Pos.CENTER);
 		shape.setPrefSize(w, h);
 		shape.getStyleClass().add("graph-node");

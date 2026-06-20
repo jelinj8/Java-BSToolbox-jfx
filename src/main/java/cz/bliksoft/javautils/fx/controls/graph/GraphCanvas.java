@@ -57,6 +57,8 @@ public class GraphCanvas extends Region {
 	private final DoubleProperty gridSpacing = new SimpleDoubleProperty(20);
 	private final BooleanProperty snapToGrid = new SimpleBooleanProperty(false);
 
+	private final java.util.List<Runnable> postRefreshCallbacks = new java.util.ArrayList<>();
+
 	private final Canvas backgroundCanvas;
 	private final Pane edgePane;
 	private final Pane groupPane;
@@ -98,10 +100,17 @@ public class GraphCanvas extends Region {
 		nodePane = new Pane();
 		nodePane.setPickOnBounds(false);
 
-		contentPane = new Pane(edgePane, groupPane, nodePane);
+		contentPane = new Pane(groupPane, edgePane, nodePane);
 		contentPane.getStyleClass().add("graph-content");
 		contentPane.setManaged(false);
 		contentPane.setPickOnBounds(false);
+
+		setClip(new javafx.scene.shape.Rectangle());
+		layoutBoundsProperty().addListener((obs, o, n) -> {
+			javafx.scene.shape.Rectangle clip = (javafx.scene.shape.Rectangle) getClip();
+			clip.setWidth(n.getWidth());
+			clip.setHeight(n.getHeight());
+		});
 
 		getChildren().addAll(backgroundCanvas, contentPane);
 
@@ -297,6 +306,8 @@ public class GraphCanvas extends Region {
 	private static final double RESIZE_HANDLE_SIZE = 6;
 
 	public void updateSelectionVisuals() {
+		Set<UUID> ownerGroupIds = new java.util.HashSet<>();
+
 		for (var entry : nodeVisuals.entrySet()) {
 			Region visual = entry.getValue();
 			boolean selected = selectionModel.isSelected(entry.getKey());
@@ -304,6 +315,13 @@ public class GraphCanvas extends Region {
 				if (!visual.getStyleClass().contains("graph-node-selected"))
 					visual.getStyleClass().add("graph-node-selected");
 				addResizeHandle(visual, entry.getKey());
+
+				if (graph != null) {
+					cz.bliksoft.dataflow.model.Group owner = cz.bliksoft.javautils.fx.controls.graph.group.GroupBuilder
+							.findGroupContaining(graph, entry.getKey());
+					if (owner != null)
+						ownerGroupIds.add(owner.getId());
+				}
 			} else {
 				visual.getStyleClass().remove("graph-node-selected");
 				removeResizeHandle(visual);
@@ -316,6 +334,16 @@ public class GraphCanvas extends Region {
 					visual.getStyleClass().add("graph-edge-selected");
 			} else {
 				visual.getStyleClass().remove("graph-edge-selected");
+			}
+		}
+
+		for (var entry : nodeVisuals.entrySet()) {
+			Region visual = entry.getValue();
+			if (ownerGroupIds.contains(entry.getKey())) {
+				if (!visual.getStyleClass().contains("graph-group-owner-highlight"))
+					visual.getStyleClass().add("graph-group-owner-highlight");
+			} else {
+				visual.getStyleClass().remove("graph-group-owner-highlight");
 			}
 		}
 	}
@@ -476,7 +504,10 @@ public class GraphCanvas extends Region {
 		if (graph == null)
 			return;
 
-		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
+		java.util.List<cz.bliksoft.dataflow.model.Group> sorted = new java.util.ArrayList<>(graph.getGroups());
+		sorted.sort((a, b) -> Double.compare(b.getWidth() * b.getHeight(), a.getWidth() * a.getHeight()));
+
+		for (cz.bliksoft.dataflow.model.Group group : sorted) {
 			Region groupVisual;
 			if (group.isCollapsed()) {
 				groupVisual = GroupRenderer.renderCollapsed(group);
@@ -552,11 +583,21 @@ public class GraphCanvas extends Region {
 		return edgeVisuals.get(edgeId);
 	}
 
+	public void addPostRefreshCallback(Runnable callback) {
+		postRefreshCallbacks.add(callback);
+	}
+
+	private void firePostRefresh() {
+		for (Runnable r : postRefreshCallbacks)
+			r.run();
+	}
+
 	public void refreshGraph() {
 		Set<UUID> selected = new java.util.LinkedHashSet<>(selectionModel.getSelection());
 		renderGraph();
 		selectionModel.selectAll(selected);
 		updateSelectionVisuals();
+		firePostRefresh();
 	}
 
 	public void refreshNodeVisual(UUID nodeId) {

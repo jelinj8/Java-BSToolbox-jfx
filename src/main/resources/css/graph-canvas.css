@@ -111,3 +111,20 @@
 .graph-group-collapsed.graph-node-selected {
     -fx-effect: dropshadow(gaussian, rgba(51, 153, 255, 0.5), 12, 0, 0, 0);
 }
+
+.graph-group-owner-highlight {
+    -fx-effect: dropshadow(gaussian, rgba(100, 149, 237, 0.4), 8, 0, 0, 0);
+}
+
+/* Runtime */
+
+.graph-edge-active .graph-edge-line {
+    -fx-stroke: #FFC107;
+    -fx-stroke-width: 3;
+}
+
+.graph-node-breakpoint {
+    -fx-border-color: #F44336;
+    -fx-border-width: 2;
+    -fx-border-style: dashed;
+}

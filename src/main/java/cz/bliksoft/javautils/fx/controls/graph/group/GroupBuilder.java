@@ -385,14 +385,21 @@ public abstract class GroupBuilder {
 	}
 
 	public static Group findExpandedGroupAtPoint(Graph graph, double x, double y) {
+		Group innermost = null;
+		double smallestArea = Double.MAX_VALUE;
 		for (Group group : graph.getGroups()) {
 			if (group.isCollapsed())
 				continue;
 			if (x >= group.getX() && x <= group.getX() + group.getWidth() && y >= group.getY()
-					&& y <= group.getY() + group.getHeight())
-				return group;
+					&& y <= group.getY() + group.getHeight()) {
+				double area = group.getWidth() * group.getHeight();
+				if (area < smallestArea) {
+					smallestArea = area;
+					innermost = group;
+				}
+			}
 		}
-		return null;
+		return innermost;
 	}
 
 	public static void addNodeToGroup(Group group, Node node) {

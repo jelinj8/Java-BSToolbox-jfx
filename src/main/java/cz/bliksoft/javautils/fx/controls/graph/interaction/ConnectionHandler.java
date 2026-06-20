@@ -212,14 +212,16 @@ public class ConnectionHandler {
 
 			if (sourceIsNode && !targetIsNode) {
 				cz.bliksoft.dataflow.model.Group sourceGroup = GroupBuilder.findGroupContaining(graph, sourceOwnerId);
-				if (sourceGroup != null && !sourceGroup.getId().equals(targetOwnerId)) {
+				if (sourceGroup != null && !sourceGroup.getId().equals(targetOwnerId)
+						&& !isTransitivelyInside(graph, targetOwnerId, false, sourceGroup)) {
 					return createCrossBorderLink(graph, sourceGroup, null, targetJpId);
 				}
 			}
 
 			if (!sourceIsNode && targetIsNode) {
 				cz.bliksoft.dataflow.model.Group targetGroup = GroupBuilder.findGroupContaining(graph, targetOwnerId);
-				if (targetGroup != null && !targetGroup.getId().equals(sourceOwnerId)) {
+				if (targetGroup != null && !targetGroup.getId().equals(sourceOwnerId)
+						&& !isTransitivelyInside(graph, sourceOwnerId, false, targetGroup)) {
 					return createCrossBorderLink(graph, null, targetGroup, targetJpId);
 				}
 			}
@@ -227,10 +229,7 @@ public class ConnectionHandler {
 			if (!sourceIsNode) {
 				cz.bliksoft.dataflow.model.Group parentOfSource = findParentGroup(graph, sourceOwnerId);
 				if (parentOfSource != null) {
-					boolean targetInParent = targetIsNode
-							? parentOfSource.getMemberNodeIds().contains(targetOwnerId)
-									|| parentOfSource.getMemberGroupIds().contains(targetOwnerId)
-							: parentOfSource.getId().equals(targetOwnerId);
+					boolean targetInParent = isTransitivelyInside(graph, targetOwnerId, targetIsNode, parentOfSource);
 					if (!targetInParent) {
 						return createCrossBorderLink(graph, parentOfSource, null, targetJpId);
 					}
@@ -240,10 +239,7 @@ public class ConnectionHandler {
 			if (!targetIsNode) {
 				cz.bliksoft.dataflow.model.Group parentOfTarget = findParentGroup(graph, targetOwnerId);
 				if (parentOfTarget != null) {
-					boolean sourceInParent = sourceIsNode
-							? parentOfTarget.getMemberNodeIds().contains(sourceOwnerId)
-									|| parentOfTarget.getMemberGroupIds().contains(sourceOwnerId)
-							: parentOfTarget.getId().equals(sourceOwnerId);
+					boolean sourceInParent = isTransitivelyInside(graph, sourceOwnerId, sourceIsNode, parentOfTarget);
 					if (!sourceInParent) {
 						return createCrossBorderLink(graph, null, parentOfTarget, targetJpId);
 					}
@@ -461,6 +457,22 @@ public class ConnectionHandler {
 				return g;
 		}
 		return null;
+	}
+
+	private boolean isTransitivelyInside(Graph graph, UUID elementId, boolean isNode,
+			cz.bliksoft.dataflow.model.Group container) {
+		if (isNode) {
+			if (container.getMemberNodeIds().contains(elementId))
+				return true;
+			for (UUID childGroupId : container.getMemberGroupIds()) {
+				cz.bliksoft.dataflow.model.Group child = GroupBuilder.findGroupById(graph, childGroupId);
+				if (child != null && isTransitivelyInside(graph, elementId, true, child))
+					return true;
+			}
+			return false;
+		} else {
+			return container.getId().equals(elementId) || container.getMemberGroupIds().contains(elementId);
+		}
 	}
 
 	private boolean isGroupId(UUID id) {
