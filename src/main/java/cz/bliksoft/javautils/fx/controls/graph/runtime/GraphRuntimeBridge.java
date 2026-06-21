@@ -39,19 +39,27 @@ public class GraphRuntimeBridge {
 
 		executor.addListener(new GraphExecutorListener() {
 			@Override
+			public void onExecutionStarted(GraphInstance instance) {
+				lastInstance = instance;
+			}
+
+			@Override
 			public void onNodeStarted(UUID nodeId) {
 				stateOverlay.updateNodeState(nodeId, NodeState.RUNNING);
 				checkPaused();
+				notifyInspector();
 			}
 
 			@Override
 			public void onNodeCompleted(UUID nodeId) {
 				stateOverlay.updateNodeState(nodeId, NodeState.COMPLETED);
+				notifyInspector();
 			}
 
 			@Override
 			public void onNodeFailed(UUID nodeId, Throwable error) {
 				stateOverlay.updateNodeState(nodeId, NodeState.FAILED);
+				notifyInspector();
 			}
 
 			@Override
@@ -69,6 +77,7 @@ public class GraphRuntimeBridge {
 				Platform.runLater(() -> {
 					running.set(false);
 					paused.set(false);
+					notifyInspector();
 				});
 			}
 		});
@@ -97,11 +106,7 @@ public class GraphRuntimeBridge {
 		paused.set(false);
 
 		Thread executionThread = new Thread(() -> {
-			lastInstance = executor.execute(graph, initialMessage);
-			Platform.runLater(() -> {
-				running.set(false);
-				paused.set(false);
-			});
+			executor.execute(graph, initialMessage);
 		}, "GraphExecutor");
 		executionThread.setDaemon(true);
 		executionThread.start();
@@ -255,9 +260,9 @@ public class GraphRuntimeBridge {
 		this.onPauseInspector = inspector;
 	}
 
-	private void inspectNode(UUID nodeId) {
+	private void notifyInspector() {
 		if (onPauseInspector != null)
-			onPauseInspector.run();
+			Platform.runLater(onPauseInspector);
 	}
 
 	private void highlightEdge(UUID edgeId) {

@@ -1,7 +1,9 @@
 package cz.bliksoft.javautils.fx.controls.graph.palette;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
@@ -12,6 +14,7 @@ import cz.bliksoft.javautils.fx.controls.graph.command.CreateNodeCommand;
 import cz.bliksoft.javautils.fx.controls.graph.group.GroupBuilder;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
@@ -20,6 +23,7 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 public class GraphPalette extends VBox {
@@ -28,6 +32,7 @@ public class GraphPalette extends VBox {
 
 	private final VBox categoriesBox = new VBox();
 	private final TextField searchField = new TextField();
+	private final Set<String> collapsedCategories = new HashSet<>();
 	private GraphCanvas targetCanvas;
 
 	public GraphPalette() {
@@ -39,7 +44,12 @@ public class GraphPalette extends VBox {
 		searchField.getStyleClass().add("graph-palette-search");
 		searchField.textProperty().addListener((obs, o, n) -> rebuildPalette());
 
-		getChildren().addAll(searchField, categoriesBox);
+		ScrollPane scrollPane = new ScrollPane(categoriesBox);
+		scrollPane.setFitToWidth(true);
+		scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+		VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+		getChildren().addAll(searchField, scrollPane);
 	}
 
 	public void setTargetCanvas(GraphCanvas canvas) {
@@ -72,8 +82,14 @@ public class GraphPalette extends VBox {
 				continue;
 
 			TitledPane section = new TitledPane(category, content);
-			section.setExpanded(true);
+			section.setExpanded(!collapsedCategories.contains(category));
 			section.setAnimated(false);
+			section.expandedProperty().addListener((obs, o, n) -> {
+				if (Boolean.TRUE.equals(n))
+					collapsedCategories.remove(category);
+				else
+					collapsedCategories.add(category);
+			});
 			categoriesBox.getChildren().add(section);
 		}
 	}

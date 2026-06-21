@@ -492,6 +492,8 @@ public class NodeInteractionHandler {
 
 			if (container == null)
 				continue;
+			if (dragStartPositions.containsKey(container.getId()))
+				continue;
 
 			double minX = container.getX() + padding;
 			double minY = container.getY() + padding;

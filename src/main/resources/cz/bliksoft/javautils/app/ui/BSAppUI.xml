@@ -239,6 +239,30 @@
 					<attribute name="menu-iconspec">svg/refresh-dot.svg|${menu-icon-size}
 					</attribute>
 				</file>
+				<file name="undo">
+					<attribute name="iconspec">svg/arrow-back-up.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/arrow-back-up.svg|${menu-icon-size}
+					</attribute>
+				</file>
+				<file name="redo">
+					<attribute name="iconspec">svg/arrow-forward-up.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/arrow-forward-up.svg|${menu-icon-size}
+					</attribute>
+				</file>
+				<file name="open">
+					<attribute name="iconspec">svg/folder-open.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/folder-open.svg|${menu-icon-size}
+					</attribute>
+				</file>
+				<file name="new">
+					<attribute name="iconspec">svg/file-plus.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/file-plus.svg|${menu-icon-size}
+					</attribute>
+				</file>
 			</file>
 
 			<file name="editor">
