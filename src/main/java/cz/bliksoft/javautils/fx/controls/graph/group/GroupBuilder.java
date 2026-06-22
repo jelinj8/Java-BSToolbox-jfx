@@ -383,8 +383,8 @@ public abstract class GroupBuilder {
 				if (jp.getId().equals(internalJpId)) {
 					double w = Math.max(child.getWidth(), 80);
 					double h = Math.max(child.getHeight(), 50);
-					double[] rel = cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer.computePosition(
-							jp.getPosition(), jp.getCustomX(), jp.getCustomY(), w, h);
+					double[] rel = cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer
+							.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(), w, h);
 					return new double[] { child.getX() + rel[0], child.getY() + rel[1] };
 				}
 			}

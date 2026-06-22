@@ -77,6 +77,18 @@ public interface IValueEditorProvider<V> {
 	}
 
 	/**
+	 * Returns {@code true} when this provider is dialog-only — the inline editor
+	 * returned by {@link #createEditor} is not a meaningful input widget and
+	 * editing should go through the dialog directly. Hosting controls skip inline
+	 * edit mode for dialog-only providers and open the dialog instead.
+	 *
+	 * @return {@code true} to bypass inline editing; default is {@code false}
+	 */
+	default boolean dialogOnly() {
+		return false;
+	}
+
+	/**
 	 * Stable key used to detect provider type changes without cross-package
 	 * instanceof. Override when two instances of the same class represent different
 	 * types (e.g. EnumEditorProvider).

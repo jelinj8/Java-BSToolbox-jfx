@@ -62,6 +62,11 @@ public class ValueDefinitionEditorProvider implements IValueEditorProvider<Value
 	}
 
 	@Override
+	public boolean dialogOnly() {
+		return true;
+	}
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public void showDialog(Window owner, ObjectProperty<ValueDefinition> valueProperty) {
 		Object raw = ((ObjectProperty<Object>) (ObjectProperty<?>) valueProperty).get();

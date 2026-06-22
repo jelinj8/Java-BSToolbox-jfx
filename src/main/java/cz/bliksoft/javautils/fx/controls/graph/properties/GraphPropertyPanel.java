@@ -126,31 +126,30 @@ public class GraphPropertyPanel extends VBox {
 				if (oldName.equals(val))
 					break;
 				g.setName(val);
-				canvas.getCommandHistory()
-						.execute(new cz.bliksoft.javautils.fx.controls.graph.command.IGraphCommand() {
-							@Override
-							public void execute() {
-							}
+				canvas.getCommandHistory().execute(new cz.bliksoft.javautils.fx.controls.graph.command.IGraphCommand() {
+					@Override
+					public void execute() {
+					}
 
-							@Override
-							public void undo() {
-								g.setName(oldName);
-								if (onGraphNameChanged != null)
-									onGraphNameChanged.run();
-							}
+					@Override
+					public void undo() {
+						g.setName(oldName);
+						if (onGraphNameChanged != null)
+							onGraphNameChanged.run();
+					}
 
-							@Override
-							public void redo() {
-								g.setName(val);
-								if (onGraphNameChanged != null)
-									onGraphNameChanged.run();
-							}
+					@Override
+					public void redo() {
+						g.setName(val);
+						if (onGraphNameChanged != null)
+							onGraphNameChanged.run();
+					}
 
-							@Override
-							public String getDescription() {
-								return "Change graph name";
-							}
-						});
+					@Override
+					public String getDescription() {
+						return "Change graph name";
+					}
+				});
 				if (onGraphNameChanged != null)
 					onGraphNameChanged.run();
 			}
@@ -391,6 +390,7 @@ public class GraphPropertyPanel extends VBox {
 		KeyValueEditor<ValueDefinition> editor = new KeyValueEditor<>(new ValueDefinitionEditorProvider());
 		editor.setKeysRestrictedToRegistry(false);
 		editor.setKeysEditable(true);
+		editor.setInlineEditing(false);
 		editor.setTitle("Computed Variables");
 		editor.setPlaceholderText("No variables");
 

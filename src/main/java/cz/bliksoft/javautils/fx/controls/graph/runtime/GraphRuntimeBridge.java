@@ -29,7 +29,10 @@ public class GraphRuntimeBridge {
 
 	private GraphInstance lastInstance;
 
-	private enum EdgeState { ACTIVE, TRAVERSED, SKIPPED }
+	private enum EdgeState {
+		ACTIVE, TRAVERSED, SKIPPED
+	}
+
 	private final Map<UUID, EdgeState> edgeStates = new HashMap<>();
 
 	public GraphRuntimeBridge(GraphCanvas canvas, GraphExecutor executor) {

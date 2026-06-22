@@ -483,7 +483,7 @@ public class ConnectionHandler {
 					graph.getEdges().remove(e);
 				for (JoinPoint jp : addedExposed) {
 					group.getExposedJoinPoints().remove(jp);
-									}
+				}
 			}
 
 			@Override

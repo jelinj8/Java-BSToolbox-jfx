@@ -523,7 +523,8 @@ public class GraphCanvas extends Region {
 		}
 
 		for (JoinPoint jp : graph.getExposedJoinPoints()) {
-			double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(), gw, gh);
+			double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(), gw,
+					gh);
 			double px = graph.getX() + rel[0];
 			double py = graph.getY() + rel[1];
 

@@ -11,6 +11,7 @@ import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -44,6 +45,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 	private final ObjectProperty<Map<String, Class<?>>> registryProperty;
 	private final ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty;
 	private final Map<Class<?>, IValueEditorProvider<V>> typeProviders;
+	private final SimpleBooleanProperty inlineEditing;
 
 	private final ObjectProperty<V> editorProxy = new SimpleObjectProperty<>();
 
@@ -59,13 +61,14 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
 	ValueTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty,
 			ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty,
-			Map<Class<?>, IValueEditorProvider<V>> typeProviders) {
+			Map<Class<?>, IValueEditorProvider<V>> typeProviders, SimpleBooleanProperty inlineEditing) {
 		this.registryProperty = registryProperty;
 		this.defaultProviderProperty = defaultProviderProperty;
 		this.typeProviders = typeProviders;
+		this.inlineEditing = inlineEditing;
 
 		setOnMouseClicked(e -> {
-			if (e.getClickCount() == 2 && !isEmpty())
+			if (e.getClickCount() == 2 && !isEmpty() && inlineEditing.get())
 				startEdit();
 		});
 	}
@@ -74,10 +77,14 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 	public void startEdit() {
 		if (isEmpty() || getTableRow() == null || getTableRow().getItem() == null)
 			return;
+		if (!inlineEditing.get())
+			return;
 		if (currentEntry == null)
 			currentEntry = getTableRow().getItem();
 		if (currentProvider == null)
 			currentProvider = resolveProvider(currentEntry.key.get());
+		if (currentProvider.dialogOnly())
+			return;
 
 		super.startEdit();
 		V item = getItem();
@@ -246,29 +253,9 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			org.apache.logging.log4j.LogManager.getLogger(ValueTableCell.class)
 					.debug("Type mismatch in toDisplayString for value '{}', using toString()", v);
 		}
-		if (currentProvider.supportsDialog()) {
-			Label label = new Label(s);
-			IValueEditorProvider<V> provider = currentProvider;
-			KVEntry<V> entry = currentEntry;
-			Button btn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
-			btn.setFocusTraversable(false);
-			btn.setOnAction(e -> {
-				Window owner = getScene() != null ? getScene().getWindow() : null;
-				ObjectProperty<V> prop = new SimpleObjectProperty<>(v);
-				provider.showDialog(owner, prop);
-				if (entry != null)
-					entry.value.set(prop.get());
-			});
-			HBox box = new HBox(4, label, btn);
-			HBox.setHgrow(label, Priority.ALWAYS);
-			setText(null);
-			setGraphic(box);
-			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-		} else {
-			setText(s);
-			setGraphic(null);
-			setContentDisplay(ContentDisplay.TEXT_ONLY);
-		}
+		setText(s);
+		setGraphic(null);
+		setContentDisplay(ContentDisplay.TEXT_ONLY);
 	}
 
 	@SuppressWarnings("rawtypes")
