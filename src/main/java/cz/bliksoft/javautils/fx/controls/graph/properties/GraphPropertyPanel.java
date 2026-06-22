@@ -2,37 +2,37 @@ package cz.bliksoft.javautils.fx.controls.graph.properties;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
+import cz.bliksoft.dataflow.model.schema.ComputedVariable;
 import cz.bliksoft.dataflow.model.schema.PropertyDefinition;
 import cz.bliksoft.dataflow.model.schema.PropertySchema;
+import cz.bliksoft.dataflow.model.schema.ValueDefinition;
 import cz.bliksoft.dataflow.types.EdgeType;
 import cz.bliksoft.dataflow.types.EdgeTypeRegistry;
 import cz.bliksoft.dataflow.types.NodeType;
 import cz.bliksoft.dataflow.types.NodeTypeRegistry;
+import cz.bliksoft.javautils.app.ui.utils.state.FxStateMeta;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
-import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
+import cz.bliksoft.javautils.fx.controls.editors.multivalue.KeyValueEditor;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
 import cz.bliksoft.javautils.fx.controls.graph.command.PropertyChangeCommand;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.GridPane;
+import javafx.scene.control.SplitPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 public class GraphPropertyPanel extends VBox {
 
 	private final Label titleLabel = new Label();
-	private final VBox propertiesBox = new VBox(6);
-	private final ScrollPane scrollPane = new ScrollPane(propertiesBox);
+	private final VBox headerBox = new VBox(4);
+	private final VBox contentArea = new VBox();
 	private GraphCanvas canvas;
 	private UUID currentElementId;
 	private Runnable onGraphNameChanged;
@@ -45,13 +45,10 @@ public class GraphPropertyPanel extends VBox {
 		titleLabel.getStyleClass().add("graph-property-title");
 		titleLabel.setMaxWidth(Double.MAX_VALUE);
 
-		propertiesBox.setPadding(new Insets(4));
+		headerBox.setPadding(new Insets(4));
+		VBox.setVgrow(contentArea, Priority.ALWAYS);
 
-		scrollPane.setFitToWidth(true);
-		scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-		VBox.setVgrow(scrollPane, Priority.ALWAYS);
-
-		getChildren().addAll(titleLabel, scrollPane);
+		getChildren().addAll(titleLabel, headerBox, contentArea);
 		showGraphProperties();
 	}
 
@@ -71,20 +68,22 @@ public class GraphPropertyPanel extends VBox {
 			showGraphProperties();
 			return;
 		}
-
 		var selection = canvas.getSelectionModel().getSelection();
 		if (selection.size() != 1) {
 			showGraphProperties();
 			return;
 		}
+		showElement(selection.iterator().next());
+	}
 
-		UUID id = selection.iterator().next();
-		showElement(id);
+	private void clearAll() {
+		headerBox.getChildren().clear();
+		contentArea.getChildren().clear();
 	}
 
 	private void showGraphProperties() {
 		currentElementId = null;
-		propertiesBox.getChildren().clear();
+		clearAll();
 
 		if (canvas == null || canvas.getGraph() == null) {
 			titleLabel.setText("No graph");
@@ -93,39 +92,92 @@ public class GraphPropertyPanel extends VBox {
 
 		titleLabel.setText("Graph");
 
-		cz.bliksoft.dataflow.model.Graph g = canvas.getGraph();
-		addDirectPropertyRow("name", g.getName() != null ? g.getName() : "", val -> {
-			g.setName(val);
-			if (onGraphNameChanged != null)
-				onGraphNameChanged.run();
-		});
-
+		Group g = canvas.getGraph();
 		addReadOnlyRow("id", g.getId().toString());
 
-		addDirectPropertyRow("grid", canvas.getGridStyle() != null ? canvas.getGridStyle().name() : "DOT", val -> {
-			try {
-				canvas.setGridStyle(cz.bliksoft.javautils.fx.controls.graph.GridStyle.valueOf(val.toUpperCase()));
-			} catch (IllegalArgumentException ignore) {
+		Map<String, Class<?>> registry = new LinkedHashMap<>();
+		registry.put("name", String.class);
+		registry.put("grid", cz.bliksoft.javautils.fx.controls.graph.GridStyle.class);
+		registry.put("grid spacing", String.class);
+		registry.put("snap to grid", Boolean.class);
+
+		Map<String, Object> data = new LinkedHashMap<>();
+		data.put("name", g.getName() != null ? g.getName() : "");
+		data.put("grid", canvas.getGridStyle() != null ? canvas.getGridStyle().name() : "DOT");
+		data.put("grid spacing", String.valueOf((int) canvas.getGridSpacing()));
+		data.put("snap to grid", String.valueOf(canvas.isSnapToGrid()));
+
+		KeyValueEditor<Object> editor = new KeyValueEditor<>();
+		editor.propertyRegistryProperty().set(registry);
+		editor.setKeysRestrictedToRegistry(true);
+		editor.setKeysEditable(false);
+		editor.setAddAction(null);
+		editor.setRemoveAction(null);
+		editor.loadFrom(data);
+
+		editor.getValues().addListener((javafx.collections.MapChangeListener<String, Object>) change -> {
+			if (!change.wasAdded())
+				return;
+			String key = change.getKey();
+			String val = change.getValueAdded() != null ? change.getValueAdded().toString() : "";
+			switch (key) {
+			case "name" -> {
+				String oldName = g.getName() != null ? g.getName() : "";
+				if (oldName.equals(val))
+					break;
+				g.setName(val);
+				canvas.getCommandHistory()
+						.execute(new cz.bliksoft.javautils.fx.controls.graph.command.IGraphCommand() {
+							@Override
+							public void execute() {
+							}
+
+							@Override
+							public void undo() {
+								g.setName(oldName);
+								if (onGraphNameChanged != null)
+									onGraphNameChanged.run();
+							}
+
+							@Override
+							public void redo() {
+								g.setName(val);
+								if (onGraphNameChanged != null)
+									onGraphNameChanged.run();
+							}
+
+							@Override
+							public String getDescription() {
+								return "Change graph name";
+							}
+						});
+				if (onGraphNameChanged != null)
+					onGraphNameChanged.run();
+			}
+			case "grid" -> {
+				try {
+					canvas.setGridStyle(cz.bliksoft.javautils.fx.controls.graph.GridStyle.valueOf(val.toUpperCase()));
+				} catch (IllegalArgumentException ignore) {
+				}
+			}
+			case "grid spacing" -> {
+				try {
+					canvas.setGridSpacing(Double.parseDouble(val));
+				} catch (NumberFormatException ignore) {
+				}
+			}
+			case "snap to grid" -> canvas.setSnapToGrid(Boolean.parseBoolean(val));
 			}
 		});
 
-		addDirectPropertyRow("grid spacing", String.valueOf((int) canvas.getGridSpacing()), val -> {
-			try {
-				canvas.setGridSpacing(Double.parseDouble(val));
-			} catch (NumberFormatException ignore) {
-			}
-		});
-
-		addDirectPropertyRow("snap to grid", String.valueOf(canvas.isSnapToGrid()), val -> {
-			canvas.setSnapToGrid(Boolean.parseBoolean(val));
-		});
+		contentArea.getChildren().add(editor);
 	}
 
 	public void showElement(UUID elementId) {
 		currentElementId = elementId;
-		propertiesBox.getChildren().clear();
+		clearAll();
 
-		Graph graph = canvas != null ? canvas.getGraph() : null;
+		Group graph = canvas != null ? canvas.getGraph() : null;
 		if (graph == null) {
 			showGraphProperties();
 			return;
@@ -162,12 +214,29 @@ public class GraphPropertyPanel extends VBox {
 			node.setProperties(new LinkedHashMap<>());
 
 		PropertySchema schema = type != null ? type.getPropertySchema() : null;
-		buildPropertyEditors(node.getId(), node.getProperties(), schema);
+
+		KeyValueEditor<Object> propsEditor = buildPropertyEditor(node.getId(), node.getProperties(), schema);
+		KeyValueEditor<ValueDefinition> varsEditor = buildComputedVariablesEditor(node);
+
+		if (propsEditor != null && varsEditor != null) {
+			SplitPane split = FxStateMeta.key(new SplitPane(), "nodeEditorSplit");
+			split.setOrientation(Orientation.VERTICAL);
+			split.getItems().addAll(propsEditor, varsEditor);
+			split.setDividerPositions(0.6);
+			VBox.setVgrow(split, Priority.ALWAYS);
+			contentArea.getChildren().add(split);
+		} else if (propsEditor != null) {
+			VBox.setVgrow(propsEditor, Priority.ALWAYS);
+			contentArea.getChildren().add(propsEditor);
+		} else if (varsEditor != null) {
+			VBox.setVgrow(varsEditor, Priority.ALWAYS);
+			contentArea.getChildren().add(varsEditor);
+		}
 
 		if (!node.getJoinPoints().isEmpty()) {
 			Label jpHeader = new Label("Join Points");
 			jpHeader.setStyle("-fx-font-weight: bold; -fx-padding: 6 0 2 0;");
-			propertiesBox.getChildren().add(jpHeader);
+			headerBox.getChildren().add(jpHeader);
 
 			for (cz.bliksoft.dataflow.model.JoinPoint jp : node.getJoinPoints()) {
 				addDirectPropertyRow(jp.getDirection().name() + " (" + cardinalityLabel(jp) + ")", jp.getName(),
@@ -196,11 +265,160 @@ public class GraphPropertyPanel extends VBox {
 		if (group.getProperties() == null)
 			group.setProperties(new LinkedHashMap<>());
 
-		PropertySchema schema = new PropertySchema(
-				java.util.List.of(new PropertyDefinition("description", "String", "", false, "Group description")));
-
-		buildPropertyEditors(group.getId(), group.getProperties(), schema);
+		PropertySchema schema = new PropertySchema(java.util.List
+				.of(new PropertyDefinition("description", "String", "", false, true, "Group description")));
+		KeyValueEditor<Object> editor = buildPropertyEditor(group.getId(), group.getProperties(), schema);
+		if (editor != null) {
+			VBox.setVgrow(editor, Priority.ALWAYS);
+			contentArea.getChildren().add(editor);
+		}
 	}
+
+	private void showEdgeProperties(Edge edge) {
+		EdgeType type = EdgeTypeRegistry.getInstance().get(edge.getTypeId());
+		titleLabel.setText(type != null ? type.getDisplayName() + " (edge)" : edge.getTypeId());
+
+		addReadOnlyRow("id", edge.getId().toString());
+
+		if (edge.getProperties() == null)
+			edge.setProperties(new LinkedHashMap<>());
+
+		PropertySchema schema = type != null ? type.getPropertySchema() : null;
+		KeyValueEditor<Object> editor = buildPropertyEditor(edge.getId(), edge.getProperties(), schema);
+		if (editor != null) {
+			VBox.setVgrow(editor, Priority.ALWAYS);
+			contentArea.getChildren().add(editor);
+		}
+	}
+
+	// =========================================================================
+	// KeyValueEditor for properties
+	// =========================================================================
+
+	private KeyValueEditor<Object> buildPropertyEditor(UUID elementId, Map<String, Object> properties,
+			PropertySchema schema) {
+		if (schema == null || schema.getDefinitions().isEmpty())
+			return null;
+
+		Map<String, Class<?>> registry = new LinkedHashMap<>();
+		for (PropertyDefinition def : schema.getDefinitions())
+			registry.put(def.getName(), resolveType(def.getType()));
+
+		Map<String, Object> editorData = new LinkedHashMap<>();
+		for (PropertyDefinition def : schema.getDefinitions()) {
+			if (def.isMandatory()) {
+				Object val = properties.get(def.getName());
+				editorData.put(def.getName(),
+						val != null ? val : (def.getDefaultValue() != null ? def.getDefaultValue() : ""));
+			}
+		}
+		for (var entry : properties.entrySet()) {
+			if (registry.containsKey(entry.getKey()) && !editorData.containsKey(entry.getKey()))
+				editorData.put(entry.getKey(), entry.getValue());
+		}
+
+		KeyValueEditor<Object> editor = new KeyValueEditor<>();
+		editor.propertyRegistryProperty().set(registry);
+		@SuppressWarnings("unchecked")
+		IValueEditorProvider<Object> vdProvider = (IValueEditorProvider<Object>) (IValueEditorProvider<?>) new ValueDefinitionEditorProvider();
+		editor.getTypeProviders().put(ValueDefinition.class, vdProvider);
+		editor.setKeysRestrictedToRegistry(true);
+		editor.setKeysEditable(false);
+		editor.setTitle("Properties");
+		editor.setPlaceholderText("No properties");
+		editor.loadFrom(editorData);
+
+		editor.setAddAction(() -> {
+			java.util.List<String> available = new java.util.ArrayList<>();
+			for (PropertyDefinition def : schema.getDefinitions()) {
+				if (!def.isMandatory() && !editor.getValues().containsKey(def.getName()))
+					available.add(def.getName());
+			}
+			if (available.isEmpty())
+				return;
+			javafx.scene.control.ChoiceDialog<String> dialog = new javafx.scene.control.ChoiceDialog<>(available.get(0),
+					available);
+			dialog.setTitle("Add Property");
+			dialog.setHeaderText(null);
+			dialog.setContentText("Property:");
+			dialog.showAndWait().ifPresent(name -> {
+				PropertyDefinition def = schema.getDefinition(name);
+				Object defaultVal = def != null && def.getDefaultValue() != null ? def.getDefaultValue() : "";
+				editor.getValues().put(name, defaultVal);
+				properties.put(name, defaultVal);
+				showElement(currentElementId);
+			});
+		});
+
+		editor.setRemoveAction(() -> {
+			String key = editor.getSelectedKey();
+			if (key == null)
+				return;
+			PropertyDefinition def = schema.getDefinition(key);
+			if (def != null && def.isMandatory())
+				return;
+			properties.remove(key);
+			editor.getValues().remove(key);
+		});
+
+		editor.getValues().addListener((javafx.collections.MapChangeListener<String, Object>) change -> {
+			if (canvas == null)
+				return;
+			String key = change.getKey();
+			if (change.wasAdded()) {
+				Object oldVal = properties.get(key);
+				Object newVal = change.getValueAdded();
+				if (java.util.Objects.equals(oldVal, newVal))
+					return;
+				properties.put(key, newVal);
+				PropertyChangeCommand cmd = new PropertyChangeCommand(canvas.getGraph(), elementId, key, oldVal,
+						newVal);
+				canvas.getCommandHistory().execute(cmd);
+				canvas.refreshNodeVisual(elementId);
+			} else if (change.wasRemoved() && !change.wasAdded()) {
+				properties.remove(key);
+			}
+		});
+
+		return editor;
+	}
+
+	// =========================================================================
+	// KeyValueEditor for computed variables
+	// =========================================================================
+
+	private KeyValueEditor<ValueDefinition> buildComputedVariablesEditor(Node node) {
+		KeyValueEditor<ValueDefinition> editor = new KeyValueEditor<>(new ValueDefinitionEditorProvider());
+		editor.setKeysRestrictedToRegistry(false);
+		editor.setKeysEditable(true);
+		editor.setTitle("Computed Variables");
+		editor.setPlaceholderText("No variables");
+
+		Map<String, ValueDefinition> cvMap = new LinkedHashMap<>();
+		for (ComputedVariable cv : node.getComputedVariables()) {
+			if (cv.getName() != null && !cv.getName().isEmpty())
+				cvMap.put(cv.getName(), cv.getValue() != null ? cv.getValue() : new ValueDefinition());
+		}
+		editor.loadFrom(cvMap);
+
+		editor.getValues().addListener((javafx.collections.MapChangeListener<String, ValueDefinition>) change -> {
+			syncComputedVariables(node, editor.getValues());
+		});
+
+		return editor;
+	}
+
+	private void syncComputedVariables(Node node, Map<String, ValueDefinition> values) {
+		node.getComputedVariables().clear();
+		for (var entry : values.entrySet()) {
+			if (entry.getKey() != null && !entry.getKey().isEmpty())
+				node.getComputedVariables().add(new ComputedVariable(entry.getKey(), entry.getValue()));
+		}
+	}
+
+	// =========================================================================
+	// Simple property rows (for header-level fields)
+	// =========================================================================
 
 	private void addReadOnlyRow(String key, String value) {
 		Label label = new Label(key);
@@ -222,7 +440,7 @@ public class GraphPropertyPanel extends VBox {
 			flash.play();
 		});
 		VBox fieldBox = new VBox(2, label, valueLabel);
-		propertiesBox.getChildren().add(fieldBox);
+		headerBox.getChildren().add(fieldBox);
 	}
 
 	private void addDirectPropertyRow(String key, String currentValue, java.util.function.Consumer<String> setter) {
@@ -244,105 +462,12 @@ public class GraphPropertyPanel extends VBox {
 		});
 
 		VBox fieldBox = new VBox(2, label, tf);
-		propertiesBox.getChildren().add(fieldBox);
+		headerBox.getChildren().add(fieldBox);
 	}
 
-	private void showEdgeProperties(Edge edge) {
-		EdgeType type = EdgeTypeRegistry.getInstance().get(edge.getTypeId());
-		titleLabel.setText(type != null ? type.getDisplayName() + " (edge)" : edge.getTypeId());
-
-		addReadOnlyRow("id", edge.getId().toString());
-
-		if (edge.getProperties() == null)
-			edge.setProperties(new LinkedHashMap<>());
-
-		PropertySchema schema = type != null ? type.getPropertySchema() : null;
-		buildPropertyEditors(edge.getId(), edge.getProperties(), schema);
-	}
-
-	private void buildPropertyEditors(UUID elementId, Map<String, Object> properties, PropertySchema schema) {
-		if (schema != null) {
-			for (PropertyDefinition def : schema.getDefinitions())
-				addPropertyRow(elementId, properties, def.getName(), resolveType(def.getType()));
-		}
-
-		for (String key : properties.keySet()) {
-			if (schema != null && schema.getDefinition(key) != null)
-				continue;
-			addPropertyRow(elementId, properties, key, String.class);
-		}
-	}
-
-	private void addPropertyRow(UUID elementId, Map<String, Object> properties, String key, Class<?> type) {
-		Label label = new Label(key);
-		label.getStyleClass().add("graph-property-label");
-
-		Object currentValue = properties.get(key);
-		String strValue = currentValue != null ? currentValue.toString() : "";
-		final Object originalValue = convertValue(strValue, type);
-
-		ObjectProperty<String> valueProp = new SimpleObjectProperty<>(strValue);
-
-		IValueEditorProvider<String> provider = ValueEditorFactory.forStringType(type);
-		javafx.scene.Node editor = provider.createEditor(valueProp);
-
-		Runnable commitEdit = () -> {
-			if (canvas == null)
-				return;
-			Object typedNew = convertValue(valueProp.get(), type);
-			if (Objects.equals(originalValue, typedNew))
-				return;
-			properties.put(key, typedNew);
-			PropertyChangeCommand cmd = new PropertyChangeCommand(canvas.getGraph(), elementId, key, originalValue,
-					typedNew);
-			canvas.getCommandHistory().execute(cmd);
-			canvas.refreshNodeVisual(elementId);
-		};
-
-		if (editor instanceof javafx.scene.control.TextField tf) {
-			tf.setOnAction(e -> commitEdit.run());
-			tf.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-				if (!isFocused)
-					commitEdit.run();
-			});
-		} else {
-			valueProp.addListener((obs, oldVal, newVal) -> {
-				if (canvas == null || Objects.equals(oldVal, newVal))
-					return;
-				Object typedNew = convertValue(newVal, type);
-				properties.put(key, typedNew);
-				PropertyChangeCommand cmd = new PropertyChangeCommand(canvas.getGraph(), elementId, key, originalValue,
-						typedNew);
-				canvas.getCommandHistory().execute(cmd);
-				canvas.refreshNodeVisual(elementId);
-			});
-		}
-
-		VBox fieldBox = new VBox(2, label, editor);
-		propertiesBox.getChildren().add(fieldBox);
-	}
-
-	private Object convertValue(String value, Class<?> type) {
-		if (value == null || value.isEmpty())
-			return null;
-		if (type == Integer.class || type == int.class) {
-			try {
-				return Integer.parseInt(value);
-			} catch (NumberFormatException e) {
-				return value;
-			}
-		}
-		if (type == Double.class || type == double.class) {
-			try {
-				return Double.parseDouble(value);
-			} catch (NumberFormatException e) {
-				return value;
-			}
-		}
-		if (type == Boolean.class || type == boolean.class)
-			return Boolean.parseBoolean(value);
-		return value;
-	}
+	// =========================================================================
+	// Utilities
+	// =========================================================================
 
 	private Class<?> resolveType(String typeName) {
 		if (typeName == null)
@@ -352,20 +477,21 @@ public class GraphPropertyPanel extends VBox {
 		case "Integer", "integer", "int" -> Integer.class;
 		case "Double", "double" -> Double.class;
 		case "Boolean", "boolean" -> Boolean.class;
+		case "ValueDefinition" -> ValueDefinition.class;
 		default -> String.class;
 		};
 	}
 
-	private Node findNode(Graph graph, UUID id) {
-		return graph.getNodes().stream().filter(n -> n.getId().equals(id)).findFirst().orElse(null);
+	private Node findNode(Group graph, UUID id) {
+		return graph.findNode(id);
 	}
 
-	private Edge findEdge(Graph graph, UUID id) {
-		return graph.getEdges().stream().filter(e -> e.getId().equals(id)).findFirst().orElse(null);
+	private Edge findEdge(Group graph, UUID id) {
+		return graph.findEdge(id);
 	}
 
-	private Group findGroup(Graph graph, UUID id) {
-		return graph.getGroups().stream().filter(g -> g.getId().equals(id)).findFirst().orElse(null);
+	private Group findGroup(Group graph, UUID id) {
+		return graph.findGroup(id);
 	}
 
 	public void refresh() {

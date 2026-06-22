@@ -1,11 +1,16 @@
 package cz.bliksoft.javautils.fx.controls.graph.group;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
+import cz.bliksoft.dataflow.model.JoinPoint;
+import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
 import cz.bliksoft.javautils.fx.controls.graph.command.GroupCommand;
 import cz.bliksoft.javautils.fx.controls.graph.command.UngroupCommand;
@@ -22,7 +27,6 @@ public class GroupInteractionHandler {
 	public GroupInteractionHandler(GraphCanvas canvas) {
 		this.canvas = canvas;
 		canvas.addEventHandler(KeyEvent.KEY_PRESSED, this::onKeyPressed);
-		canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, this::onDoubleClick);
 	}
 
 	public void setEditingPane(GroupEditingPane editingPane) {
@@ -58,74 +62,80 @@ public class GroupInteractionHandler {
 	}
 
 	public void groupSelected() {
-		Graph graph = canvas.getGraph();
-		if (graph == null)
+		Group root = canvas.getGraph();
+		if (root == null)
 			return;
 
 		Set<UUID> selected = canvas.getSelectionModel().getSelection();
-		Set<UUID> selectedNodes = selected.stream()
-				.filter(id -> graph.getNodes().stream().anyMatch(n -> n.getId().equals(id)))
-				.collect(Collectors.toSet());
-
-		if (selectedNodes.size() < 2)
+		if (selected.isEmpty())
 			return;
 
-		if (!validateGroupingAllowed(graph, selectedNodes))
+		Group commonParent = findCommonParent(root, selected);
+		if (commonParent == null)
 			return;
 
-		GroupBuilder.GroupResult result = GroupBuilder.createFromSelection(graph, selectedNodes, "Group");
-		GroupCommand cmd = new GroupCommand(graph, result.getGroup(), result.getBridgeEdges(), result.getRelinks());
+		Set<UUID> selectedIds = new java.util.LinkedHashSet<>();
+		for (UUID id : selected) {
+			if (commonParent.getNodes().stream().anyMatch(n -> n.getId().equals(id)))
+				selectedIds.add(id);
+			else if (commonParent.getGroups().stream().anyMatch(g -> g.getId().equals(id)))
+				selectedIds.add(id);
+		}
+
+		if (selectedIds.isEmpty())
+			return;
+
+		repairMisplacedEdges(commonParent);
+
+		GroupBuilder.GroupResult result = GroupBuilder.createFromSelection(commonParent, selectedIds, "Group");
+		GroupCommand cmd = new GroupCommand(commonParent, result.getGroup(), result.getBridgeEdges(),
+				result.getRelinks());
 		canvas.getCommandHistory().execute(cmd);
 		canvas.refreshGraph();
 	}
 
-	private boolean validateGroupingAllowed(Graph graph, Set<UUID> selectedNodes) {
-		Group commonGroup = null;
-		boolean hasGrouped = false;
-		boolean hasUngrouped = false;
-
-		for (UUID nodeId : selectedNodes) {
-			Group containing = GroupBuilder.findGroupContaining(graph, nodeId);
-			if (containing == null) {
-				hasUngrouped = true;
-			} else {
-				hasGrouped = true;
-				if (commonGroup == null)
-					commonGroup = containing;
-				else if (!commonGroup.getId().equals(containing.getId()))
-					return false;
-			}
+	private Group findCommonParent(Group root, Set<UUID> ids) {
+		Group common = null;
+		for (UUID id : ids) {
+			Group parent = root.findParentOf(id);
+			if (parent == null)
+				return null;
+			if (common == null)
+				common = parent;
+			else if (!common.getId().equals(parent.getId()))
+				return null;
 		}
-
-		if (hasGrouped && hasUngrouped)
-			return false;
-
-		if (commonGroup != null && !commonGroup.getMemberNodeIds().containsAll(selectedNodes))
-			return false;
-
-		return true;
+		return common;
 	}
 
 	public void ungroupSelected() {
-		Graph graph = canvas.getGraph();
-		if (graph == null)
+		Group root = canvas.getGraph();
+		if (root == null)
 			return;
 
 		Set<UUID> selected = canvas.getSelectionModel().getSelection();
 		for (UUID id : selected) {
-			Group group = GroupBuilder.findGroupById(graph, id);
-			if (group != null) {
-				UngroupCommand cmd = new UngroupCommand(graph, group);
-				canvas.getCommandHistory().execute(cmd);
-				canvas.getSelectionModel().clear();
-				canvas.refreshGraph();
-				return;
-			}
+			Group group = root.findGroup(id);
+			if (group == null)
+				continue;
+			Group actualParent = root.findParentOf(id);
+			if (actualParent == null)
+				continue;
+			UngroupCommand cmd = new UngroupCommand(actualParent, group);
+			canvas.getCommandHistory().execute(cmd);
+			canvas.getSelectionModel().clear();
+			canvas.refreshGraph();
+			return;
 		}
 	}
 
+	public void enterGroup(java.util.UUID groupId) {
+		if (editingPane != null)
+			editingPane.enterGroup(groupId);
+	}
+
 	public void toggleCollapse(UUID groupId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
 
@@ -137,14 +147,49 @@ public class GroupInteractionHandler {
 		canvas.refreshGraph();
 	}
 
+	private void repairMisplacedEdges(Group targetGroup) {
+		Group rootGraph = canvas.getRootGraph();
+		if (rootGraph == null || rootGraph.getId().equals(targetGroup.getId()))
+			return;
+
+		Set<UUID> targetJpIds = new HashSet<>();
+		for (Node node : targetGroup.getNodes())
+			for (JoinPoint jp : node.getJoinPoints())
+				targetJpIds.add(jp.getId());
+		for (Group child : targetGroup.getGroups())
+			for (JoinPoint jp : child.getExposedJoinPoints())
+				targetJpIds.add(jp.getId());
+
+		if (targetJpIds.isEmpty())
+			return;
+
+		collectMisplacedEdgesFrom(rootGraph, targetGroup, targetJpIds);
+	}
+
+	private void collectMisplacedEdgesFrom(Group searchGroup, Group targetGroup, Set<UUID> targetJpIds) {
+		if (searchGroup.getId().equals(targetGroup.getId()))
+			return;
+
+		List<Edge> toMove = new ArrayList<>();
+		for (Edge edge : searchGroup.getEdges()) {
+			if (targetJpIds.contains(edge.getSourceJoinPointId()) && targetJpIds.contains(edge.getTargetJoinPointId()))
+				toMove.add(edge);
+		}
+		for (Edge edge : toMove) {
+			searchGroup.getEdges().remove(edge);
+			targetGroup.getEdges().add(edge);
+		}
+
+		for (Group child : searchGroup.getGroups())
+			collectMisplacedEdgesFrom(child, targetGroup, targetJpIds);
+	}
+
 	private UUID findGroupAt(MouseEvent e) {
 		javafx.scene.Node target = e.getPickResult().getIntersectedNode();
 		while (target != null && target != canvas) {
-			Object groupId = target.getProperties().get("groupId");
-			if (groupId instanceof UUID uid) {
-				if (target.getStyleClass().contains("graph-group-expanded"))
-					return uid;
-			}
+			Object headerId = target.getProperties().get("groupHeader");
+			if (headerId instanceof UUID uid)
+				return uid;
 			target = target.getParent();
 		}
 		return null;

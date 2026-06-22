@@ -1,14 +1,14 @@
 package cz.bliksoft.javautils.fx.controls.graph.command;
 
-import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 
 public class CreateNodeCommand implements IGraphCommand {
 
-	private final Graph graph;
+	private final Group graph;
 	private final Node node;
 
-	public CreateNodeCommand(Graph graph, Node node) {
+	public CreateNodeCommand(Group graph, Node node) {
 		this.graph = graph;
 		this.node = node;
 	}

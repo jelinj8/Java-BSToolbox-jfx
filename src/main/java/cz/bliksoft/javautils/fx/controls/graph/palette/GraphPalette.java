@@ -147,9 +147,9 @@ public class GraphPalette extends VBox {
 		}
 
 		Node node = type.createNode(nodeX, nodeY);
-		CreateNodeCommand cmd = new CreateNodeCommand(targetCanvas.getGraph(), node);
+		cz.bliksoft.dataflow.model.Group targetGroup = findTargetGroup(targetCanvas, node);
+		CreateNodeCommand cmd = new CreateNodeCommand(targetGroup, node);
 		targetCanvas.getCommandHistory().execute(cmd);
-		addToContainingGroup(targetCanvas, node);
 		targetCanvas.refreshGraph();
 		targetCanvas.getSelectionModel().select(node.getId());
 		targetCanvas.updateSelectionVisuals();
@@ -187,9 +187,9 @@ public class GraphPalette extends VBox {
 			}
 
 			Node node = type.createNode(nodeX, nodeY);
-			CreateNodeCommand cmd = new CreateNodeCommand(canvas.getGraph(), node);
+			cz.bliksoft.dataflow.model.Group targetGroup = findTargetGroup(canvas, node);
+			CreateNodeCommand cmd = new CreateNodeCommand(targetGroup, node);
 			canvas.getCommandHistory().execute(cmd);
-			addToContainingGroup(canvas, node);
 			canvas.refreshGraph();
 			canvas.getSelectionModel().select(node.getId());
 			canvas.updateSelectionVisuals();
@@ -199,18 +199,20 @@ public class GraphPalette extends VBox {
 		});
 	}
 
-	private void addToContainingGroup(GraphCanvas canvas, Node node) {
+	private cz.bliksoft.dataflow.model.Group findTargetGroup(GraphCanvas canvas, Node node) {
+		double cx = node.getX() + node.getWidth() / 2;
+		double cy = node.getY() + node.getHeight() / 2;
+
+		Group group = GroupBuilder.findExpandedGroupAtPoint(canvas.getGraph(), cx, cy);
+		if (group != null)
+			return group;
+
 		var sel = canvas.getSelectionModel().getSelection();
 		if (sel.size() == 1) {
 			Group selectedGroup = GroupBuilder.findGroupById(canvas.getGraph(), sel.iterator().next());
-			if (selectedGroup != null && !selectedGroup.isCollapsed()) {
-				GroupBuilder.addNodeToGroup(selectedGroup, node);
-				return;
-			}
+			if (selectedGroup != null && !selectedGroup.isCollapsed())
+				return selectedGroup;
 		}
-		Group group = GroupBuilder.findExpandedGroupAtPoint(canvas.getGraph(), node.getX() + node.getWidth() / 2,
-				node.getY() + node.getHeight() / 2);
-		if (group != null)
-			GroupBuilder.addNodeToGroup(group, node);
+		return canvas.getGraph();
 	}
 }

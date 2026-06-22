@@ -139,7 +139,7 @@ public class GraphContextMenus {
 	private void reverseEdge(UUID edgeId) {
 		if (canvas.getGraph() == null)
 			return;
-		for (Edge edge : canvas.getGraph().getEdges()) {
+		for (Edge edge : canvas.getGraph().getAllEdgesRecursive()) {
 			if (edge.getId().equals(edgeId)) {
 				UUID oldSource = edge.getSourceJoinPointId();
 				edge.setSourceJoinPointId(edge.getTargetJoinPointId());
@@ -153,8 +153,9 @@ public class GraphContextMenus {
 	private void changeZOrder(UUID nodeId, int delta) {
 		if (canvas.getGraph() == null)
 			return;
-		for (Node node : canvas.getGraph().getNodes()) {
-			if (node.getId().equals(nodeId)) {
+		Node node = canvas.getGraph().findNode(nodeId);
+		if (node != null) {
+			{
 				node.setzOrder(node.getzOrder() + delta);
 				canvas.refreshGraph();
 				return;
@@ -177,7 +178,7 @@ public class GraphContextMenus {
 	}
 
 	private void showGroupMenu(MouseEvent e, UUID groupId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
 		Group group = GroupBuilder.findGroupById(graph, groupId);
@@ -200,7 +201,7 @@ public class GraphContextMenus {
 	}
 
 	private void showJoinPointMenu(MouseEvent e, UUID jpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
 
@@ -212,8 +213,7 @@ public class GraphContextMenus {
 		if (ownerNode != null) {
 			Group containingGroup = GroupBuilder.findGroupContaining(graph, ownerNode.getId());
 			if (containingGroup != null) {
-				boolean alreadyExposed = containingGroup.getJoinPointMappings().stream()
-						.anyMatch(m -> m.getInternalId().equals(jpId));
+				boolean alreadyExposed = GroupBuilder.findExposedJpForInternal(containingGroup, jpId) != null;
 				if (!alreadyExposed) {
 					MenuItem expose = new MenuItem("Expose on Group");
 					expose.setOnAction(a -> {
@@ -233,7 +233,7 @@ public class GraphContextMenus {
 		if (ownerGroup != null) {
 			MenuItem unexpose = new MenuItem("Unexpose");
 			unexpose.setOnAction(a -> {
-				GroupBuilder.unexposeJoinPoint(graph, ownerGroup, jpId);
+				GroupBuilder.removeExposedJoinPoint(graph, ownerGroup, jpId);
 				canvas.refreshGraph();
 			});
 			menu.getItems().add(unexpose);
@@ -248,13 +248,13 @@ public class GraphContextMenus {
 	private boolean isNodeId(UUID id) {
 		if (canvas.getGraph() == null)
 			return false;
-		return canvas.getGraph().getNodes().stream().anyMatch(n -> n.getId().equals(id));
+		return canvas.getGraph().findNode(id) != null;
 	}
 
 	private boolean isGroupId(UUID id) {
 		if (canvas.getGraph() == null)
 			return false;
-		return canvas.getGraph().getGroups().stream().anyMatch(g -> g.getId().equals(id));
+		return canvas.getGraph().findGroup(id) != null;
 	}
 
 	private UUID findJoinPointAt(MouseEvent e) {
@@ -268,7 +268,7 @@ public class GraphContextMenus {
 		return null;
 	}
 
-	private Group findGroupOwningJoinPoint(Graph graph, UUID jpId) {
+	private Group findGroupOwningJoinPoint(Group graph, UUID jpId) {
 		for (Group group : graph.getGroups()) {
 			if (group.getExposedJoinPoints().stream().anyMatch(jp -> jp.getId().equals(jpId)))
 				return group;
@@ -276,7 +276,7 @@ public class GraphContextMenus {
 		return null;
 	}
 
-	private Node findNodeOwningJoinPoint(Graph graph, UUID jpId) {
+	private Node findNodeOwningJoinPoint(Group graph, UUID jpId) {
 		for (Node node : graph.getNodes()) {
 			if (node.getJoinPoints().stream().anyMatch(jp -> jp.getId().equals(jpId)))
 				return node;
@@ -284,7 +284,7 @@ public class GraphContextMenus {
 		return null;
 	}
 
-	private JoinPoint findJoinPointById(Graph graph, UUID jpId) {
+	private JoinPoint findJoinPointById(Group graph, UUID jpId) {
 		return GroupBuilder.findJoinPoint(graph, jpId);
 	}
 

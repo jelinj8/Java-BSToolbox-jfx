@@ -1,5 +1,7 @@
 package cz.bliksoft.javautils.fx.controls.graph.runtime;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import cz.bliksoft.dataflow.engine.GraphExecutor;
@@ -9,6 +11,7 @@ import cz.bliksoft.dataflow.engine.Message;
 import cz.bliksoft.dataflow.engine.NodeState;
 import cz.bliksoft.dataflow.engine.SteppingController;
 import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -26,6 +29,9 @@ public class GraphRuntimeBridge {
 
 	private GraphInstance lastInstance;
 
+	private enum EdgeState { ACTIVE, TRAVERSED, SKIPPED }
+	private final Map<UUID, EdgeState> edgeStates = new HashMap<>();
+
 	public GraphRuntimeBridge(GraphCanvas canvas, GraphExecutor executor) {
 		this.canvas = canvas;
 		this.executor = executor;
@@ -34,6 +40,7 @@ public class GraphRuntimeBridge {
 
 		canvas.addPostRefreshCallback(() -> {
 			stateOverlay.reapplyAll();
+			reapplyEdgeStates();
 			updateBreakpointVisuals();
 		});
 
@@ -69,7 +76,12 @@ public class GraphRuntimeBridge {
 
 			@Override
 			public void onEdgeTraversed(UUID edgeId, Message message) {
-				highlightEdge(edgeId);
+				highlightEdge(edgeId, true);
+			}
+
+			@Override
+			public void onEdgeSkipped(UUID edgeId) {
+				highlightEdge(edgeId, false);
 			}
 
 			@Override
@@ -92,11 +104,12 @@ public class GraphRuntimeBridge {
 	}
 
 	private void startExecution(Message initialMessage, SteppingController.Mode mode) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
 
 		stateOverlay.clear();
+		clearEdgeRuntimeStyles();
 		updateBreakpointVisuals();
 		SteppingController sc = executor.getSteppingController();
 		sc.reset();
@@ -147,6 +160,7 @@ public class GraphRuntimeBridge {
 			running.set(false);
 			paused.set(false);
 			stateOverlay.clear();
+			clearEdgeRuntimeStyles();
 		});
 	}
 
@@ -265,16 +279,62 @@ public class GraphRuntimeBridge {
 			Platform.runLater(onPauseInspector);
 	}
 
-	private void highlightEdge(UUID edgeId) {
-		Platform.runLater(() -> {
-			javafx.scene.Group edgeVisual = canvas.getEdgeVisual(edgeId);
+	private void clearEdgeRuntimeStyles() {
+		edgeStates.clear();
+		if (canvas.getGraph() == null)
+			return;
+		for (var edge : canvas.getGraph().getAllEdgesRecursive()) {
+			javafx.scene.Group edgeVisual = canvas.getEdgeVisual(edge.getId());
 			if (edgeVisual != null) {
-				edgeVisual.getStyleClass().add("graph-edge-active");
-				javafx.animation.PauseTransition pt = new javafx.animation.PauseTransition(
-						javafx.util.Duration.millis(500));
-				pt.setOnFinished(e -> edgeVisual.getStyleClass().remove("graph-edge-active"));
-				pt.play();
+				edgeVisual.setEffect(null);
+				edgeVisual.setOpacity(1.0);
 			}
+		}
+	}
+
+	private void highlightEdge(UUID edgeId, boolean traversed) {
+		Platform.runLater(() -> {
+			if (!traversed) {
+				edgeStates.put(edgeId, EdgeState.SKIPPED);
+				applyEdgeEffect(edgeId, EdgeState.SKIPPED);
+				return;
+			}
+
+			edgeStates.put(edgeId, EdgeState.ACTIVE);
+			applyEdgeEffect(edgeId, EdgeState.ACTIVE);
+
+			javafx.animation.PauseTransition pt = new javafx.animation.PauseTransition(
+					javafx.util.Duration.millis(400));
+			pt.setOnFinished(e -> {
+				edgeStates.put(edgeId, EdgeState.TRAVERSED);
+				applyEdgeEffect(edgeId, EdgeState.TRAVERSED);
+			});
+			pt.play();
 		});
+	}
+
+	private void applyEdgeEffect(UUID edgeId, EdgeState state) {
+		javafx.scene.Group edgeVisual = canvas.getEdgeVisual(edgeId);
+		if (edgeVisual == null)
+			return;
+		switch (state) {
+		case ACTIVE -> {
+			edgeVisual.setEffect(new javafx.scene.effect.DropShadow(10, javafx.scene.paint.Color.web("#FFC107")));
+			edgeVisual.setOpacity(1.0);
+		}
+		case TRAVERSED -> {
+			edgeVisual.setEffect(new javafx.scene.effect.DropShadow(6, javafx.scene.paint.Color.web("#4CAF50")));
+			edgeVisual.setOpacity(1.0);
+		}
+		case SKIPPED -> {
+			edgeVisual.setEffect(null);
+			edgeVisual.setOpacity(0.25);
+		}
+		}
+	}
+
+	private void reapplyEdgeStates() {
+		for (var entry : edgeStates.entrySet())
+			applyEdgeEffect(entry.getKey(), entry.getValue());
 	}
 }

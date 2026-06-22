@@ -22,7 +22,7 @@ public abstract class GroupRenderer {
 	private static final double HEADER_HEIGHT = 20;
 	private static final double RESIZE_HANDLE_SIZE = 8;
 
-	public static Region renderExpanded(Group group, Graph graph) {
+	public static Region renderExpanded(Group group, Group parent) {
 		double x = group.getX();
 		double y = group.getY();
 		double w = group.getWidth();
@@ -46,6 +46,7 @@ public abstract class GroupRenderer {
 		header.setArcWidth(8);
 		header.setArcHeight(8);
 		header.setCursor(Cursor.MOVE);
+		header.getProperties().put("groupHeader", group.getId());
 
 		Label nameLabel = new Label(group.getName());
 		nameLabel.getStyleClass().add("graph-group-label");
@@ -62,9 +63,6 @@ public abstract class GroupRenderer {
 		container.getStyleClass().add("graph-group-expanded");
 		container.getProperties().put("groupId", group.getId());
 		container.getProperties().put("nodeId", group.getId());
-
-		if (!group.getExposedJoinPoints().isEmpty())
-			JoinPointRenderer.renderJoinPoints(container, group.getExposedJoinPoints(), w, h);
 
 		return container;
 	}

@@ -11,7 +11,6 @@ import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
-import cz.bliksoft.dataflow.model.JoinPointMapping;
 import cz.bliksoft.dataflow.model.JoinPointPosition;
 import cz.bliksoft.dataflow.model.Node;
 
@@ -73,105 +72,168 @@ public abstract class GroupBuilder {
 		}
 	}
 
-	public static GroupResult createFromSelection(Graph graph, Set<UUID> selectedNodeIds, String name) {
+	public static GroupResult createFromSelection(Group parent, Set<UUID> selectedIds, String name) {
 		Group group = new Group(name);
-		group.setMemberNodeIds(new LinkedHashSet<>(selectedNodeIds));
 
 		Set<UUID> memberJpIds = new LinkedHashSet<>();
-		for (Node node : graph.getNodes()) {
-			if (selectedNodeIds.contains(node.getId())) {
+		List<Node> selectedNodes = new ArrayList<>();
+		for (Node node : parent.getNodes()) {
+			if (selectedIds.contains(node.getId())) {
+				selectedNodes.add(node);
 				for (JoinPoint jp : node.getJoinPoints())
 					memberJpIds.add(jp.getId());
 			}
 		}
 
-		Set<UUID> internalEdgeIds = new LinkedHashSet<>();
-		for (Edge edge : graph.getEdges()) {
-			boolean sourceInside = memberJpIds.contains(edge.getSourceJoinPointId());
-			boolean targetInside = memberJpIds.contains(edge.getTargetJoinPointId());
-			if (sourceInside && targetInside)
-				internalEdgeIds.add(edge.getId());
+		List<Group> selectedGroups = new ArrayList<>();
+		for (Group child : parent.getGroups()) {
+			if (selectedIds.contains(child.getId())) {
+				selectedGroups.add(child);
+				for (JoinPoint jp : child.getExposedJoinPoints())
+					memberJpIds.add(jp.getId());
+			}
 		}
-		group.setMemberEdgeIds(internalEdgeIds);
+
+		for (Node node : selectedNodes) {
+			parent.getNodes().remove(node);
+			group.getNodes().add(node);
+		}
+		for (Group child : selectedGroups) {
+			parent.getGroups().remove(child);
+			group.getGroups().add(child);
+		}
+
+		List<Edge> internalEdges = new ArrayList<>();
+		for (Edge edge : parent.getEdges()) {
+			if (memberJpIds.contains(edge.getSourceJoinPointId()) && memberJpIds.contains(edge.getTargetJoinPointId()))
+				internalEdges.add(edge);
+		}
+		for (Edge edge : internalEdges) {
+			parent.getEdges().remove(edge);
+			group.getEdges().add(edge);
+		}
 
 		List<Edge> bridgeEdges = new ArrayList<>();
 		List<EdgeRelink> relinks = new ArrayList<>();
 
-		for (Edge edge : graph.getEdges()) {
+		for (Edge edge : new ArrayList<>(parent.getEdges())) {
 			boolean sourceInside = memberJpIds.contains(edge.getSourceJoinPointId());
 			boolean targetInside = memberJpIds.contains(edge.getTargetJoinPointId());
 
 			if (sourceInside && !targetInside) {
-				UUID exposedJpId = exposeJoinPoint(graph, group, edge.getSourceJoinPointId());
+				UUID exposedJpId = exposeJoinPoint(parent, group, edge.getSourceJoinPointId());
 				if (exposedJpId != null) {
 					Edge bridge = new Edge(edge.getTypeId(), edge.getSourceJoinPointId(), exposedJpId);
 					bridge.setDirectionality(edge.getDirectionality());
 					bridgeEdges.add(bridge);
-					group.getMemberEdgeIds().add(bridge.getId());
-
+					group.getEdges().add(bridge);
 					relinks.add(new EdgeRelink(edge.getId(), edge.getSourceJoinPointId(), exposedJpId, true));
 				}
 			}
 			if (!sourceInside && targetInside) {
-				UUID exposedJpId = exposeJoinPoint(graph, group, edge.getTargetJoinPointId());
+				UUID exposedJpId = exposeJoinPoint(parent, group, edge.getTargetJoinPointId());
 				if (exposedJpId != null) {
 					Edge bridge = new Edge(edge.getTypeId(), exposedJpId, edge.getTargetJoinPointId());
 					bridge.setDirectionality(edge.getDirectionality());
 					bridgeEdges.add(bridge);
-					group.getMemberEdgeIds().add(bridge.getId());
-
+					group.getEdges().add(bridge);
 					relinks.add(new EdgeRelink(edge.getId(), edge.getTargetJoinPointId(), exposedJpId, false));
 				}
 			}
 		}
 
-		computeCollapsedBounds(graph, group, selectedNodeIds);
+		for (EdgeRelink r : relinks) {
+			for (Edge edge : parent.getEdges()) {
+				if (edge.getId().equals(r.getEdgeId())) {
+					if (r.isSource())
+						edge.setSourceJoinPointId(r.getNewJoinPointId());
+					else
+						edge.setTargetJoinPointId(r.getNewJoinPointId());
+					break;
+				}
+			}
+		}
+
+		computeCollapsedBounds(parent, group, selectedIds);
+		parent.getGroups().add(group);
 
 		return new GroupResult(group, bridgeEdges, relinks);
 	}
 
-	private static UUID exposeJoinPoint(Graph graph, Group group, UUID internalJpId) {
-		for (JoinPointMapping existing : group.getJoinPointMappings()) {
-			if (existing.getInternalId().equals(internalJpId))
-				return existing.getExposedId();
-		}
+	private static UUID exposeJoinPoint(Group parent, Group group, UUID internalJpId) {
+		UUID existing = findExposedJpForInternal(group, internalJpId);
+		if (existing != null)
+			return existing;
 
-		JoinPoint internalJp = findJoinPoint(graph, internalJpId);
+		JoinPoint internalJp = findJoinPointInGroup(group, internalJpId);
+		if (internalJp == null)
+			internalJp = findJoinPointInGroup(parent, internalJpId);
 		if (internalJp == null)
 			return null;
 
 		JoinPoint exposed = new JoinPoint(internalJp.getName(), internalJp.getPosition(),
 				internalJp.getDirection().toBorderDirection(), -1);
 		group.getExposedJoinPoints().add(exposed);
-		group.getJoinPointMappings().add(new JoinPointMapping(exposed.getId(), internalJpId));
 		return exposed.getId();
 	}
 
-	public static void exposeJoinPoint(Graph graph, Group group, UUID internalJpId, JoinPoint exposed) {
+	public static void exposeJoinPoint(Group parent, Group group, UUID internalJpId, JoinPoint exposed) {
 		group.getExposedJoinPoints().add(exposed);
-		group.getJoinPointMappings().add(new JoinPointMapping(exposed.getId(), internalJpId));
+		positionSingleExposedJoinPoint(group, exposed);
+		ensureBridgeEdge(group, internalJpId, exposed.getId(), exposed.getDirection());
 	}
 
-	public static void unexposeJoinPoint(Graph graph, Group group, UUID exposedJpId) {
-		group.getExposedJoinPoints().removeIf(jp -> jp.getId().equals(exposedJpId));
-		group.getJoinPointMappings().removeIf(m -> m.getExposedId().equals(exposedJpId));
-
-		graph.getEdges().removeIf(
-				e -> e.getSourceJoinPointId().equals(exposedJpId) || e.getTargetJoinPointId().equals(exposedJpId));
+	public static UUID findExposedJpForInternal(Group group, UUID internalJpId) {
+		Set<UUID> exposedIds = new java.util.HashSet<>();
+		for (JoinPoint jp : group.getExposedJoinPoints())
+			exposedIds.add(jp.getId());
+		for (Edge edge : group.getEdges()) {
+			if (edge.getSourceJoinPointId().equals(internalJpId) && exposedIds.contains(edge.getTargetJoinPointId()))
+				return edge.getTargetJoinPointId();
+			if (edge.getTargetJoinPointId().equals(internalJpId) && exposedIds.contains(edge.getSourceJoinPointId()))
+				return edge.getSourceJoinPointId();
+		}
+		return null;
 	}
 
-	public static JoinPoint findJoinPoint(Graph graph, UUID jpId) {
-		for (Node node : graph.getNodes()) {
+	public static UUID findInternalJpForExposed(Group group, UUID exposedJpId) {
+		for (Edge edge : group.getEdges()) {
+			if (edge.getSourceJoinPointId().equals(exposedJpId))
+				return edge.getTargetJoinPointId();
+			if (edge.getTargetJoinPointId().equals(exposedJpId))
+				return edge.getSourceJoinPointId();
+		}
+		return null;
+	}
+
+	public static JoinPoint findJoinPointInGroup(Group group, UUID jpId) {
+		for (Node node : group.getNodes()) {
 			for (JoinPoint jp : node.getJoinPoints()) {
 				if (jp.getId().equals(jpId))
 					return jp;
 			}
 		}
-		for (Group group : graph.getGroups()) {
-			for (JoinPoint jp : group.getExposedJoinPoints()) {
+		for (Group child : group.getGroups()) {
+			for (JoinPoint jp : child.getExposedJoinPoints()) {
 				if (jp.getId().equals(jpId))
 					return jp;
 			}
+		}
+		for (JoinPoint jp : group.getExposedJoinPoints()) {
+			if (jp.getId().equals(jpId))
+				return jp;
+		}
+		return null;
+	}
+
+	public static JoinPoint findJoinPoint(Group root, UUID jpId) {
+		JoinPoint found = findJoinPointInGroup(root, jpId);
+		if (found != null)
+			return found;
+		for (Group child : root.getGroups()) {
+			found = findJoinPoint(child, jpId);
+			if (found != null)
+				return found;
 		}
 		return null;
 	}
@@ -179,8 +241,8 @@ public abstract class GroupBuilder {
 	private static final double GROUP_PADDING = 20;
 	private static final double GROUP_HEADER = 20;
 
-	private static void computeCollapsedBounds(Graph graph, Group group, Set<UUID> nodeIds) {
-		double[] bounds = computeMemberBounds(graph, nodeIds);
+	private static void computeCollapsedBounds(Group parent, Group group, Set<UUID> nodeIds) {
+		double[] bounds = computeMemberBounds(group);
 		if (bounds == null)
 			return;
 
@@ -189,42 +251,25 @@ public abstract class GroupBuilder {
 		group.setWidth(bounds[2] - bounds[0] + GROUP_PADDING * 2);
 		group.setHeight(bounds[3] - bounds[1] + GROUP_PADDING * 2 + GROUP_HEADER);
 
-		positionExposedJoinPoints(graph, group);
+		positionExposedJoinPoints(group);
 	}
 
-	static double[] computeMemberBounds(Graph graph, Set<UUID> nodeIds) {
+	public static double[] computeMemberBounds(Group group) {
 		double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
 		double maxX = Double.MIN_VALUE, maxY = Double.MIN_VALUE;
 
-		for (Node node : graph.getNodes()) {
-			if (!nodeIds.contains(node.getId()))
-				continue;
+		for (Node node : group.getNodes()) {
 			minX = Math.min(minX, node.getX());
 			minY = Math.min(minY, node.getY());
 			maxX = Math.max(maxX, node.getX() + node.getWidth());
 			maxY = Math.max(maxY, node.getY() + node.getHeight());
 		}
 
-		if (minX >= Double.MAX_VALUE)
-			return null;
-		return new double[] { minX, minY, maxX, maxY };
-	}
-
-	static double[] computeFullBounds(Graph graph, Group group) {
-		double[] nodeBounds = computeMemberBounds(graph, group.getMemberNodeIds());
-		double minX = nodeBounds != null ? nodeBounds[0] : Double.MAX_VALUE;
-		double minY = nodeBounds != null ? nodeBounds[1] : Double.MAX_VALUE;
-		double maxX = nodeBounds != null ? nodeBounds[2] : Double.MIN_VALUE;
-		double maxY = nodeBounds != null ? nodeBounds[3] : Double.MIN_VALUE;
-
-		for (UUID childId : group.getMemberGroupIds()) {
-			Group child = findGroupById(graph, childId);
-			if (child != null) {
-				minX = Math.min(minX, child.getX());
-				minY = Math.min(minY, child.getY());
-				maxX = Math.max(maxX, child.getX() + child.getWidth());
-				maxY = Math.max(maxY, child.getY() + child.getHeight());
-			}
+		for (Group child : group.getGroups()) {
+			minX = Math.min(minX, child.getX());
+			minY = Math.min(minY, child.getY());
+			maxX = Math.max(maxX, child.getX() + child.getWidth());
+			maxY = Math.max(maxY, child.getY() + child.getHeight());
 		}
 
 		if (minX >= Double.MAX_VALUE)
@@ -232,8 +277,8 @@ public abstract class GroupBuilder {
 		return new double[] { minX, minY, maxX, maxY };
 	}
 
-	public static double[] computeMinBounds(Graph graph, Group group) {
-		double[] memberBounds = computeFullBounds(graph, group);
+	public static double[] computeMinBounds(Group group) {
+		double[] memberBounds = computeMemberBounds(group);
 		if (memberBounds == null)
 			return new double[] { group.getX(), group.getY(), 100, 80 };
 		double minW = memberBounds[2] - memberBounds[0] + GROUP_PADDING * 2;
@@ -243,22 +288,21 @@ public abstract class GroupBuilder {
 		return new double[] { minX, minY, minW, minH };
 	}
 
-	public static void positionExposedJoinPoints(Graph graph, Group group) {
+	public static void positionExposedJoinPoints(Group group) {
 		for (JoinPoint ejp : group.getExposedJoinPoints())
-			positionSingleExposedJoinPoint(graph, group, ejp);
+			positionSingleExposedJoinPoint(group, ejp);
 		separateOverlappingJoinPoints(group);
 	}
 
-	public static void positionSingleExposedJoinPoint(Graph graph, Group group, JoinPoint ejp) {
+	public static void positionSingleExposedJoinPoint(Group group, JoinPoint ejp) {
 		double gx = group.getX(), gy = group.getY();
 		double gw = group.getWidth(), gh = group.getHeight();
 
-		JoinPointMapping mapping = group.getJoinPointMappings().stream()
-				.filter(m -> m.getExposedId().equals(ejp.getId())).findFirst().orElse(null);
+		UUID internalJpId = findInternalJpForExposed(group, ejp.getId());
 
 		double cx, cy;
-		if (mapping != null) {
-			double[] internalPos = findInternalPosition(graph, mapping.getInternalId());
+		if (internalJpId != null) {
+			double[] internalPos = findInternalPosition(group, internalJpId);
 			cx = internalPos != null ? internalPos[0] : gx + gw / 2;
 			cy = internalPos != null ? internalPos[1] : gy + gh / 2;
 		} else {
@@ -300,18 +344,15 @@ public abstract class GroupBuilder {
 		for (int i = 0; i < jps.size(); i++) {
 			for (int j = i + 1; j < jps.size(); j++) {
 				JoinPoint a = jps.get(i), b = jps.get(j);
-				boolean sameEdge = isSameEdge(a, b);
-				if (!sameEdge)
+				if (!isSameEdge(a, b))
 					continue;
 				boolean horizontal = (a.getCustomY() == 0 || a.getCustomY() == 1);
 				if (horizontal) {
-					if (Math.abs(a.getCustomX() - b.getCustomX()) < minGap) {
+					if (Math.abs(a.getCustomX() - b.getCustomX()) < minGap)
 						b.setCustomX(clampFraction(a.getCustomX() + minGap));
-					}
 				} else {
-					if (Math.abs(a.getCustomY() - b.getCustomY()) < minGap) {
+					if (Math.abs(a.getCustomY() - b.getCustomY()) < minGap)
 						b.setCustomY(clampFraction(a.getCustomY() + minGap));
-					}
 				}
 			}
 		}
@@ -327,8 +368,8 @@ public abstract class GroupBuilder {
 		return a.getCustomY() == 1 && b.getCustomY() == 1;
 	}
 
-	private static double[] findInternalPosition(Graph graph, UUID internalJpId) {
-		for (Node node : graph.getNodes()) {
+	private static double[] findInternalPosition(Group group, UUID internalJpId) {
+		for (Node node : group.getAllNodesRecursive()) {
 			for (JoinPoint jp : node.getJoinPoints()) {
 				if (jp.getId().equals(internalJpId)) {
 					double[] rel = cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer.computePosition(
@@ -337,57 +378,34 @@ public abstract class GroupBuilder {
 				}
 			}
 		}
-		return null;
-	}
-
-	public static Group findGroupContaining(Graph graph, UUID nodeId) {
-		for (Group group : graph.getGroups()) {
-			if (group.getMemberNodeIds().contains(nodeId))
-				return group;
-		}
-		return null;
-	}
-
-	public static int countBordersCrossed(Graph graph, UUID nodeIdA, UUID nodeIdB) {
-		java.util.List<UUID> groupsA = findAllContainingGroups(graph, nodeIdA);
-		java.util.List<UUID> groupsB = findAllContainingGroups(graph, nodeIdB);
-
-		int shared = 0;
-		for (UUID gid : groupsA) {
-			if (groupsB.contains(gid))
-				shared++;
-		}
-		return (groupsA.size() - shared) + (groupsB.size() - shared);
-	}
-
-	private static java.util.List<UUID> findAllContainingGroups(Graph graph, UUID nodeId) {
-		java.util.List<UUID> result = new java.util.ArrayList<>();
-		Group direct = findGroupContaining(graph, nodeId);
-		if (direct == null)
-			return result;
-		result.add(direct.getId());
-		addAncestorGroups(graph, direct.getId(), result);
-		return result;
-	}
-
-	private static void addAncestorGroups(Graph graph, UUID groupId, java.util.List<UUID> result) {
-		for (Group group : graph.getGroups()) {
-			if (group.getMemberGroupIds().contains(groupId)) {
-				result.add(group.getId());
-				addAncestorGroups(graph, group.getId(), result);
-				return;
+		for (Group child : group.getAllGroupsRecursive()) {
+			for (JoinPoint jp : child.getExposedJoinPoints()) {
+				if (jp.getId().equals(internalJpId)) {
+					double w = Math.max(child.getWidth(), 80);
+					double h = Math.max(child.getHeight(), 50);
+					double[] rel = cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer.computePosition(
+							jp.getPosition(), jp.getCustomX(), jp.getCustomY(), w, h);
+					return new double[] { child.getX() + rel[0], child.getY() + rel[1] };
+				}
 			}
 		}
+		return null;
 	}
 
-	public static Group findGroupById(Graph graph, UUID groupId) {
-		return graph.getGroups().stream().filter(g -> g.getId().equals(groupId)).findFirst().orElse(null);
+	public static Group findGroupContaining(Group root, UUID nodeId) {
+		return root.findParentOf(nodeId);
 	}
 
-	public static Group findExpandedGroupAtPoint(Graph graph, double x, double y) {
+	public static Group findGroupById(Group root, UUID groupId) {
+		if (root.getId().equals(groupId))
+			return root;
+		return root.findGroup(groupId);
+	}
+
+	public static Group findExpandedGroupAtPoint(Group root, double x, double y) {
 		Group innermost = null;
 		double smallestArea = Double.MAX_VALUE;
-		for (Group group : graph.getGroups()) {
+		for (Group group : root.getAllGroupsRecursive()) {
 			if (group.isCollapsed())
 				continue;
 			if (x >= group.getX() && x <= group.getX() + group.getWidth() && y >= group.getY()
@@ -403,13 +421,14 @@ public abstract class GroupBuilder {
 	}
 
 	public static void addNodeToGroup(Group group, Node node) {
-		group.getMemberNodeIds().add(node.getId());
+		if (!group.getNodes().contains(node))
+			group.getNodes().add(node);
 	}
 
-	public static void expandAncestorBounds(Graph graph, Group startGroup) {
+	public static void expandAncestorBounds(Group root, Group startGroup) {
 		Group current = startGroup;
 		while (current != null) {
-			double[] minBounds = computeMinBounds(graph, current);
+			double[] minBounds = computeMinBounds(current);
 			if (minBounds == null)
 				break;
 			boolean changed = false;
@@ -435,86 +454,74 @@ public abstract class GroupBuilder {
 			}
 			if (!changed)
 				break;
-			current = findParentGroup(graph, current.getId());
+			current = root.findParentOf(current.getId());
 		}
 	}
 
-	public static void expandAllAncestors(Graph graph) {
-		for (Group group : graph.getGroups()) {
-			if (!group.getMemberGroupIds().isEmpty() || !group.getMemberNodeIds().isEmpty())
-				expandAncestorBounds(graph, group);
+	public static void expandAllAncestors(Group root) {
+		for (Group group : root.getAllGroupsRecursive()) {
+			if (!group.getNodes().isEmpty() || !group.getGroups().isEmpty())
+				expandAncestorBounds(root, group);
 		}
 	}
 
-	private static Group findParentGroup(Graph graph, UUID groupId) {
-		for (Group g : graph.getGroups()) {
-			if (g.getMemberGroupIds().contains(groupId))
-				return g;
-		}
-		return null;
+	public static int countBordersCrossed(Group root, UUID nodeIdA, UUID nodeIdB) {
+		Group parentA = root.findParentOf(nodeIdA);
+		Group parentB = root.findParentOf(nodeIdB);
+		if (parentA == null || parentB == null)
+			return 0;
+		if (parentA.getId().equals(parentB.getId()))
+			return 0;
+		return 1;
 	}
 
-	public static JoinPoint getOrCreateExposedJoinPoint(Graph graph, Group group, UUID internalJpId) {
-		JoinPoint exposed = null;
-
-		for (JoinPointMapping m : group.getJoinPointMappings()) {
-			if (m.getInternalId().equals(internalJpId)) {
-				for (JoinPoint jp : group.getExposedJoinPoints()) {
-					if (jp.getId().equals(m.getExposedId())) {
-						exposed = jp;
-						break;
-					}
-				}
+	public static JoinPoint getOrCreateExposedJoinPoint(Group parent, Group group, UUID internalJpId) {
+		UUID existingExposedId = findExposedJpForInternal(group, internalJpId);
+		if (existingExposedId != null) {
+			for (JoinPoint jp : group.getExposedJoinPoints()) {
+				if (jp.getId().equals(existingExposedId))
+					return jp;
 			}
 		}
 
-		JoinPoint internalJp = findJoinPoint(graph, internalJpId);
+		JoinPoint internalJp = findJoinPoint(group, internalJpId);
 		if (internalJp == null)
-			return exposed;
+			internalJp = findJoinPointInGroup(parent, internalJpId);
+		if (internalJp == null)
+			return null;
 
-		if (exposed == null) {
-			exposed = new JoinPoint(internalJp.getName(), internalJp.getPosition(),
-					internalJp.getDirection().toBorderDirection(), -1);
-			group.getExposedJoinPoints().add(exposed);
-			group.getJoinPointMappings().add(new JoinPointMapping(exposed.getId(), internalJpId));
-			positionSingleExposedJoinPoint(graph, group, exposed);
-		}
+		JoinPoint exposed = new JoinPoint(internalJp.getName(), internalJp.getPosition(),
+				internalJp.getDirection().toBorderDirection(), -1);
+		group.getExposedJoinPoints().add(exposed);
+		positionSingleExposedJoinPoint(group, exposed);
 
-		ensureBridgeEdge(graph, group, internalJpId, exposed.getId(), internalJp.getDirection());
+		ensureBridgeEdge(group, internalJpId, exposed.getId(), internalJp.getDirection());
 		return exposed;
 	}
 
-	private static void ensureBridgeEdge(Graph graph, Group group, UUID internalJpId, UUID exposedJpId,
+	private static void ensureBridgeEdge(Group group, UUID internalJpId, UUID exposedJpId,
 			Direction internalDirection) {
-		for (Edge edge : graph.getEdges()) {
+		for (Edge edge : group.getEdges()) {
 			if ((edge.getSourceJoinPointId().equals(internalJpId) && edge.getTargetJoinPointId().equals(exposedJpId))
 					|| (edge.getSourceJoinPointId().equals(exposedJpId)
 							&& edge.getTargetJoinPointId().equals(internalJpId)))
 				return;
 		}
-
 		Edge bridge = new Edge("default", internalDirection.isOutgoing() ? internalJpId : exposedJpId,
 				internalDirection.isOutgoing() ? exposedJpId : internalJpId);
-		graph.getEdges().add(bridge);
-		group.getMemberEdgeIds().add(bridge.getId());
+		group.getEdges().add(bridge);
 	}
 
-	public static void removeExposedJoinPoint(Graph graph, Group group, UUID exposedJpId) {
+	public static void removeExposedJoinPoint(Group parent, Group group, UUID exposedJpId) {
 		group.getExposedJoinPoints().removeIf(jp -> jp.getId().equals(exposedJpId));
-		group.getJoinPointMappings().removeIf(m -> m.getExposedId().equals(exposedJpId));
-		graph.getEdges().removeIf(
+		group.getEdges().removeIf(
 				e -> e.getSourceJoinPointId().equals(exposedJpId) || e.getTargetJoinPointId().equals(exposedJpId));
-		group.getMemberEdgeIds().removeIf(id -> {
-			for (Edge e : graph.getEdges()) {
-				if (e.getId().equals(id))
-					return false;
-			}
-			return true;
-		});
+		parent.getEdges().removeIf(
+				e -> e.getSourceJoinPointId().equals(exposedJpId) || e.getTargetJoinPointId().equals(exposedJpId));
 	}
 
-	public static boolean hasConnections(Graph graph, UUID jpId) {
-		for (Edge e : graph.getEdges()) {
+	public static boolean hasConnections(Group root, UUID jpId) {
+		for (Edge e : root.getAllEdgesRecursive()) {
 			if (e.getSourceJoinPointId().equals(jpId) || e.getTargetJoinPointId().equals(jpId))
 				return true;
 		}

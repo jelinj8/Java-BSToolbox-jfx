@@ -5,19 +5,19 @@ import java.util.Map;
 import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 
 public class PropertyChangeCommand implements IGraphCommand {
 
-	private final Graph graph;
+	private final Group graph;
 	private final UUID elementId;
 	private final String propertyKey;
 	private final Object oldValue;
 	private final Object newValue;
 
-	public PropertyChangeCommand(Graph graph, UUID elementId, String propertyKey, Object oldValue, Object newValue) {
+	public PropertyChangeCommand(Group graph, UUID elementId, String propertyKey, Object oldValue, Object newValue) {
 		this.graph = graph;
 		this.elementId = elementId;
 		this.propertyKey = propertyKey;

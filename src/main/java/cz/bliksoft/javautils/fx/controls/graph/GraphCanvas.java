@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.dataflow.model.Point2D;
@@ -74,7 +75,8 @@ public class GraphCanvas extends Region {
 	private final GraphContextMenus contextMenus;
 	private final GroupInteractionHandler groupHandler;
 
-	private Graph graph;
+	private Group graph;
+	private Group rootGraph;
 
 	private double panStartX, panStartY;
 	private double panStartScrollX, panStartScrollY;
@@ -287,8 +289,20 @@ public class GraphCanvas extends Region {
 		contentPane.getChildren().remove(rubberBand);
 
 		if (rubberBounds.getWidth() > 3 || rubberBounds.getHeight() > 3) {
+			Group scope = findInnermostGroupContaining(graph, rubberBounds);
+
+			Set<UUID> scopeChildIds = new java.util.HashSet<>();
+			if (scope != null) {
+				for (Node n : scope.getNodes())
+					scopeChildIds.add(n.getId());
+				for (Group g : scope.getGroups())
+					scopeChildIds.add(g.getId());
+			}
+
 			Set<UUID> selected = new java.util.LinkedHashSet<>();
 			for (var entry : nodeVisuals.entrySet()) {
+				if (!scopeChildIds.contains(entry.getKey()))
+					continue;
 				javafx.geometry.Bounds nodeBounds = entry.getValue().getBoundsInParent();
 				if (rubberBounds.intersects(nodeBounds))
 					selected.add(entry.getKey());
@@ -301,6 +315,21 @@ public class GraphCanvas extends Region {
 		}
 
 		rubberBand = null;
+	}
+
+	private Group findInnermostGroupContaining(Group parent, javafx.geometry.Bounds bounds) {
+		if (parent == null)
+			return graph;
+		for (Group child : parent.getGroups()) {
+			if (child.isCollapsed())
+				continue;
+			if (bounds.getMinX() >= child.getX() && bounds.getMinY() >= child.getY()
+					&& bounds.getMaxX() <= child.getX() + child.getWidth()
+					&& bounds.getMaxY() <= child.getY() + child.getHeight()) {
+				return findInnermostGroupContaining(child, bounds);
+			}
+		}
+		return parent;
 	}
 
 	private static final double RESIZE_HANDLE_SIZE = 6;
@@ -440,14 +469,22 @@ public class GraphCanvas extends Region {
 
 	// --- public API ---
 
-	public void setGraph(Graph graph) {
+	public void setGraph(Group graph) {
 		this.graph = graph;
 		selectionModel.clear();
 		renderGraph();
 	}
 
-	public Graph getGraph() {
+	public Group getGraph() {
 		return graph;
+	}
+
+	public void setRootGraph(Group rootGraph) {
+		this.rootGraph = rootGraph;
+	}
+
+	public Group getRootGraph() {
+		return rootGraph != null ? rootGraph : graph;
 	}
 
 	public GraphSelectionModel getSelectionModel() {
@@ -457,16 +494,90 @@ public class GraphCanvas extends Region {
 	private void renderGraph() {
 		edgePane.getChildren().clear();
 		nodePane.getChildren().clear();
+		groupPane.getChildren().clear();
 		nodeVisuals.clear();
 		edgeVisuals.clear();
 
 		if (graph == null)
 			return;
 
+		renderGroupContents(graph);
+		renderRootExposedJoinPoints();
+	}
+
+	private void renderRootExposedJoinPoints() {
+		if (graph == null || graph.getExposedJoinPoints().isEmpty())
+			return;
+
+		double gw = graph.getWidth();
+		double gh = graph.getHeight();
+		if (gw <= 0 || gh <= 0) {
+			double[] bounds = computeContentBounds();
+			if (bounds != null) {
+				gw = bounds[2] - bounds[0] + 100;
+				gh = bounds[3] - bounds[1] + 100;
+			} else {
+				gw = 800;
+				gh = 600;
+			}
+		}
+
+		for (JoinPoint jp : graph.getExposedJoinPoints()) {
+			double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(), gw, gh);
+			double px = graph.getX() + rel[0];
+			double py = graph.getY() + rel[1];
+
+			javafx.scene.shape.Rectangle portShape = new javafx.scene.shape.Rectangle(20, 14);
+			portShape.setFill(javafx.scene.paint.Color.web("#e8e8f0"));
+			portShape.setStroke(javafx.scene.paint.Color.web("#666"));
+			portShape.setStrokeWidth(1);
+			portShape.setArcWidth(4);
+			portShape.setArcHeight(4);
+
+			javafx.scene.control.Label portLabel = new javafx.scene.control.Label(jp.getName());
+			portLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #444;");
+			portLabel.setMouseTransparent(true);
+			portLabel.setLayoutX(22);
+			portLabel.setLayoutY(-2);
+
+			Pane portNode = new Pane(portShape, portLabel);
+			portNode.setManaged(false);
+			portNode.setLayoutX(px - 10);
+			portNode.setLayoutY(py - 7);
+			portNode.setPickOnBounds(false);
+			portNode.getProperties().put("exposedPortNode", true);
+
+			JoinPointRenderer.renderJoinPoints(portNode, java.util.List.of(jp), 20, 14);
+
+			nodePane.getChildren().add(portNode);
+		}
+	}
+
+	private double[] computeContentBounds() {
+		double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
+		double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+		for (Node n : graph.getAllNodesRecursive()) {
+			minX = Math.min(minX, n.getX());
+			minY = Math.min(minY, n.getY());
+			maxX = Math.max(maxX, n.getX() + n.getWidth());
+			maxY = Math.max(maxY, n.getY() + n.getHeight());
+		}
+		for (Group g : graph.getAllGroupsRecursive()) {
+			minX = Math.min(minX, g.getX());
+			minY = Math.min(minY, g.getY());
+			maxX = Math.max(maxX, g.getX() + g.getWidth());
+			maxY = Math.max(maxY, g.getY() + g.getHeight());
+		}
+		if (minX >= Double.MAX_VALUE)
+			return null;
+		return new double[] { minX, minY, maxX, maxY };
+	}
+
+	private void renderGroupContents(Group group) {
 		NodeRendererRegistry rendererRegistry = NodeRendererRegistry.getInstance();
 		RenderContext ctx = new RenderContext(zoom.get(), false);
 
-		java.util.List<Node> sortedNodes = new java.util.ArrayList<>(graph.getNodes());
+		java.util.List<Node> sortedNodes = new java.util.ArrayList<>(group.getNodes());
 		sortedNodes.sort(java.util.Comparator.comparingInt(Node::getzOrder));
 
 		for (Node node : sortedNodes) {
@@ -494,43 +605,44 @@ public class GraphCanvas extends Region {
 			nodePane.getChildren().add(wrapper);
 		}
 
-		renderEdges();
-		renderGroups();
-	}
+		renderGroupEdges(group);
 
-	private void renderGroups() {
-		groupPane.getChildren().clear();
-
-		if (graph == null)
-			return;
-
-		java.util.List<cz.bliksoft.dataflow.model.Group> sorted = new java.util.ArrayList<>(graph.getGroups());
+		java.util.List<cz.bliksoft.dataflow.model.Group> sorted = new java.util.ArrayList<>(group.getGroups());
 		sorted.sort((a, b) -> Double.compare(b.getWidth() * b.getHeight(), a.getWidth() * a.getHeight()));
 
-		for (cz.bliksoft.dataflow.model.Group group : sorted) {
+		for (cz.bliksoft.dataflow.model.Group child : sorted) {
 			Region groupVisual;
-			if (group.isCollapsed()) {
-				groupVisual = GroupRenderer.renderCollapsed(group);
+			if (child.isCollapsed()) {
+				groupVisual = GroupRenderer.renderCollapsed(child);
 				nodePane.getChildren().add(groupVisual);
 			} else {
-				groupVisual = GroupRenderer.renderExpanded(group, graph);
+				groupVisual = GroupRenderer.renderExpanded(child, group);
 				groupPane.getChildren().add(groupVisual);
+
+				if (!child.getExposedJoinPoints().isEmpty()) {
+					Pane jpOverlay = new Pane();
+					jpOverlay.setManaged(false);
+					jpOverlay.setLayoutX(child.getX());
+					jpOverlay.setLayoutY(child.getY());
+					jpOverlay.setPrefSize(child.getWidth(), child.getHeight());
+					jpOverlay.setPickOnBounds(false);
+					jpOverlay.getProperties().put("nodeId", child.getId());
+					double w = child.getWidth(), h = child.getHeight();
+					JoinPointRenderer.renderJoinPoints(jpOverlay, child.getExposedJoinPoints(), w, h);
+					nodePane.getChildren().add(jpOverlay);
+				}
+
+				renderGroupContents(child);
 			}
-			nodeVisuals.put(group.getId(), groupVisual);
+			nodeVisuals.put(child.getId(), groupVisual);
 		}
 	}
 
-	private void renderEdges() {
-		edgePane.getChildren().clear();
-		edgeVisuals.clear();
-
-		if (graph == null)
-			return;
-
+	private void renderGroupEdges(Group group) {
 		EdgeRendererRegistry rendererRegistry = EdgeRendererRegistry.getInstance();
 		RenderContext ctx = new RenderContext(zoom.get(), false);
 
-		for (Edge edge : graph.getEdges()) {
+		for (Edge edge : group.getEdges()) {
 			EdgeType type = EdgeTypeRegistry.getInstance().get(edge.getTypeId());
 			IEdgeRenderer renderer = rendererRegistry.get(edge.getTypeId());
 			if (renderer == null)
@@ -544,15 +656,40 @@ public class GraphCanvas extends Region {
 			javafx.scene.Group edgeVisual = renderer.createEdgeVisual(edge, type, sourcePos, targetPos,
 					edge.getWaypoints().isEmpty() ? null : edge.getWaypoints(), ctx);
 
+			addConditionalMarker(edgeVisual, edge, sourcePos, targetPos);
+
 			edgeVisuals.put(edge.getId(), edgeVisual);
 			edgePane.getChildren().add(edgeVisual);
 		}
 	}
 
+	private void addConditionalMarker(javafx.scene.Group edgeVisual, Edge edge, Point2D sourcePos, Point2D targetPos) {
+		java.util.Map<String, Object> props = edge.getProperties();
+		if (props == null || !props.containsKey("condition"))
+			return;
+
+		double midX = (sourcePos.getX() + targetPos.getX()) / 2;
+		double midY = (sourcePos.getY() + targetPos.getY()) / 2;
+		double size = 6;
+
+		javafx.scene.shape.Polygon diamond = new javafx.scene.shape.Polygon(midX, midY - size, midX + size, midY, midX,
+				midY + size, midX - size, midY);
+		diamond.setFill(javafx.scene.paint.Color.web("#2196F3"));
+		diamond.setStroke(javafx.scene.paint.Color.WHITE);
+		diamond.setStrokeWidth(1);
+		diamond.setMouseTransparent(true);
+		diamond.getStyleClass().add("graph-edge-condition-marker");
+		edgeVisual.getChildren().add(diamond);
+	}
+
 	private Point2D resolveJoinPointPosition(UUID joinPointId) {
 		if (graph == null)
 			return null;
-		for (Node node : graph.getNodes()) {
+		return resolveJoinPointInGroup(graph, joinPointId);
+	}
+
+	private Point2D resolveJoinPointInGroup(Group group, UUID joinPointId) {
+		for (Node node : group.getNodes()) {
 			for (JoinPoint jp : node.getJoinPoints()) {
 				if (jp.getId().equals(joinPointId)) {
 					double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(),
@@ -561,16 +698,19 @@ public class GraphCanvas extends Region {
 				}
 			}
 		}
-		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
-			for (JoinPoint jp : group.getExposedJoinPoints()) {
-				if (jp.getId().equals(joinPointId)) {
-					double w = Math.max(group.getWidth(), 80);
-					double h = Math.max(group.getHeight(), 50);
-					double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(),
-							w, h);
-					return new Point2D(group.getX() + rel[0], group.getY() + rel[1]);
-				}
+		for (JoinPoint jp : group.getExposedJoinPoints()) {
+			if (jp.getId().equals(joinPointId)) {
+				double w = Math.max(group.getWidth(), 80);
+				double h = Math.max(group.getHeight(), 50);
+				double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(), w,
+						h);
+				return new Point2D(group.getX() + rel[0], group.getY() + rel[1]);
 			}
+		}
+		for (cz.bliksoft.dataflow.model.Group child : group.getGroups()) {
+			Point2D found = resolveJoinPointInGroup(child, joinPointId);
+			if (found != null)
+				return found;
 		}
 		return null;
 	}
@@ -646,13 +786,25 @@ public class GraphCanvas extends Region {
 				wrapper.getStyleClass().add("graph-node-selected");
 		}
 
-		renderEdges();
-		renderGroups();
+		edgePane.getChildren().clear();
+		edgeVisuals.clear();
+		groupPane.getChildren().clear();
+		renderGroupContentsEdgesAndGroups(graph);
+	}
+
+	private void renderGroupContentsEdgesAndGroups(Group g) {
+		renderGroupEdges(g);
+		for (cz.bliksoft.dataflow.model.Group child : g.getGroups()) {
+			if (!child.isCollapsed())
+				renderGroupContentsEdgesAndGroups(child);
+		}
 	}
 
 	public void refreshEdges() {
-		renderEdges();
-		renderGroups();
+		edgePane.getChildren().clear();
+		edgeVisuals.clear();
+		groupPane.getChildren().clear();
+		renderGroupContentsEdgesAndGroups(graph);
 	}
 
 	public Pane getContentPane() {

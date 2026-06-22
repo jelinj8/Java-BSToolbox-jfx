@@ -82,16 +82,13 @@ public class NodeStateOverlay {
 			states.clear();
 
 			if (canvas.getGraph() != null) {
-				for (var node : canvas.getGraph().getNodes()) {
+				for (var node : canvas.getGraph().getAllNodesRecursive()) {
 					Region visual = canvas.getNodeVisual(node.getId());
 					if (visual instanceof javafx.scene.layout.Pane pane) {
 						Circle badge = findBadgeIn(pane);
 						if (badge != null)
 							pane.getChildren().remove(badge);
 					}
-				}
-				for (var node : canvas.getGraph().getNodes()) {
-					Region visual = canvas.getNodeVisual(node.getId());
 					if (visual != null)
 						visual.setStyle("");
 				}

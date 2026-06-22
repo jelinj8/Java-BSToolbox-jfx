@@ -98,6 +98,11 @@ public class NodeInteractionHandler {
 		if (clickedNodeId == null)
 			return;
 
+		if (e.getClickCount() == 2 && handleGroupDoubleClick(e, clickedNodeId)) {
+			e.consume();
+			return;
+		}
+
 		if (e.isControlDown())
 			return;
 
@@ -247,6 +252,7 @@ public class NodeInteractionHandler {
 		if (canvas.getGraph() != null) {
 			canvas.getGraph().getNodes().forEach(n -> all.add(n.getId()));
 			canvas.getGraph().getEdges().forEach(e -> all.add(e.getId()));
+			canvas.getGraph().getGroups().forEach(g -> all.add(g.getId()));
 		}
 		canvas.getSelectionModel().selectAll(all);
 		canvas.updateSelectionVisuals();
@@ -297,15 +303,15 @@ public class NodeInteractionHandler {
 
 	private Map<UUID, double[]> captureModelPositions(Set<UUID> selectedIds) {
 		Map<UUID, double[]> positions = new LinkedHashMap<>();
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return positions;
 		Set<UUID> expanded = expandGroupMembers(selectedIds);
-		for (Node node : graph.getNodes()) {
+		for (Node node : graph.getAllNodesRecursive()) {
 			if (expanded.contains(node.getId()))
 				positions.put(node.getId(), new double[] { node.getX(), node.getY() });
 		}
-		for (Group group : graph.getGroups()) {
+		for (Group group : graph.getAllGroupsRecursive()) {
 			if (expanded.contains(group.getId()))
 				positions.put(group.getId(), new double[] { group.getX(), group.getY() });
 		}
@@ -313,7 +319,7 @@ public class NodeInteractionHandler {
 	}
 
 	private Set<UUID> expandGroupMembers(Set<UUID> selectedIds) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return selectedIds;
 		Set<UUID> expanded = new java.util.LinkedHashSet<>(selectedIds);
@@ -325,18 +331,17 @@ public class NodeInteractionHandler {
 		return expanded;
 	}
 
-	private void expandGroupRecursive(Graph graph, Group group, Set<UUID> result) {
-		result.addAll(group.getMemberNodeIds());
-		for (UUID childGroupId : group.getMemberGroupIds()) {
-			result.add(childGroupId);
-			Group child = GroupBuilder.findGroupById(graph, childGroupId);
-			if (child != null)
-				expandGroupRecursive(graph, child, result);
+	private void expandGroupRecursive(Group graph, Group group, Set<UUID> result) {
+		for (Node node : group.getNodes())
+			result.add(node.getId());
+		for (Group child : group.getGroups()) {
+			result.add(child.getId());
+			expandGroupRecursive(graph, child, result);
 		}
 	}
 
 	private boolean dragIncludesGroup() {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null || dragStartPositions == null)
 			return false;
 		for (UUID id : dragStartPositions.keySet()) {
@@ -346,9 +351,42 @@ public class NodeInteractionHandler {
 		return false;
 	}
 
+	private boolean handleGroupDoubleClick(MouseEvent e, UUID clickedId) {
+		Group graph = canvas.getGraph();
+		if (graph == null)
+			return false;
+
+		Group group = GroupBuilder.findGroupById(graph, clickedId);
+		if (group == null)
+			return false;
+
+		if (group.isCollapsed()) {
+			canvas.getGroupHandler().toggleCollapse(clickedId);
+			return true;
+		}
+
+		javafx.scene.Node target = e.getPickResult().getIntersectedNode();
+		boolean onHeader = false;
+		while (target != null && target != canvas) {
+			if (target.getProperties().containsKey("groupHeader")) {
+				onHeader = true;
+				break;
+			}
+			target = target.getParent();
+		}
+
+		if (onHeader) {
+			canvas.getGroupHandler().enterGroup(clickedId);
+			return true;
+		}
+		return false;
+	}
+
 	private UUID findNodeAt(MouseEvent e) {
 		javafx.scene.Node target = e.getPickResult().getIntersectedNode();
 		while (target != null && target != canvas) {
+			if (Boolean.TRUE.equals(target.getProperties().get("exposedPortNode")))
+				return null;
 			Object nodeId = target.getProperties().get("nodeId");
 			if (nodeId instanceof UUID)
 				return (UUID) nodeId;
@@ -430,14 +468,14 @@ public class NodeInteractionHandler {
 	}
 
 	private void resetSize(UUID groupId, UUID nodeId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
 
 		if (groupId != null) {
 			Group group = GroupBuilder.findGroupById(graph, groupId);
 			if (group != null) {
-				double[] minBounds = GroupBuilder.computeMinBounds(graph, group);
+				double[] minBounds = GroupBuilder.computeMinBounds(group);
 				group.setX(minBounds[0]);
 				group.setY(minBounds[1]);
 				group.setWidth(minBounds[2]);
@@ -463,7 +501,7 @@ public class NodeInteractionHandler {
 	}
 
 	private double[] constrainDelta(double dx, double dy) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return new double[] { dx, dy };
 
@@ -480,17 +518,19 @@ public class NodeInteractionHandler {
 				elemH = movedGroup.getHeight();
 				container = findParentGroupOf(graph, movedGroup.getId());
 			} else {
-				for (Node node : graph.getNodes()) {
-					if (node.getId().equals(id)) {
-						elemW = node.getWidth();
-						elemH = node.getHeight();
-						container = GroupBuilder.findGroupContaining(graph, id);
-						break;
-					}
+				Node node = graph.findNode(id);
+				if (node != null) {
+					elemW = node.getWidth();
+					elemH = node.getHeight();
+					container = GroupBuilder.findGroupContaining(graph, id);
 				}
 			}
 
 			if (container == null)
+				continue;
+			if (container == graph)
+				continue;
+			if (container.getWidth() <= 0 || container.getHeight() <= 0)
 				continue;
 			if (dragStartPositions.containsKey(container.getId()))
 				continue;
@@ -516,12 +556,8 @@ public class NodeInteractionHandler {
 		return new double[] { dx, dy };
 	}
 
-	private Group findParentGroupOf(Graph graph, UUID groupId) {
-		for (Group g : graph.getGroups()) {
-			if (g.getMemberGroupIds().contains(groupId))
-				return g;
-		}
-		return null;
+	private Group findParentGroupOf(Group graph, UUID groupId) {
+		return graph.findParentOf(groupId);
 	}
 
 	private static final double MIN_NODE_SIZE = 20;
@@ -529,7 +565,7 @@ public class NodeInteractionHandler {
 	private void handleResizeDrag(MouseEvent e) {
 		double dx = (e.getScreenX() - dragStartScreenX) / canvas.getZoom();
 		double dy = (e.getScreenY() - dragStartScreenY) / canvas.getZoom();
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
 
@@ -537,7 +573,7 @@ public class NodeInteractionHandler {
 			Group group = GroupBuilder.findGroupById(graph, resizingGroupId);
 			if (group == null)
 				return;
-			double[] minBounds = GroupBuilder.computeMinBounds(graph, group);
+			double[] minBounds = GroupBuilder.computeMinBounds(group);
 			group.setWidth(Math.max(minBounds[2], resizeStartW + dx));
 			group.setHeight(Math.max(minBounds[3], resizeStartH + dy));
 			GroupBuilder.expandAllAncestors(graph);

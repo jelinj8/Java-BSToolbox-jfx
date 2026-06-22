@@ -123,6 +123,29 @@
     -fx-stroke-width: 3;
 }
 
+.graph-edge-traversed .graph-edge-line {
+    -fx-stroke: #4CAF50;
+    -fx-stroke-width: 2;
+}
+
+.graph-edge-traversed .graph-edge-arrow {
+    -fx-fill: #4CAF50;
+}
+
+.graph-edge-skipped .graph-edge-line {
+    -fx-stroke: #BDBDBD;
+    -fx-stroke-width: 1.5;
+    -fx-stroke-dash-array: 6 4;
+}
+
+.graph-edge-skipped .graph-edge-arrow {
+    -fx-fill: #BDBDBD;
+}
+
+.graph-edge-skipped .graph-edge-condition-marker {
+    -fx-fill: #BDBDBD;
+}
+
 .graph-node-breakpoint {
     -fx-border-color: #F44336;
     -fx-border-width: 2;

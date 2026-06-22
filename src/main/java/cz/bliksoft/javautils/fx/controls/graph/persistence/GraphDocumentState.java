@@ -25,7 +25,7 @@ public class GraphDocumentState {
 	}
 
 	public void newDocument() {
-		Graph g = new Graph("");
+		Graph g = new Graph("Root");
 		graph.set(g);
 		file.set(null);
 		status.set(ObjectStatus.NEW);

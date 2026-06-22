@@ -43,6 +43,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
 	private final ObjectProperty<Map<String, Class<?>>> registryProperty;
 	private final ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty;
+	private final Map<Class<?>, IValueEditorProvider<V>> typeProviders;
 
 	private final ObjectProperty<V> editorProxy = new SimpleObjectProperty<>();
 
@@ -57,9 +58,11 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 	private ListChangeListener<String> cssListener;
 
 	ValueTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty,
-			ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty) {
+			ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty,
+			Map<Class<?>, IValueEditorProvider<V>> typeProviders) {
 		this.registryProperty = registryProperty;
 		this.defaultProviderProperty = defaultProviderProperty;
+		this.typeProviders = typeProviders;
 
 		setOnMouseClicked(e -> {
 			if (e.getClickCount() == 2 && !isEmpty())
@@ -77,12 +80,29 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			currentProvider = resolveProvider(currentEntry.key.get());
 
 		super.startEdit();
-		editorProxy.set(getItem());
+		V item = getItem();
+		try {
+			editorProxy.set(item);
+		} catch (ClassCastException e) {
+			@SuppressWarnings("unchecked")
+			V converted = (V) (item != null ? item.toString() : "");
+			editorProxy.set(converted);
+		}
 
-		Node editorNode = currentProvider.createEditor(editorProxy);
+		Node editorNode;
+		try {
+			editorNode = currentProvider.createEditor(editorProxy);
+		} catch (ClassCastException e) {
+			@SuppressWarnings("unchecked")
+			V converted = (V) (item != null ? item.toString() : "");
+			editorProxy.set(converted);
+			editorNode = currentProvider.createEditor(editorProxy);
+		}
+		Node editorNodeFinal = editorNode;
 		editorNode.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.ENTER) {
 				e.consume();
+				flushTextFormatter(editorNodeFinal);
 				currentProvider.applyEdit(editorProxy);
 				commitEdit(editorProxy.get());
 			} else if (e.getCode() == KeyCode.ESCAPE) {
@@ -91,6 +111,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			} else if (e.getCode() == KeyCode.TAB && e.isShiftDown()) {
 				e.consume();
 				int row = getTableRow() != null ? getTableRow().getIndex() : -1;
+				flushTextFormatter(editorNodeFinal);
 				currentProvider.applyEdit(editorProxy);
 				commitEdit(editorProxy.get());
 				Platform.runLater(() -> {
@@ -217,7 +238,14 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			setContentDisplay(ContentDisplay.TEXT_ONLY);
 			return;
 		}
-		String s = currentProvider.toDisplayString(v);
+		String s;
+		try {
+			s = currentProvider.toDisplayString(v);
+		} catch (ClassCastException e) {
+			s = v != null ? v.toString() : "";
+			org.apache.logging.log4j.LogManager.getLogger(ValueTableCell.class)
+					.debug("Type mismatch in toDisplayString for value '{}', using toString()", v);
+		}
 		if (currentProvider.supportsDialog()) {
 			Label label = new Label(s);
 			IValueEditorProvider<V> provider = currentProvider;
@@ -243,13 +271,45 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		}
 	}
 
+	@SuppressWarnings("rawtypes")
+	private void flushTextFormatter(Node editorNode) {
+		javafx.scene.control.TextField tf = findTextField(editorNode);
+		if (tf != null && tf.getTextFormatter() != null) {
+			javafx.scene.control.TextFormatter fmt = tf.getTextFormatter();
+			try {
+				Object parsed = fmt.getValueConverter().fromString(tf.getText());
+				fmt.setValue(parsed);
+			} catch (Exception ignored) {
+			}
+		}
+	}
+
+	private javafx.scene.control.TextField findTextField(Node node) {
+		if (node instanceof javafx.scene.control.TextField tf)
+			return tf;
+		if (node instanceof javafx.scene.Parent p) {
+			for (Node child : p.getChildrenUnmodifiable()) {
+				javafx.scene.control.TextField found = findTextField(child);
+				if (found != null)
+					return found;
+			}
+		}
+		return null;
+	}
+
 	@SuppressWarnings("unchecked")
 	private IValueEditorProvider<V> resolveProvider(String key) {
 		Map<String, Class<?>> registry = registryProperty.get();
 		if (registry != null && key != null && !key.isBlank()) {
 			Class<?> type = registry.get(key);
-			if (type != null)
+			if (type != null) {
+				if (typeProviders != null) {
+					IValueEditorProvider<V> override = typeProviders.get(type);
+					if (override != null)
+						return override;
+				}
 				return (IValueEditorProvider<V>) ValueEditorFactory.forStringType(type);
+			}
 		}
 		IValueEditorProvider<V> def = defaultProviderProperty.get();
 		if (def != null)

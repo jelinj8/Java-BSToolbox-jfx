@@ -115,6 +115,7 @@ public class GraphEditorPanel extends BorderPane
 		graphToolBar = buildGraphToolBar();
 
 		fileManager.newDocument();
+		editingPane.setRootGraph(canvas.getGraph());
 	}
 
 	// =========================================================================
@@ -122,28 +123,29 @@ public class GraphEditorPanel extends BorderPane
 	// =========================================================================
 
 	private void buildLayout() {
-		palette.setPrefWidth(200);
 		palette.setMinWidth(150);
-		palette.setMaxWidth(300);
-		propertyPanel.setPrefWidth(250);
 		propertyPanel.setMinWidth(180);
-		inspectorPanel.setPrefHeight(200);
 		inspectorPanel.setMinHeight(100);
 
 		rightPanels = FxStateMeta.key(new SplitPane(), "rightPanels");
 		rightPanels.setOrientation(Orientation.VERTICAL);
 		rightPanels.getItems().add(propertyPanel);
-		rightPanels.setPrefWidth(250);
 		rightPanels.setMinWidth(180);
-		rightPanels.setMaxWidth(400);
 
 		SplitPane mainSplit = FxStateMeta.key(new SplitPane(), "mainSplit");
 		mainSplit.setOrientation(Orientation.HORIZONTAL);
 		mainSplit.getItems().addAll(palette, editingPane, rightPanels);
-		mainSplit.setDividerPositions(0.15, 0.78);
 
 		SplitPane.setResizableWithParent(palette, false);
 		SplitPane.setResizableWithParent(rightPanels, false);
+
+		String savedDiv = null;
+		try {
+			savedDiv = cz.bliksoft.javautils.app.BSApp.getLocalProperties().getProperty("graphEditor.mainSplit.div");
+		} catch (Exception ignored) {
+		}
+		if (savedDiv == null || savedDiv.isBlank())
+			mainSplit.setDividerPositions(0.15, 0.78);
 
 		setCenter(mainSplit);
 	}
@@ -209,9 +211,9 @@ public class GraphEditorPanel extends BorderPane
 	}
 
 	private void wireDocumentState() {
-		canvas.getCommandHistory().canUndoProperty().addListener((obs, o, n) -> documentState.markModified());
+		canvas.getCommandHistory().setOnChanged(() -> documentState.markModified());
 		documentState.statusProperty().addListener((obs, o, n) -> {
-			saveEnabled.set(n == ObjectStatus.MODIFIED || n == ObjectStatus.NEW);
+			saveEnabled.set(n == ObjectStatus.MODIFIED);
 		});
 	}
 
@@ -248,11 +250,7 @@ public class GraphEditorPanel extends BorderPane
 	private boolean isEdge(UUID id) {
 		if (canvas.getGraph() == null)
 			return false;
-		for (var edge : canvas.getGraph().getEdges()) {
-			if (edge.getId().equals(id))
-				return true;
-		}
-		return false;
+		return canvas.getGraph().findEdge(id) != null;
 	}
 
 	private void showInspectorPanel() {
@@ -285,7 +283,7 @@ public class GraphEditorPanel extends BorderPane
 	@Override
 	public void newDocument() {
 		fileManager.newDocument();
-		editingPane.showRoot();
+		editingPane.setRootGraph(canvas.getGraph());
 	}
 
 	@Override
@@ -314,6 +312,7 @@ public class GraphEditorPanel extends BorderPane
 	@Override
 	public void open() {
 		fileManager.open(getWindow());
+		editingPane.setRootGraph(canvas.getGraph());
 	}
 
 	@Override

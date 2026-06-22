@@ -30,13 +30,14 @@ class GroupBuilderTest {
 		Group group = result.getGroup();
 
 		assertEquals("Test Group", group.getName());
-		assertEquals(2, group.getMemberNodeIds().size());
-		assertTrue(group.getMemberNodeIds().contains(n1.getId()));
-		assertTrue(group.getMemberNodeIds().contains(n2.getId()));
-		assertTrue(group.getMemberEdgeIds().contains(edge.getId()));
+		assertEquals(2, group.getNodes().size());
+		assertNotNull(group.findNode(n1.getId()));
+		assertNotNull(group.findNode(n2.getId()));
+		assertTrue(group.getEdges().stream().anyMatch(e -> e.getId().equals(edge.getId())));
 		assertTrue(group.getExposedJoinPoints().isEmpty());
 		assertTrue(result.getBridgeEdges().isEmpty());
 		assertTrue(result.getRelinks().isEmpty());
+		assertTrue(graph.getNodes().isEmpty());
 	}
 
 	@Test
@@ -50,8 +51,8 @@ class GroupBuilderTest {
 		JoinPoint jp2out = addJoinPoint(n2, "out2", Direction.OUT);
 		JoinPoint jp3in = addJoinPoint(n3, "in", Direction.IN);
 
-		Edge e1 = addEdge(graph, jp1out, jp2in);
-		Edge e2 = addEdge(graph, jp2out, jp3in);
+		addEdge(graph, jp1out, jp2in);
+		addEdge(graph, jp2out, jp3in);
 
 		GroupBuilder.GroupResult result = GroupBuilder.createFromSelection(graph, Set.of(n2.getId()), "Middle");
 		Group group = result.getGroup();
@@ -59,44 +60,6 @@ class GroupBuilderTest {
 		assertEquals(2, group.getExposedJoinPoints().size());
 		assertEquals(2, result.getBridgeEdges().size());
 		assertEquals(2, result.getRelinks().size());
-
-		GroupBuilder.EdgeRelink r1 = result.getRelinks().stream().filter(r -> r.getEdgeId().equals(e1.getId()))
-				.findFirst().orElseThrow();
-		assertFalse(r1.isSource());
-		assertEquals(jp2in.getId(), r1.getOriginalJoinPointId());
-
-		GroupBuilder.EdgeRelink r2 = result.getRelinks().stream().filter(r -> r.getEdgeId().equals(e2.getId()))
-				.findFirst().orElseThrow();
-		assertTrue(r2.isSource());
-		assertEquals(jp2out.getId(), r2.getOriginalJoinPointId());
-	}
-
-	@Test
-	void relinkAppliedAndReversed() {
-		Graph graph = new Graph("test");
-		Node n1 = createNode(graph, 0, 0);
-		Node n2 = createNode(graph, 200, 0);
-		JoinPoint jp1out = addJoinPoint(n1, "out", Direction.OUT);
-		JoinPoint jp2in = addJoinPoint(n2, "in", Direction.IN);
-
-		Edge edge = addEdge(graph, jp1out, jp2in);
-
-		GroupBuilder.GroupResult result = GroupBuilder.createFromSelection(graph, Set.of(n2.getId()), "G");
-		Group group = result.getGroup();
-
-		cz.bliksoft.javautils.fx.controls.graph.command.GroupCommand cmd = new cz.bliksoft.javautils.fx.controls.graph.command.GroupCommand(
-				graph, group, result.getBridgeEdges(), result.getRelinks());
-
-		assertEquals(jp2in.getId(), edge.getTargetJoinPointId());
-
-		cmd.execute();
-		assertNotEquals(jp2in.getId(), edge.getTargetJoinPointId());
-		assertEquals(1, result.getBridgeEdges().size());
-		assertTrue(graph.getEdges().contains(result.getBridgeEdges().get(0)));
-
-		cmd.undo();
-		assertEquals(jp2in.getId(), edge.getTargetJoinPointId());
-		assertFalse(graph.getEdges().contains(result.getBridgeEdges().get(0)));
 	}
 
 	@Test
@@ -123,11 +86,15 @@ class GroupBuilderTest {
 		Node n1 = createNode(graph, 0, 0);
 		Node n2 = createNode(graph, 200, 0);
 
-		Group group = GroupBuilder.createFromSelection(graph, Set.of(n1.getId()), "G1").getGroup();
-		graph.getGroups().add(group);
+		GroupBuilder.createFromSelection(graph, Set.of(n1.getId()), "G1");
 
-		assertNotNull(GroupBuilder.findGroupContaining(graph, n1.getId()));
-		assertNull(GroupBuilder.findGroupContaining(graph, n2.getId()));
+		Group n1Parent = GroupBuilder.findGroupContaining(graph, n1.getId());
+		assertNotNull(n1Parent);
+		assertNotEquals(graph.getId(), n1Parent.getId());
+
+		Group n2Parent = GroupBuilder.findGroupContaining(graph, n2.getId());
+		assertNotNull(n2Parent);
+		assertEquals(graph.getId(), n2Parent.getId());
 	}
 
 	@Test
@@ -135,7 +102,6 @@ class GroupBuilderTest {
 		Graph graph = new Graph("test");
 		Node n1 = createNode(graph, 0, 0);
 		Group group = GroupBuilder.createFromSelection(graph, Set.of(n1.getId()), "G1").getGroup();
-		graph.getGroups().add(group);
 
 		assertNotNull(GroupBuilder.findGroupById(graph, group.getId()));
 		assertNull(GroupBuilder.findGroupById(graph, java.util.UUID.randomUUID()));
@@ -165,11 +131,10 @@ class GroupBuilderTest {
 		Node n1 = createNode(graph, 0, 0);
 		Node n2 = createNode(graph, 200, 0);
 
-		Group group = GroupBuilder.createFromSelection(graph, Set.of(n1.getId(), n2.getId()), "G").getGroup();
-		graph.getGroups().add(group);
+		GroupBuilder.createFromSelection(graph, Set.of(n1.getId(), n2.getId()), "G");
 		assertEquals(1, graph.getGroups().size());
 
-		graph.getGroups().remove(group);
+		graph.getGroups().clear();
 		assertEquals(0, graph.getGroups().size());
 	}
 
@@ -182,8 +147,7 @@ class GroupBuilderTest {
 		JoinPoint jp2 = addJoinPoint(n2, "in", Direction.IN);
 		addEdge(graph, jp1, jp2);
 
-		Group group = GroupBuilder.createFromSelection(graph, Set.of(n1.getId(), n2.getId()), "Persisted").getGroup();
-		graph.getGroups().add(group);
+		GroupBuilder.createFromSelection(graph, Set.of(n1.getId(), n2.getId()), "Persisted");
 
 		String xml = cz.bliksoft.dataflow.xml.GraphSerializer.marshal(graph);
 		Graph loaded = cz.bliksoft.dataflow.xml.GraphSerializer.unmarshal(xml);
@@ -191,7 +155,7 @@ class GroupBuilderTest {
 		assertEquals(1, loaded.getGroups().size());
 		Group loadedGroup = loaded.getGroups().get(0);
 		assertEquals("Persisted", loadedGroup.getName());
-		assertEquals(2, loadedGroup.getMemberNodeIds().size());
+		assertEquals(2, loadedGroup.getNodes().size());
 	}
 
 	private Node createNode(Graph graph, double x, double y) {

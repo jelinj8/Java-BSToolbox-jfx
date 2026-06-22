@@ -12,7 +12,6 @@ import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
-import cz.bliksoft.dataflow.model.JoinPointMapping;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.dataflow.xml.GraphSerializer;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
@@ -92,7 +91,7 @@ public class ClipboardHandler {
 	}
 
 	private void pasteFragment(Graph fragment) {
-		Graph target = canvas.getGraph();
+		Group target = findPasteTarget();
 		if (target == null)
 			return;
 
@@ -140,36 +139,11 @@ public class ClipboardHandler {
 			group.setX(group.getX() + PASTE_OFFSET);
 			group.setY(group.getY() + PASTE_OFFSET);
 
-			Set<UUID> newMemberNodes = new java.util.LinkedHashSet<>();
-			for (UUID oldId : group.getMemberNodeIds()) {
-				UUID mapped = idMapping.get(oldId);
-				if (mapped != null)
-					newMemberNodes.add(mapped);
-			}
-			group.setMemberNodeIds(newMemberNodes);
-
-			Set<UUID> newMemberEdges = new java.util.LinkedHashSet<>();
-			for (UUID oldId : group.getMemberEdgeIds()) {
-				UUID mapped = idMapping.get(oldId);
-				if (mapped != null)
-					newMemberEdges.add(mapped);
-			}
-			group.setMemberEdgeIds(newMemberEdges);
-
 			for (JoinPoint jp : group.getExposedJoinPoints()) {
 				UUID newJpId = RandomUUIDCreator.getRandomUuid();
 				idMapping.put(jp.getId(), newJpId);
 				jp.setId(newJpId);
 			}
-
-			List<JoinPointMapping> newMappings = new ArrayList<>();
-			for (JoinPointMapping m : group.getJoinPointMappings()) {
-				UUID newExposed = idMapping.get(m.getExposedId());
-				UUID newInternal = idMapping.get(m.getInternalId());
-				if (newExposed != null && newInternal != null)
-					newMappings.add(new JoinPointMapping(newExposed, newInternal));
-			}
-			group.setJoinPointMappings(newMappings);
 
 			commands.add(new IGraphCommand() {
 				@Override
@@ -225,7 +199,9 @@ public class ClipboardHandler {
 		}
 
 		for (Group group : canvas.getGraph().getGroups()) {
-			if (selected.contains(group.getId()) || copiedNodeIds.containsAll(group.getMemberNodeIds())) {
+			Set<UUID> groupNodeIds = new java.util.HashSet<>();
+			group.getNodes().forEach(n -> groupNodeIds.add(n.getId()));
+			if (selected.contains(group.getId()) || copiedNodeIds.containsAll(groupNodeIds)) {
 				fragment.getGroups().add(group);
 				for (JoinPoint jp : group.getExposedJoinPoints())
 					allJpIds.add(jp.getId());
@@ -244,6 +220,19 @@ public class ClipboardHandler {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+	private Group findPasteTarget() {
+		Group root = canvas.getGraph();
+		if (root == null)
+			return null;
+		var sel = canvas.getSelectionModel().getSelection();
+		if (sel.size() == 1) {
+			Group selected = root.findGroup(sel.iterator().next());
+			if (selected != null && !selected.isCollapsed())
+				return selected;
+		}
+		return root;
 	}
 
 	private void setClipboard(String xml) {

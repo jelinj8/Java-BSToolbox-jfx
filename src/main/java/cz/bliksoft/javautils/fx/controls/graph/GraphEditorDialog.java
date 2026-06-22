@@ -69,6 +69,12 @@ public class GraphEditorDialog {
 		stage.setOnHidden(e -> {
 			FxWindowState.persistWindow(stage, root, WINDOW_KEY);
 			panel.unregisterFromContext();
+			try {
+				cz.bliksoft.javautils.app.BSApp.saveLocalProperties();
+			} catch (Exception ex) {
+				org.apache.logging.log4j.LogManager.getLogger(GraphEditorDialog.class).warn("Failed to save properties",
+						ex);
+			}
 		});
 
 		FxWindowState.restoreWindow(stage, root, WINDOW_KEY);

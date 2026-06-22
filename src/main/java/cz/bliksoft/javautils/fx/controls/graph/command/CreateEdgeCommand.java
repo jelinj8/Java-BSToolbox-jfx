@@ -1,14 +1,14 @@
 package cz.bliksoft.javautils.fx.controls.graph.command;
 
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 
 public class CreateEdgeCommand implements IGraphCommand {
 
-	private final Graph graph;
+	private final Group graph;
 	private final Edge edge;
 
-	public CreateEdgeCommand(Graph graph, Edge edge) {
+	public CreateEdgeCommand(Group graph, Edge edge) {
 		this.graph = graph;
 		this.edge = edge;
 	}

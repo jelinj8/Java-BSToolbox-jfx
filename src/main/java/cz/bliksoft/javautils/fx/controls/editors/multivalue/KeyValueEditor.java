@@ -1,5 +1,6 @@
 package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -56,6 +57,7 @@ public class KeyValueEditor<V> extends VBox {
 	private final StringProperty title = new SimpleStringProperty();
 	private final ObjectProperty<Map<String, Class<?>>> propertyRegistry = new SimpleObjectProperty<>();
 	private final ObjectProperty<IValueEditorProvider<V>> defaultValueProvider = new SimpleObjectProperty<>();
+	private final Map<Class<?>, IValueEditorProvider<V>> typeProviders = new HashMap<>();
 	private final SimpleBooleanProperty keysRestrictedToRegistry = new SimpleBooleanProperty(true);
 
 	private final ObservableMap<String, V> values = FXCollections.observableHashMap();
@@ -111,7 +113,7 @@ public class KeyValueEditor<V> extends VBox {
 		TableColumn<KVEntry<V>, V> valCol = new TableColumn<>();
 		valCol.setEditable(true);
 		valCol.setCellValueFactory(r -> r.getValue().value);
-		valCol.setCellFactory(col -> new ValueTableCell<>(propertyRegistry, defaultValueProvider));
+		valCol.setCellFactory(col -> new ValueTableCell<>(propertyRegistry, defaultValueProvider, typeProviders));
 
 		TableColumn<KVEntry<V>, String> keyCol = new TableColumn<>();
 		keyCol.setEditable(true);
@@ -308,6 +310,19 @@ public class KeyValueEditor<V> extends VBox {
 
 	public ObjectProperty<IValueEditorProvider<V>> defaultValueProviderProperty() {
 		return defaultValueProvider;
+	}
+
+	public Map<Class<?>, IValueEditorProvider<V>> getTypeProviders() {
+		return typeProviders;
+	}
+
+	public String getSelectedKey() {
+		KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
+		return sel != null ? sel.key.get() : null;
+	}
+
+	public void setPlaceholderText(String text) {
+		table.setPlaceholder(new Label(text));
 	}
 
 	// ---- ObservableMap sync ----

@@ -2,17 +2,17 @@ package cz.bliksoft.javautils.fx.controls.graph.command;
 
 import java.util.UUID;
 
-import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 
 public class ResizeNodeCommand implements IGraphCommand {
 
-	private final Graph graph;
+	private final Group graph;
 	private final UUID nodeId;
 	private final double oldX, oldY, oldW, oldH;
 	private final double newX, newY, newW, newH;
 
-	public ResizeNodeCommand(Graph graph, UUID nodeId, double oldX, double oldY, double oldW, double oldH, double newX,
+	public ResizeNodeCommand(Group graph, UUID nodeId, double oldX, double oldY, double oldW, double oldH, double newX,
 			double newY, double newW, double newH) {
 		this.graph = graph;
 		this.nodeId = nodeId;

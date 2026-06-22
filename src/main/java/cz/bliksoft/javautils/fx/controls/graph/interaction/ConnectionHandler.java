@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
+import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
@@ -36,6 +37,8 @@ public class ConnectionHandler {
 	}
 
 	private UUID repositioningOwnerNodeId;
+	private cz.bliksoft.dataflow.model.JoinPointPosition repoOldPosition;
+	private double repoOldCustomX, repoOldCustomY;
 
 	private void setupHandlers() {
 		canvas.addEventFilter(MouseEvent.MOUSE_PRESSED, this::onMousePressed);
@@ -60,7 +63,7 @@ public class ConnectionHandler {
 		if (group != null) {
 			JoinPoint jp = findJoinPoint(jpId);
 			if (jp != null)
-				GroupBuilder.positionSingleExposedJoinPoint(canvas.getGraph(), group, jp);
+				GroupBuilder.positionSingleExposedJoinPoint(group, jp);
 			canvas.refreshGraph();
 			return;
 		}
@@ -95,6 +98,12 @@ public class ConnectionHandler {
 				Node owner = findNodeOwningJp(jpId);
 				if (owner != null)
 					repositioningOwnerNodeId = owner.getId();
+			}
+			JoinPoint repoJp = findJoinPoint(jpId);
+			if (repoJp != null) {
+				repoOldPosition = repoJp.getPosition();
+				repoOldCustomX = repoJp.getCustomX();
+				repoOldCustomY = repoJp.getCustomY();
 			}
 			e.consume();
 			return;
@@ -146,6 +155,37 @@ public class ConnectionHandler {
 
 	private void onMouseReleased(MouseEvent e) {
 		if (repositioningJpId != null) {
+			JoinPoint movedJp = findJoinPoint(repositioningJpId);
+			if (movedJp != null) {
+				final cz.bliksoft.dataflow.model.JoinPointPosition oldPos = repoOldPosition;
+				final double oldCx = repoOldCustomX, oldCy = repoOldCustomY;
+				final cz.bliksoft.dataflow.model.JoinPointPosition newPos = movedJp.getPosition();
+				final double newCx = movedJp.getCustomX(), newCy = movedJp.getCustomY();
+				canvas.getCommandHistory().execute(new cz.bliksoft.javautils.fx.controls.graph.command.IGraphCommand() {
+					@Override
+					public void execute() {
+					}
+
+					@Override
+					public void undo() {
+						movedJp.setPosition(oldPos);
+						movedJp.setCustomX(oldCx);
+						movedJp.setCustomY(oldCy);
+					}
+
+					@Override
+					public void redo() {
+						movedJp.setPosition(newPos);
+						movedJp.setCustomX(newCx);
+						movedJp.setCustomY(newCy);
+					}
+
+					@Override
+					public String getDescription() {
+						return "Reposition join point";
+					}
+				});
+			}
 			repositioningJpId = null;
 			repositioningGroup = null;
 			repositioningOwnerNodeId = null;
@@ -177,7 +217,7 @@ public class ConnectionHandler {
 	}
 
 	private boolean tryCreateConnection(UUID targetJpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return false;
 
@@ -249,7 +289,8 @@ public class ConnectionHandler {
 
 		if (canConnect(sourceJoinPointId, targetJpId)) {
 			Edge edge = createOrientedEdge(sourceJoinPointId, targetJpId);
-			CreateEdgeCommand cmd = new CreateEdgeCommand(canvas.getGraph(), edge);
+			Group edgeContainer = findEdgeContainer(sourceJoinPointId, targetJpId);
+			CreateEdgeCommand cmd = new CreateEdgeCommand(edgeContainer, edge);
 			canvas.getCommandHistory().execute(cmd);
 			return true;
 		}
@@ -257,33 +298,71 @@ public class ConnectionHandler {
 		return false;
 	}
 
-	private boolean createCrossBorderLink(Graph graph, cz.bliksoft.dataflow.model.Group sourceGroup,
+	private Group findEdgeContainer(UUID sourceJpId, UUID targetJpId) {
+		Group graph = canvas.getGraph();
+		if (graph == null)
+			return graph;
+		Group deepest = findDeepestGroupContainingBothJps(graph, sourceJpId, targetJpId);
+		return deepest != null ? deepest : graph;
+	}
+
+	private Group findDeepestGroupContainingBothJps(Group group, UUID jpIdA, UUID jpIdB) {
+		for (cz.bliksoft.dataflow.model.Group child : group.getGroups()) {
+			Group deeper = findDeepestGroupContainingBothJps(child, jpIdA, jpIdB);
+			if (deeper != null)
+				return deeper;
+		}
+		if (groupCanSeeBothJps(group, jpIdA, jpIdB))
+			return group;
+		return null;
+	}
+
+	private boolean groupCanSeeBothJps(Group group, UUID jpIdA, UUID jpIdB) {
+		java.util.Set<UUID> visible = new java.util.HashSet<>();
+		for (Node n : group.getNodes())
+			for (JoinPoint jp : n.getJoinPoints())
+				visible.add(jp.getId());
+		for (JoinPoint jp : group.getExposedJoinPoints())
+			visible.add(jp.getId());
+		for (cz.bliksoft.dataflow.model.Group child : group.getGroups())
+			for (JoinPoint jp : child.getExposedJoinPoints())
+				visible.add(jp.getId());
+		return visible.contains(jpIdA) && visible.contains(jpIdB);
+	}
+
+	private boolean createCrossBorderLink(Group graph, cz.bliksoft.dataflow.model.Group sourceGroup,
 			cz.bliksoft.dataflow.model.Group targetGroup, UUID targetJpId) {
-		java.util.List<Edge> edgesBefore = new java.util.ArrayList<>(graph.getEdges());
 		java.util.List<JoinPoint> exposedBefore = sourceGroup != null
 				? new java.util.ArrayList<>(sourceGroup.getExposedJoinPoints())
 				: (targetGroup != null ? new java.util.ArrayList<>(targetGroup.getExposedJoinPoints()) : null);
 
+		Edge externalEdge;
+		Group edgeContainer;
 		if (sourceGroup != null) {
 			JoinPoint exposed = GroupBuilder.getOrCreateExposedJoinPoint(graph, sourceGroup, sourceJoinPointId);
 			if (exposed == null)
 				return false;
-			graph.getEdges().add(createOrientedEdge(exposed.getId(), targetJpId));
+			externalEdge = createOrientedEdge(exposed.getId(), targetJpId);
+			edgeContainer = findEdgeContainer(exposed.getId(), targetJpId);
 		} else if (targetGroup != null) {
 			JoinPoint exposed = GroupBuilder.getOrCreateExposedJoinPoint(graph, targetGroup, targetJpId);
 			if (exposed == null)
 				return false;
-			graph.getEdges().add(createOrientedEdge(sourceJoinPointId, exposed.getId()));
+			externalEdge = createOrientedEdge(sourceJoinPointId, exposed.getId());
+			edgeContainer = findEdgeContainer(sourceJoinPointId, exposed.getId());
+		} else {
+			return false;
 		}
+		edgeContainer.getEdges().add(externalEdge);
 
-		java.util.List<Edge> newEdges = new java.util.ArrayList<>(graph.getEdges());
-		newEdges.removeAll(edgesBefore);
+		java.util.List<Edge> newEdges = java.util.List.of(externalEdge);
 
 		cz.bliksoft.dataflow.model.Group affectedGroup = sourceGroup != null ? sourceGroup : targetGroup;
 		java.util.List<JoinPoint> newExposed = new java.util.ArrayList<>(affectedGroup.getExposedJoinPoints());
 		if (exposedBefore != null)
 			newExposed.removeAll(exposedBefore);
 
+		final Group edgeOwner = edgeContainer;
 		canvas.getCommandHistory().execute(new cz.bliksoft.javautils.fx.controls.graph.command.IGraphCommand() {
 			private final java.util.List<Edge> addedEdges = new java.util.ArrayList<>(newEdges);
 			private final java.util.List<JoinPoint> addedExposed = new java.util.ArrayList<>(newExposed);
@@ -296,16 +375,10 @@ public class ConnectionHandler {
 			@Override
 			public void undo() {
 				for (Edge e : addedEdges)
-					graph.getEdges().remove(e);
+					edgeOwner.getEdges().remove(e);
 				for (JoinPoint jp : addedExposed) {
 					group.getExposedJoinPoints().remove(jp);
-					group.getJoinPointMappings().removeIf(m -> m.getExposedId().equals(jp.getId()));
-					group.getMemberEdgeIds().removeIf(id -> {
-						for (Edge e : addedEdges)
-							if (e.getId().equals(id))
-								return true;
-						return false;
-					});
+					group.getEdges().removeAll(addedEdges);
 				}
 			}
 
@@ -314,12 +387,12 @@ public class ConnectionHandler {
 				for (JoinPoint jp : addedExposed) {
 					if (!group.getExposedJoinPoints().contains(jp)) {
 						group.getExposedJoinPoints().add(jp);
-						GroupBuilder.positionSingleExposedJoinPoint(graph, group, jp);
+						GroupBuilder.positionSingleExposedJoinPoint(group, jp);
 					}
 				}
 				for (Edge e : addedEdges) {
-					if (!graph.getEdges().contains(e))
-						graph.getEdges().add(e);
+					if (!edgeOwner.getEdges().contains(e))
+						edgeOwner.getEdges().add(e);
 				}
 			}
 
@@ -333,7 +406,7 @@ public class ConnectionHandler {
 	}
 
 	private boolean tryCreateExposedJoinPoint(UUID groupId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null || sourceJoinPointId == null)
 			return false;
 
@@ -346,20 +419,17 @@ public class ConnectionHandler {
 			if (!GroupBuilder.hasConnections(graph, sourceJoinPointId)) {
 				JoinPoint removedJp = findJoinPoint(sourceJoinPointId);
 				UUID removedJpId = sourceJoinPointId;
-				cz.bliksoft.dataflow.model.JoinPointMapping removedMapping = null;
-				for (var m : group.getJoinPointMappings()) {
-					if (m.getExposedId().equals(removedJpId)) {
-						removedMapping = m;
-						break;
-					}
-				}
 				java.util.List<Edge> removedEdges = new java.util.ArrayList<>();
 				for (Edge e : graph.getEdges()) {
 					if (e.getSourceJoinPointId().equals(removedJpId) || e.getTargetJoinPointId().equals(removedJpId))
 						removedEdges.add(e);
 				}
+				java.util.List<Edge> removedBridgeEdges = new java.util.ArrayList<>();
+				for (Edge e : group.getEdges()) {
+					if (e.getSourceJoinPointId().equals(removedJpId) || e.getTargetJoinPointId().equals(removedJpId))
+						removedBridgeEdges.add(e);
+				}
 				GroupBuilder.removeExposedJoinPoint(graph, sourceOwnerGroup, removedJpId);
-				final cz.bliksoft.dataflow.model.JoinPointMapping fMapping = removedMapping;
 				canvas.getCommandHistory().execute(new cz.bliksoft.javautils.fx.controls.graph.command.IGraphCommand() {
 					@Override
 					public void execute() {
@@ -369,9 +439,8 @@ public class ConnectionHandler {
 					public void undo() {
 						if (removedJp != null)
 							group.getExposedJoinPoints().add(removedJp);
-						if (fMapping != null)
-							group.getJoinPointMappings().add(fMapping);
 						graph.getEdges().addAll(removedEdges);
+						group.getEdges().addAll(removedBridgeEdges);
 					}
 
 					@Override
@@ -390,7 +459,7 @@ public class ConnectionHandler {
 		}
 
 		UUID sourceOwnerId = findOwnerNode(sourceJoinPointId);
-		if (sourceOwnerId == null || !group.getMemberNodeIds().contains(sourceOwnerId))
+		if (sourceOwnerId == null || group.getNodes().stream().noneMatch(n -> n.getId().equals(sourceOwnerId)))
 			return false;
 
 		java.util.List<JoinPoint> exposedBefore = new java.util.ArrayList<>(group.getExposedJoinPoints());
@@ -414,8 +483,7 @@ public class ConnectionHandler {
 					graph.getEdges().remove(e);
 				for (JoinPoint jp : addedExposed) {
 					group.getExposedJoinPoints().remove(jp);
-					group.getJoinPointMappings().removeIf(m -> m.getExposedId().equals(jp.getId()));
-				}
+									}
 			}
 
 			@Override
@@ -423,7 +491,7 @@ public class ConnectionHandler {
 				for (JoinPoint jp : addedExposed) {
 					if (!group.getExposedJoinPoints().contains(jp)) {
 						group.getExposedJoinPoints().add(jp);
-						GroupBuilder.positionSingleExposedJoinPoint(graph, group, jp);
+						GroupBuilder.positionSingleExposedJoinPoint(group, jp);
 					}
 				}
 				for (Edge e : addedEdges) {
@@ -451,35 +519,22 @@ public class ConnectionHandler {
 		return null;
 	}
 
-	private cz.bliksoft.dataflow.model.Group findParentGroup(Graph graph, UUID groupId) {
-		for (cz.bliksoft.dataflow.model.Group g : graph.getGroups()) {
-			if (g.getMemberGroupIds().contains(groupId))
-				return g;
-		}
-		return null;
+	private cz.bliksoft.dataflow.model.Group findParentGroup(Group graph, UUID groupId) {
+		return graph.findParentOf(groupId);
 	}
 
-	private boolean isTransitivelyInside(Graph graph, UUID elementId, boolean isNode,
+	private boolean isTransitivelyInside(Group graph, UUID elementId, boolean isNode,
 			cz.bliksoft.dataflow.model.Group container) {
-		if (isNode) {
-			if (container.getMemberNodeIds().contains(elementId))
-				return true;
-			for (UUID childGroupId : container.getMemberGroupIds()) {
-				cz.bliksoft.dataflow.model.Group child = GroupBuilder.findGroupById(graph, childGroupId);
-				if (child != null && isTransitivelyInside(graph, elementId, true, child))
-					return true;
-			}
-			return false;
-		} else {
-			return container.getId().equals(elementId) || container.getMemberGroupIds().contains(elementId);
-		}
+		if (isNode)
+			return container.findNode(elementId) != null;
+		return container.getId().equals(elementId) || container.findGroup(elementId) != null;
 	}
 
 	private boolean isGroupId(UUID id) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return false;
-		return graph.getGroups().stream().anyMatch(g -> g.getId().equals(id));
+		return graph.findGroup(id) != null;
 	}
 
 	private Edge createOrientedEdge(UUID jpIdA, UUID jpIdB) {
@@ -531,7 +586,7 @@ public class ConnectionHandler {
 	}
 
 	private void highlightCompatibleTargets() {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null || sourceJoinPointId == null)
 			return;
 
@@ -589,7 +644,7 @@ public class ConnectionHandler {
 	}
 
 	private int countConnections(UUID joinPointId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return 0;
 		int count = 0;
@@ -601,7 +656,7 @@ public class ConnectionHandler {
 	}
 
 	private boolean hasDuplicateEdge(UUID jpIdA, UUID jpIdB) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return false;
 		for (Edge edge : graph.getEdges()) {
@@ -613,34 +668,22 @@ public class ConnectionHandler {
 	}
 
 	private JoinPoint findJoinPoint(UUID jpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return null;
-		for (Node node : graph.getNodes()) {
-			for (JoinPoint jp : node.getJoinPoints()) {
-				if (jp.getId().equals(jpId))
-					return jp;
-			}
-		}
-		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
-			for (JoinPoint jp : group.getExposedJoinPoints()) {
-				if (jp.getId().equals(jpId))
-					return jp;
-			}
-		}
-		return null;
+		return GroupBuilder.findJoinPoint(graph, jpId);
 	}
 
 	private UUID findOwnerNode(UUID jpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return null;
-		for (Node node : graph.getNodes()) {
+		for (Node node : graph.getAllNodesRecursive()) {
 			for (JoinPoint jp : node.getJoinPoints())
 				if (jp.getId().equals(jpId))
 					return node.getId();
 		}
-		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
+		for (cz.bliksoft.dataflow.model.Group group : graph.getAllGroupsRecursive()) {
 			for (JoinPoint jp : group.getExposedJoinPoints())
 				if (jp.getId().equals(jpId))
 					return group.getId();
@@ -696,49 +739,43 @@ public class ConnectionHandler {
 	}
 
 	private void repositionOnNode(JoinPoint jp, double px, double py) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return;
-		for (Node node : graph.getNodes()) {
-			if (node.getId().equals(repositioningOwnerNodeId)) {
-				double nx = node.getX(), ny = node.getY();
-				double nw = node.getWidth(), nh = node.getHeight();
+		Node node = graph.findNode(repositioningOwnerNodeId);
+		if (node == null)
+			return;
 
-				double dTop = Math.abs(py - ny);
-				double dBottom = Math.abs(py - (ny + nh));
-				double dLeft = Math.abs(px - nx);
-				double dRight = Math.abs(px - (nx + nw));
-				double min = Math.min(Math.min(dTop, dBottom), Math.min(dLeft, dRight));
+		double nx = node.getX(), ny = node.getY();
+		double nw = node.getWidth(), nh = node.getHeight();
 
-				jp.setPosition(cz.bliksoft.dataflow.model.JoinPointPosition.CUSTOM);
-				if (min == dLeft) {
-					jp.setCustomX(0);
-					jp.setCustomY(clamp((py - ny) / nh, 0.05, 0.95));
-				} else if (min == dRight) {
-					jp.setCustomX(1);
-					jp.setCustomY(clamp((py - ny) / nh, 0.05, 0.95));
-				} else if (min == dTop) {
-					jp.setCustomX(clamp((px - nx) / nw, 0.05, 0.95));
-					jp.setCustomY(0);
-				} else {
-					jp.setCustomX(clamp((px - nx) / nw, 0.05, 0.95));
-					jp.setCustomY(1);
-				}
-				return;
-			}
+		double dTop = Math.abs(py - ny);
+		double dBottom = Math.abs(py - (ny + nh));
+		double dLeft = Math.abs(px - nx);
+		double dRight = Math.abs(px - (nx + nw));
+		double min = Math.min(Math.min(dTop, dBottom), Math.min(dLeft, dRight));
+
+		jp.setPosition(cz.bliksoft.dataflow.model.JoinPointPosition.CUSTOM);
+		if (min == dLeft) {
+			jp.setCustomX(0);
+			jp.setCustomY(clamp((py - ny) / nh, 0.05, 0.95));
+		} else if (min == dRight) {
+			jp.setCustomX(1);
+			jp.setCustomY(clamp((py - ny) / nh, 0.05, 0.95));
+		} else if (min == dTop) {
+			jp.setCustomX(clamp((px - nx) / nw, 0.05, 0.95));
+			jp.setCustomY(0);
+		} else {
+			jp.setCustomX(clamp((px - nx) / nw, 0.05, 0.95));
+			jp.setCustomY(1);
 		}
 	}
 
 	private Node findNodeOwningJp(UUID jpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return null;
-		for (Node node : graph.getNodes()) {
-			for (JoinPoint jp : node.getJoinPoints())
-				if (jp.getId().equals(jpId))
-					return node;
-		}
-		return null;
+		return graph.findNodeByJoinPoint(jpId);
 	}
 
 	private void resetJoinPointToDefault(JoinPoint jp, Node ownerNode) {
@@ -761,10 +798,10 @@ public class ConnectionHandler {
 	}
 
 	private cz.bliksoft.dataflow.model.Group findGroupOwningExposedJp(UUID jpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return null;
-		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
+		for (cz.bliksoft.dataflow.model.Group group : graph.getAllGroupsRecursive()) {
 			for (JoinPoint jp : group.getExposedJoinPoints()) {
 				if (jp.getId().equals(jpId))
 					return group;
@@ -802,10 +839,10 @@ public class ConnectionHandler {
 	}
 
 	private javafx.geometry.Point2D getJoinPointScreenPos(UUID jpId) {
-		Graph graph = canvas.getGraph();
+		Group graph = canvas.getGraph();
 		if (graph == null)
 			return null;
-		for (Node node : graph.getNodes()) {
+		for (Node node : graph.getAllNodesRecursive()) {
 			for (JoinPoint jp : node.getJoinPoints()) {
 				if (jp.getId().equals(jpId)) {
 					double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(),
@@ -817,13 +854,9 @@ public class ConnectionHandler {
 				}
 			}
 		}
-		for (cz.bliksoft.dataflow.model.Group group : graph.getGroups()) {
+		for (cz.bliksoft.dataflow.model.Group group : graph.getAllGroupsRecursive()) {
 			for (JoinPoint jp : group.getExposedJoinPoints()) {
 				if (jp.getId().equals(jpId)) {
-					double w = Math.max(group.getWidth(), 80);
-					double h = Math.max(group.getHeight(), 50);
-					double[] rel = JoinPointRenderer.computePosition(jp.getPosition(), jp.getCustomX(), jp.getCustomY(),
-							w, h);
 					javafx.scene.Node indicator = findJoinPointIndicator(jpId);
 					if (indicator != null)
 						return indicator.localToScreen(0, 0);

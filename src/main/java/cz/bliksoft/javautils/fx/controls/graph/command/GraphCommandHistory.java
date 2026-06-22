@@ -15,6 +15,7 @@ public class GraphCommandHistory {
 
 	private final BooleanProperty canUndo = new SimpleBooleanProperty(false);
 	private final BooleanProperty canRedo = new SimpleBooleanProperty(false);
+	private Runnable onChanged;
 
 	public GraphCommandHistory() {
 		this(200);
@@ -60,12 +61,19 @@ public class GraphCommandHistory {
 	public void clear() {
 		history.clear();
 		position = -1;
-		updateProperties();
+		canUndo.set(false);
+		canRedo.set(false);
+	}
+
+	public void setOnChanged(Runnable onChanged) {
+		this.onChanged = onChanged;
 	}
 
 	private void updateProperties() {
 		canUndo.set(position >= 0);
 		canRedo.set(position < history.size() - 1);
+		if (onChanged != null)
+			onChanged.run();
 	}
 
 	public ReadOnlyBooleanProperty canUndoProperty() {

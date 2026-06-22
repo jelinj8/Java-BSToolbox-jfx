@@ -4,11 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
-import cz.bliksoft.dataflow.model.JoinPoint;
-import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
 import javafx.geometry.Insets;
 import javafx.scene.control.Hyperlink;
@@ -20,22 +17,48 @@ import javafx.scene.layout.VBox;
 
 public class GroupEditingPane extends VBox {
 
-	private final Graph rootGraph;
+	private Group rootGraph;
 	private final GraphCanvas canvas;
 	private final HBox breadcrumbBar = new HBox(4);
+	private final Separator breadcrumbSeparator = new Separator();
 	private final List<UUID> navigationStack = new ArrayList<>();
 
 	public GroupEditingPane(Graph rootGraph, GraphCanvas canvas) {
 		this.rootGraph = rootGraph;
 		this.canvas = canvas;
+		canvas.setRootGraph(rootGraph);
 
 		breadcrumbBar.getStyleClass().add("graph-breadcrumb-bar");
 		breadcrumbBar.setPadding(new Insets(4, 8, 4, 8));
 
 		VBox.setVgrow(canvas, Priority.ALWAYS);
-		getChildren().addAll(breadcrumbBar, new Separator(), canvas);
+		getChildren().addAll(breadcrumbBar, breadcrumbSeparator, canvas);
 
 		showRoot();
+	}
+
+	public void setRootGraph(Group graph) {
+		this.rootGraph = graph;
+		canvas.setRootGraph(graph);
+		showRoot();
+	}
+
+	public Group getRootGraph() {
+		return rootGraph;
+	}
+
+	public UUID getCurrentGroupId() {
+		return navigationStack.isEmpty() ? null : navigationStack.getLast();
+	}
+
+	public Group getCurrentGroup() {
+		if (navigationStack.isEmpty())
+			return rootGraph;
+		return rootGraph.findGroup(navigationStack.getLast());
+	}
+
+	public boolean isAtRoot() {
+		return navigationStack.isEmpty();
 	}
 
 	public void showRoot() {
@@ -45,13 +68,12 @@ public class GroupEditingPane extends VBox {
 	}
 
 	public void enterGroup(UUID groupId) {
-		Group group = GroupBuilder.findGroupById(rootGraph, groupId);
+		Group group = rootGraph.findGroup(groupId);
 		if (group == null)
 			return;
 
 		navigationStack.add(groupId);
-		Graph subGraph = buildSubGraph(group);
-		canvas.setGraph(subGraph);
+		canvas.setGraph(group);
 		updateBreadcrumbs();
 	}
 
@@ -63,21 +85,29 @@ public class GroupEditingPane extends VBox {
 		while (navigationStack.size() > depth)
 			navigationStack.removeLast();
 
-		UUID currentGroupId = navigationStack.get(navigationStack.size() - 1);
-		Group group = GroupBuilder.findGroupById(rootGraph, currentGroupId);
+		Group group = rootGraph.findGroup(navigationStack.getLast());
 		if (group == null) {
 			showRoot();
 			return;
 		}
-		Graph subGraph = buildSubGraph(group);
-		canvas.setGraph(subGraph);
+		canvas.setGraph(group);
 		updateBreadcrumbs();
 	}
 
 	private void updateBreadcrumbs() {
 		breadcrumbBar.getChildren().clear();
 
-		Hyperlink rootLink = new Hyperlink(rootGraph.getName());
+		boolean atRoot = navigationStack.isEmpty();
+		breadcrumbBar.setVisible(!atRoot);
+		breadcrumbBar.setManaged(!atRoot);
+		breadcrumbSeparator.setVisible(!atRoot);
+		breadcrumbSeparator.setManaged(!atRoot);
+
+		if (atRoot)
+			return;
+
+		String rootName = rootGraph.getName() != null && !rootGraph.getName().isEmpty() ? rootGraph.getName() : "Root";
+		Hyperlink rootLink = new Hyperlink(rootName);
 		rootLink.getStyleClass().add("graph-breadcrumb-link");
 		rootLink.setOnAction(e -> showRoot());
 		breadcrumbBar.getChildren().add(rootLink);
@@ -87,7 +117,7 @@ public class GroupEditingPane extends VBox {
 			separator.getStyleClass().add("graph-breadcrumb-separator");
 
 			UUID groupId = navigationStack.get(i);
-			Group group = GroupBuilder.findGroupById(rootGraph, groupId);
+			Group group = rootGraph.findGroup(groupId);
 			String name = group != null ? group.getName() : "?";
 
 			final int depth = i + 1;
@@ -104,44 +134,8 @@ public class GroupEditingPane extends VBox {
 		}
 	}
 
-	private Graph buildSubGraph(Group group) {
-		Graph subGraph = new Graph(group.getName());
-		subGraph.setId(group.getId());
-
-		for (Node node : rootGraph.getNodes()) {
-			if (group.getMemberNodeIds().contains(node.getId()))
-				subGraph.getNodes().add(node);
-		}
-
-		java.util.Set<UUID> memberJpIds = new java.util.HashSet<>();
-		for (Node node : subGraph.getNodes()) {
-			for (JoinPoint jp : node.getJoinPoints())
-				memberJpIds.add(jp.getId());
-		}
-
-		for (Edge edge : rootGraph.getEdges()) {
-			if (group.getMemberEdgeIds().contains(edge.getId()))
-				subGraph.getEdges().add(edge);
-			else if (memberJpIds.contains(edge.getSourceJoinPointId())
-					&& memberJpIds.contains(edge.getTargetJoinPointId()))
-				subGraph.getEdges().add(edge);
-		}
-
-		for (Group nested : rootGraph.getGroups()) {
-			if (!nested.getId().equals(group.getId())
-					&& group.getMemberNodeIds().containsAll(nested.getMemberNodeIds()))
-				subGraph.getGroups().add(nested);
-		}
-
-		return subGraph;
-	}
-
 	public List<UUID> getNavigationStack() {
 		return List.copyOf(navigationStack);
-	}
-
-	public boolean isAtRoot() {
-		return navigationStack.isEmpty();
 	}
 
 	public GraphCanvas getCanvas() {

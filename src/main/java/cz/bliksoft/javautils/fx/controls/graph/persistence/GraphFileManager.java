@@ -89,6 +89,8 @@ public class GraphFileManager {
 			documentState.opened(graph, file);
 			canvas.setGraph(graph);
 			canvas.getCommandHistory().clear();
+			if (!repairs.isEmpty())
+				documentState.markModified();
 			rememberDirectory(file);
 			return true;
 		} catch (Exception e) {
