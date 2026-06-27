@@ -6,9 +6,9 @@ import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IObjectStatusProvider;
 import cz.bliksoft.javautils.fx.binding.ObjectStatus;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
-import cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -20,7 +20,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
-import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -45,6 +44,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 	private final ObjectProperty<Map<String, Class<?>>> registryProperty;
 	private final ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty;
 	private final Map<Class<?>, IValueEditorProvider<V>> typeProviders;
+	private final Map<String, IValueEditorProvider<V>> keyProviders;
 	private final SimpleBooleanProperty inlineEditing;
 
 	private final ObjectProperty<V> editorProxy = new SimpleObjectProperty<>();
@@ -61,10 +61,12 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
 	ValueTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty,
 			ObjectProperty<IValueEditorProvider<V>> defaultProviderProperty,
-			Map<Class<?>, IValueEditorProvider<V>> typeProviders, SimpleBooleanProperty inlineEditing) {
+			Map<Class<?>, IValueEditorProvider<V>> typeProviders, Map<String, IValueEditorProvider<V>> keyProviders,
+			SimpleBooleanProperty inlineEditing) {
 		this.registryProperty = registryProperty;
 		this.defaultProviderProperty = defaultProviderProperty;
 		this.typeProviders = typeProviders;
+		this.keyProviders = keyProviders;
 		this.inlineEditing = inlineEditing;
 
 		setOnMouseClicked(e -> {
@@ -286,6 +288,11 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 
 	@SuppressWarnings("unchecked")
 	private IValueEditorProvider<V> resolveProvider(String key) {
+		if (keyProviders != null && key != null && !key.isBlank()) {
+			IValueEditorProvider<V> keyOverride = keyProviders.get(key);
+			if (keyOverride != null)
+				return keyOverride;
+		}
 		Map<String, Class<?>> registry = registryProperty.get();
 		if (registry != null && key != null && !key.isBlank()) {
 			Class<?> type = registry.get(key);

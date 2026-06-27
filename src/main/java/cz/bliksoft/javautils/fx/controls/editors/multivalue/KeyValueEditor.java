@@ -66,6 +66,7 @@ public class KeyValueEditor<V> extends VBox {
 	private final ObjectProperty<Map<String, Class<?>>> propertyRegistry = new SimpleObjectProperty<>();
 	private final ObjectProperty<IValueEditorProvider<V>> defaultValueProvider = new SimpleObjectProperty<>();
 	private final Map<Class<?>, IValueEditorProvider<V>> typeProviders = new HashMap<>();
+	private final Map<String, IValueEditorProvider<V>> keyProviders = new HashMap<>();
 	private final SimpleBooleanProperty keysRestrictedToRegistry = new SimpleBooleanProperty(true);
 	private final SimpleBooleanProperty inlineEditing = new SimpleBooleanProperty(true);
 
@@ -129,8 +130,8 @@ public class KeyValueEditor<V> extends VBox {
 		TableColumn<KVEntry<V>, V> valCol = new TableColumn<>();
 		valCol.setEditable(true);
 		valCol.setCellValueFactory(r -> r.getValue().value);
-		valCol.setCellFactory(
-				col -> new ValueTableCell<>(propertyRegistry, defaultValueProvider, typeProviders, inlineEditing));
+		valCol.setCellFactory(col -> new ValueTableCell<>(propertyRegistry, defaultValueProvider, typeProviders,
+				keyProviders, inlineEditing));
 
 		TableColumn<KVEntry<V>, String> keyCol = new TableColumn<>();
 		keyCol.setEditable(true);
@@ -453,6 +454,15 @@ public class KeyValueEditor<V> extends VBox {
 		return typeProviders;
 	}
 
+	/**
+	 * Per-key value-editor overrides, consulted before {@link #getTypeProviders()
+	 * type providers}. Use to give an individual property its own editor (e.g. a
+	 * {@code ValueDefinition} property with a locked output type).
+	 */
+	public Map<String, IValueEditorProvider<V>> getKeyProviders() {
+		return keyProviders;
+	}
+
 	// ---- Internal helpers ----
 
 	private void fireEditAction() {
@@ -502,6 +512,11 @@ public class KeyValueEditor<V> extends VBox {
 
 	@SuppressWarnings("unchecked")
 	private IValueEditorProvider<V> resolveProvider(String key) {
+		if (key != null && !key.isBlank()) {
+			IValueEditorProvider<V> keyOverride = keyProviders.get(key);
+			if (keyOverride != null)
+				return keyOverride;
+		}
 		Map<String, Class<?>> registry = propertyRegistry.get();
 		if (registry != null && key != null && !key.isBlank()) {
 			Class<?> type = registry.get(key);
