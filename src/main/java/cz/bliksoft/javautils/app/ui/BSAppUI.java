@@ -10,6 +10,8 @@ import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.events.MessageEvent;
 import cz.bliksoft.javautils.app.events.TryCloseEvent;
+import cz.bliksoft.javautils.app.ui.actions.UIActions;
+import cz.bliksoft.javautils.app.ui.builder.AcceleratorManager;
 import cz.bliksoft.javautils.app.ui.builder.UIComposer;
 import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
 import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
@@ -34,8 +36,12 @@ import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Dialog;
+import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -60,6 +66,21 @@ public class BSAppUI extends ModuleBase {
 	}
 
 	private static Stage mainStage = null;
+
+	/**
+	 * Whether a main window was built from a {@code /core/ui/main} definition. When
+	 * {@code false} (no main-window definition) BSAppUI leaves the stage to the
+	 * hosting app: it neither shows a window nor wires the stage title/state/close.
+	 */
+	private static boolean mainUiBuilt = false;
+
+	/**
+	 * Externally-built main UI root supplied via
+	 * {@link #init(Application, Stage, Node)}. When set, it is hosted on the stage
+	 * (scene + accelerators + stage state/title) instead of building one from a
+	 * {@code /core/ui/main} definition.
+	 */
+	private static Node externalRoot = null;
 
 	private static String originalTitle = null;
 	private static String mainTitle = null;
@@ -98,72 +119,90 @@ public class BSAppUI extends ModuleBase {
 		BSApp.init(app);
 	}
 
+	/**
+	 * As {@link #init(Application, Stage)}, but hosts an <em>externally-built</em>
+	 * UI {@code root} on the primary stage instead of composing one from a
+	 * {@code /core/ui/main} definition. BSAppUI still applies the framework
+	 * bindings to it: it wraps the root in a {@link Scene}, binds the registered
+	 * action accelerators, restores/persists window state, wires the close handler,
+	 * and shows the stage. Use this when the app builds its own root UI but still
+	 * wants the standard window behaviour. A non-{@code null} {@code root} takes
+	 * precedence over any {@code /core/ui/main} definition.
+	 *
+	 * @param app   the running JavaFX application
+	 * @param stage the primary stage
+	 * @param root  the app-built root node to host, or {@code null} to fall back to
+	 *              a {@code /core/ui/main} definition (same as
+	 *              {@link #init(Application, Stage)})
+	 */
+	public static void init(Application app, Stage stage, Node root) {
+		externalRoot = root;
+		init(app, stage);
+	}
+
 	@Override
 	public void init() {
-		mainStage.setOnCloseRequest(event -> {
-			TryCloseEvent.fire("Window closing");
-			event.consume();
-		});
-
 		log = LogManager.getLogger();
 
-		FileObject f = FileSystem.getRoot().getFile(FS_UI_ROOT);
-		if (f != null) {
-			String mainName = f.getAttribute("main", "main");
-			FileObject mainNode = mainName.startsWith("/") ? FileSystem.getRoot().getFile(mainName)
-					: f.getFile(mainName);
-			if (mainNode != null) {
-				f = mainNode;
-				String theme = f.getAttribute("theme");
-				if (theme != null) {
-					switch (theme.toUpperCase()) {
-					case "LIGHT":
-						Styling.setThemeMode(Styling.ThemeMode.LIGHT);
-						break;
-					case "DARK":
-						Styling.setThemeMode(Styling.ThemeMode.DARK);
-						break;
-					case "SYSTEM":
-						Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
-						break;
-					}
-				}
-				Object localThemeObj = BSApp.getProperty(PROP_THEME);
-				if (localThemeObj != null) {
-					switch (localThemeObj.toString().toUpperCase()) {
-					case "LIGHT":
-						Styling.setThemeMode(Styling.ThemeMode.LIGHT);
-						break;
-					case "DARK":
-						Styling.setThemeMode(Styling.ThemeMode.DARK);
-						break;
-					case "SYSTEM":
-						Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
-						break;
-					case "NONE":
-						Styling.setThemeMode(Styling.ThemeMode.NONE);
-						break;
-					}
-				}
-				Styling.installGlobalCss();
+		FileObject mainNode = null;
+		FileObject uiRoot = FileSystem.getRoot().getFile(FS_UI_ROOT);
+		if (uiRoot != null) {
+			String mainName = uiRoot.getAttribute("main", "main");
+			mainNode = mainName.startsWith("/") ? FileSystem.getRoot().getFile(mainName) : uiRoot.getFile(mainName);
+		}
 
-				FileObject colorsNode = FileSystem.getRoot().getFile(FS_UI_ROOT + "/colors/themes");
-				if (colorsNode != null) {
-					String themeName = Styling.getThemeMode() == Styling.ThemeMode.DARK ? "dark" : "light";
-					FileObject themeColors = colorsNode.getFile(themeName);
-					if (themeColors != null) {
-						String stroke = themeColors.getAttribute("stroke");
-						String fill = themeColors.getAttribute("fill");
-						if (StringUtils.hasLength(stroke))
-							SvgConverter.setDefaultStrokeColor(stroke);
-						if (StringUtils.hasLength(fill))
-							SvgConverter.setDefaultFillColor(fill);
-					}
+		// theming + global CSS run regardless of a main-window definition, so an app
+		// that hosts its own stage still gets the theme/icon styling
+		if (mainNode != null) {
+			String theme = mainNode.getAttribute("theme");
+			if (theme != null) {
+				switch (theme.toUpperCase()) {
+				case "LIGHT" -> Styling.setThemeMode(Styling.ThemeMode.LIGHT);
+				case "DARK" -> Styling.setThemeMode(Styling.ThemeMode.DARK);
+				case "SYSTEM" -> Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
 				}
-
-				UIComposer.buildUI(f, mainStage);
-				StageAutoSizer.install(mainStage);
 			}
+		}
+		Object localThemeObj = BSApp.getProperty(PROP_THEME);
+		if (localThemeObj != null) {
+			switch (localThemeObj.toString().toUpperCase()) {
+			case "LIGHT" -> Styling.setThemeMode(Styling.ThemeMode.LIGHT);
+			case "DARK" -> Styling.setThemeMode(Styling.ThemeMode.DARK);
+			case "SYSTEM" -> Styling.setThemeMode(Styling.ThemeMode.SYSTEM);
+			case "NONE" -> Styling.setThemeMode(Styling.ThemeMode.NONE);
+			}
+		}
+		Styling.installGlobalCss();
+
+		FileObject colorsNode = FileSystem.getRoot().getFile(FS_UI_ROOT + "/colors/themes");
+		if (colorsNode != null) {
+			String themeName = Styling.getThemeMode() == Styling.ThemeMode.DARK ? "dark" : "light";
+			FileObject themeColors = colorsNode.getFile(themeName);
+			if (themeColors != null) {
+				String stroke = themeColors.getAttribute("stroke");
+				String fill = themeColors.getAttribute("fill");
+				if (StringUtils.hasLength(stroke))
+					SvgConverter.setDefaultStrokeColor(stroke);
+				if (StringUtils.hasLength(fill))
+					SvgConverter.setDefaultFillColor(fill);
+			}
+		}
+
+		// host the main window: an externally-supplied root takes precedence; otherwise
+		// compose one from a /core/ui/main definition. Either way the shared wiring
+		// below (close/title/state/show) applies. With neither, the app owns the stage.
+		if (mainStage != null && externalRoot != null) {
+			Scene scene = externalRoot instanceof Parent p ? new Scene(p) : new Scene(new StackPane(externalRoot));
+			mainStage.setScene(scene);
+			AcceleratorManager accelerators = new AcceleratorManager();
+			accelerators.attach(scene);
+			UIActions.bindAll(accelerators);
+			StageAutoSizer.install(mainStage);
+			mainUiBuilt = true;
+		} else if (mainStage != null && mainNode != null) {
+			UIComposer.buildUI(mainNode, mainStage);
+			StageAutoSizer.install(mainStage);
+			mainUiBuilt = true;
 		}
 
 		uiContextHolder = new StackedContextHolder("UI StackedContextHolder");
@@ -172,48 +211,58 @@ public class BSAppUI extends ModuleBase {
 
 		Context.setCurrentContext(uiContext);
 
-		originalTitle = mainStage.getTitle();
+		// stage title/state/close wiring applies only to a BSAppUI-built main window;
+		// when the app hosts its own content we leave its stage untouched
+		if (mainUiBuilt) {
+			mainStage.setOnCloseRequest(event -> {
+				TryCloseEvent.fire("Window closing");
+				event.consume();
+			});
 
-		Context.getCurrentContext()
-				.addContextListener(new AbstractContextListener<String>(CTX_MAIN_TITLE, "Main window title") {
-					@Override
-					public void fired(ContextChangedEvent<String> event) {
-						mainTitle = event.getNewValue();
-						updateStageTitle();
-					}
-				}, true);
+			originalTitle = mainStage.getTitle();
 
-		Context.getCurrentContext()
-				.addContextListener(new AbstractContextListener<String>(CTX_MAIN_SUBTITLE, "Main window subtitle") {
-					@Override
-					public void fired(ContextChangedEvent<String> event) {
-						mainSubtitle = event.getNewValue();
-						updateStageTitle();
-					}
-				}, true);
-
-		if (mainPane != null) {
-			Context.getCurrentContext().addContextListener(
-					new AbstractContextListener<Node>(CTX_MAIN_COMPONENT, "Main component switcher") {
-
+			Context.getCurrentContext()
+					.addContextListener(new AbstractContextListener<String>(CTX_MAIN_TITLE, "Main window title") {
 						@Override
-						public void fired(ContextChangedEvent<Node> event) {
-							mainPane.setCenter(null);
-							if (event.isNewNotNull()) {
-								mainPane.setCenter(event.getNewValue());
-							}
-							StageAutoSizer.autoSize();
+						public void fired(ContextChangedEvent<String> event) {
+							mainTitle = event.getNewValue();
+							updateStageTitle();
 						}
-					});
-		}
+					}, true);
 
-		StageStateBinder.restore(mainStage, "@main");
+			Context.getCurrentContext()
+					.addContextListener(new AbstractContextListener<String>(CTX_MAIN_SUBTITLE, "Main window subtitle") {
+						@Override
+						public void fired(ContextChangedEvent<String> event) {
+							mainSubtitle = event.getNewValue();
+							updateStageTitle();
+						}
+					}, true);
+
+			if (mainPane != null) {
+				Context.getCurrentContext().addContextListener(
+						new AbstractContextListener<Node>(CTX_MAIN_COMPONENT, "Main component switcher") {
+
+							@Override
+							public void fired(ContextChangedEvent<Node> event) {
+								mainPane.setCenter(null);
+								if (event.isNewNotNull()) {
+									mainPane.setCenter(event.getNewValue());
+								}
+								StageAutoSizer.autoSize();
+							}
+						});
+			}
+
+			StageStateBinder.restore(mainStage, "@main");
+		}
 	}
 
 	@Override
 	public void install() {
 		super.install();
-		mainStage.show();
+		if (mainUiBuilt)
+			mainStage.show();
 	}
 
 	/**
@@ -626,6 +675,17 @@ public class BSAppUI extends ModuleBase {
 			log.error("Failed to get UI stacked context from switched context for POP operation.");
 		}
 		return null;
+	}
+
+	public static void setStageIcons(Stage stage, String basePath) {
+		int[] sizes = { 16, 32, 48, 256 };
+		for (int s : sizes) {
+			String path = basePath.contains("${size}") ? basePath.replace("${size}", String.valueOf(s))
+					: String.format("%s%d.png", basePath, s);
+			Image i = ImageUtils.getImageIfPossible(path, false);
+			if (i != null)
+				stage.getIcons().add(i);
+		}
 	}
 
 	@Override

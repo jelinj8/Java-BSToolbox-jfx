@@ -260,7 +260,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		setContentDisplay(ContentDisplay.TEXT_ONLY);
 	}
 
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void flushTextFormatter(Node editorNode) {
 		javafx.scene.control.TextField tf = findTextField(editorNode);
 		if (tf != null && tf.getTextFormatter() != null) {

@@ -53,19 +53,26 @@ public class UIActions {
 
 			log.debug("Loading UI actions.");
 
+			// the core/actions configuration is optional - an app may register actions
+			// only programmatically or via the IUIAction ServiceLoader (below)
 			FileObject actionsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
-			FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
-			for (FileObject f : actionsFile.getChildFiles()) {
-				try {
-					IUIAction action = loader.loadFile(f);
-					KeyCombination kc = ShortcutFileLoader.load(f);
-					if (kc != null && action instanceof UIActionBase a)
-						a.setAccelerator(kc);
-					String key = f.getAttribute("key");
-					registerAction(key != null ? key : action.getKey(), action, f.getResourceId());
-				} catch (Exception e) {
-					log.error("Failed to register IUIAction {} ({})", f.getName(), e.getMessage());
+			if (actionsFile != null) {
+				FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
+				for (FileObject f : actionsFile.getChildFiles()) {
+					try {
+						IUIAction action = loader.loadFile(f);
+						KeyCombination kc = ShortcutFileLoader.load(f);
+						if (kc != null && action instanceof UIActionBase a)
+							a.setAccelerator(kc);
+						String key = f.getAttribute("key");
+						registerAction(key != null ? key : action.getKey(), action, f.getResourceId());
+					} catch (Exception e) {
+						log.error("Failed to register IUIAction {} ({})", f.getName(), e.getMessage());
+					}
 				}
+			} else {
+				log.debug("No '{}/{}' actions configuration present; loading actions from classpath only.",
+						BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
 			}
 
 			ServiceLoader<IUIAction> svcLoader = ServiceLoader.load(IUIAction.class);

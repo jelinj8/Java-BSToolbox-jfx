@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.ActionBinder;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.IUIActionWithSubactions;
@@ -38,7 +39,6 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
@@ -162,7 +162,7 @@ public final class UIComposer {
 		// Icons from attributes (e.g. iconBase="/icons/app")
 		String iconBase = file.getAttribute("iconBase", null);
 		if (iconBase != null)
-			setStageIcons(stage, iconBase);
+			BSAppUI.setStageIcons(stage, iconBase);
 
 		stage.setScene(scn);
 
@@ -176,17 +176,6 @@ public final class UIComposer {
 
 		ctx.accelerators().attach(scn);
 		UIActions.bindAll(ctx.accelerators());
-	}
-
-	private static void setStageIcons(Stage stage, String basePath) {
-		int[] sizes = { 16, 32, 48, 256 };
-		for (int s : sizes) {
-			String path = basePath.contains("${size}") ? basePath.replace("${size}", String.valueOf(s))
-					: String.format("%s%d.png", basePath, s);
-			Image i = ImageUtils.getImageIfPossible(path, false);
-			if (i != null)
-				stage.getIcons().add(i);
-		}
 	}
 
 	// private static UiProduct buildUIProduct(FileObject entry, UIBuildContext ctx)
