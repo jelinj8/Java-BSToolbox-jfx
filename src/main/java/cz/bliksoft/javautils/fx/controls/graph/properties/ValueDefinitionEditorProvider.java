@@ -1,17 +1,37 @@
 package cz.bliksoft.javautils.fx.controls.graph.properties;
 
+import java.util.List;
+
 import cz.bliksoft.dataflow.model.schema.ValueDefinition;
 import cz.bliksoft.dataflow.model.schema.ValueSource;
+import cz.bliksoft.dataflow.model.schema.ValueType;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.stage.Window;
 
 public class ValueDefinitionEditorProvider implements IValueEditorProvider<ValueDefinition> {
+
+	private final ValueType lockedType;
+	private final List<ValueSource> allowedSources;
+
+	public ValueDefinitionEditorProvider() {
+		this(null, null);
+	}
+
+	/**
+	 * @param lockedType     when non-{@code null}, the editor preselects and locks
+	 *                       this output {@link ValueType}
+	 * @param allowedSources the value sources offered, or {@code null}/empty for
+	 *                       all
+	 */
+	public ValueDefinitionEditorProvider(ValueType lockedType, List<ValueSource> allowedSources) {
+		this.lockedType = lockedType;
+		this.allowedSources = allowedSources;
+	}
 
 	@Override
 	public Node createEditor(ObjectProperty<ValueDefinition> valueProperty) {
@@ -51,9 +71,13 @@ public class ValueDefinitionEditorProvider implements IValueEditorProvider<Value
 
 	@Override
 	public ValueDefinition fromString(String s) {
-		if (s == null || s.isEmpty())
-			return new ValueDefinition();
-		return ValueDefinition.scalar(cz.bliksoft.dataflow.model.schema.ValueType.STRING, s);
+		ValueType type = lockedType != null ? lockedType : ValueType.STRING;
+		if (s == null || s.isEmpty()) {
+			ValueDefinition def = new ValueDefinition();
+			def.setValueType(type);
+			return def;
+		}
+		return ValueDefinition.scalar(type, s);
 	}
 
 	@Override
@@ -76,7 +100,7 @@ public class ValueDefinitionEditorProvider implements IValueEditorProvider<Value
 		else
 			current = fromString(raw != null ? raw.toString() : null);
 
-		ValueDefinitionEditor editor = new ValueDefinitionEditor();
+		ValueDefinitionEditor editor = new ValueDefinitionEditor(allowedSources, lockedType);
 		ValueDefinition copy = copyDef(current);
 		editor.setValue(copy);
 

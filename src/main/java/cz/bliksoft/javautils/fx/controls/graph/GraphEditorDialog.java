@@ -111,7 +111,7 @@ public class GraphEditorDialog {
 				new SeparatorMenuItem(), actionMenuItem("GraphStepOver"), actionMenuItem("GraphStepAll"),
 				actionMenuItem("GraphResume"), actionMenuItem("GraphRunToEnd"), new SeparatorMenuItem(),
 				actionMenuItem("GraphPause"), actionMenuItem("GraphStop"), new SeparatorMenuItem(),
-				actionMenuItem("GraphToggleBP"));
+				actionMenuItem("GraphToggleBP"), new SeparatorMenuItem(), actionMenuItem("GraphAttach"));
 
 		return new MenuBar(fileMenu, editMenu, viewMenu, runMenu);
 	}

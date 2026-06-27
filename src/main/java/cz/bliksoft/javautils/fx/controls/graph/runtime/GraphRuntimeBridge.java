@@ -10,7 +10,6 @@ import cz.bliksoft.dataflow.engine.GraphInstance;
 import cz.bliksoft.dataflow.engine.Message;
 import cz.bliksoft.dataflow.engine.NodeState;
 import cz.bliksoft.dataflow.engine.SteppingController;
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
 import javafx.application.Platform;

@@ -3,12 +3,9 @@ package cz.bliksoft.javautils.fx.controls.graph.interaction;
 import java.util.Set;
 import java.util.UUID;
 
-import cz.bliksoft.dataflow.model.Direction;
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
-import cz.bliksoft.dataflow.model.JoinPointPosition;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;
 import cz.bliksoft.javautils.fx.controls.graph.command.DeleteElementsCommand;

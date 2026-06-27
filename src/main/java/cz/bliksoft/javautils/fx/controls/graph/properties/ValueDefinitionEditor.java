@@ -21,14 +21,27 @@ public class ValueDefinitionEditor extends VBox {
 
 	private final ComboBox<ValueSource> sourceCombo = new ComboBox<>();
 	private final VBox editorArea = new VBox(2);
+	private final ValueType lockedType;
 	private ValueDefinition current;
 	private Consumer<ValueDefinition> onChange;
 
 	public ValueDefinitionEditor() {
-		this(null);
+		this(null, null);
 	}
 
 	public ValueDefinitionEditor(List<ValueSource> allowedSources) {
+		this(allowedSources, null);
+	}
+
+	/**
+	 * @param allowedSources the value sources offered, or {@code null}/empty for
+	 *                       all
+	 * @param lockedType     when non-{@code null}, the output {@link ValueType} is
+	 *                       preselected to this value and the type selector is
+	 *                       disabled in every sub-editor
+	 */
+	public ValueDefinitionEditor(List<ValueSource> allowedSources, ValueType lockedType) {
+		this.lockedType = lockedType;
 		setSpacing(2);
 
 		if (allowedSources != null && !allowedSources.isEmpty())
@@ -50,6 +63,8 @@ public class ValueDefinitionEditor extends VBox {
 
 	public void setValue(ValueDefinition def) {
 		this.current = def != null ? def : new ValueDefinition();
+		if (lockedType != null)
+			current.setValueType(lockedType);
 		sourceCombo.setValue(current.getSource());
 		buildSubEditor();
 	}
@@ -91,8 +106,19 @@ public class ValueDefinitionEditor extends VBox {
 			buildTypedValueEditor(valueContainer, typeCombo.getValue());
 			fireChange();
 		});
+		lockTypeCombo(typeCombo);
 
 		editorArea.getChildren().addAll(typeCombo, valueContainer);
+	}
+
+	/**
+	 * When a locked type is configured, pins the combo to it and disables it.
+	 */
+	private void lockTypeCombo(ComboBox<ValueType> combo) {
+		if (lockedType != null) {
+			combo.setValue(lockedType);
+			combo.setDisable(true);
+		}
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -143,6 +169,7 @@ public class ValueDefinitionEditor extends VBox {
 			current.setValueType(typeCombo.getValue());
 			fireChange();
 		});
+		lockTypeCombo(typeCombo);
 
 		TextArea exprArea = new TextArea(current.getExpression() != null ? current.getExpression() : "");
 		exprArea.setPromptText("XPath expression");
@@ -200,6 +227,7 @@ public class ValueDefinitionEditor extends VBox {
 			current.setValueType(typeCombo.getValue());
 			fireChange();
 		});
+		lockTypeCombo(typeCombo);
 
 		Label defaultLabel = new Label("Default:");
 		defaultLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #888;");

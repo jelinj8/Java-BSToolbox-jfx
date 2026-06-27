@@ -1,12 +1,10 @@
 package cz.bliksoft.javautils.fx.controls.graph.interaction;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.GraphCanvas;

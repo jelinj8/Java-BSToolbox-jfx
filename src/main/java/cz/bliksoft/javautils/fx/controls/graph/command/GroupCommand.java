@@ -2,10 +2,8 @@ package cz.bliksoft.javautils.fx.controls.graph.command;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.group.GroupBuilder.EdgeRelink;

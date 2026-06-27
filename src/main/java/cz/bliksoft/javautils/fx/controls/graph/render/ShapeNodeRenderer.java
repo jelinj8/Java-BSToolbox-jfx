@@ -2,8 +2,12 @@ package cz.bliksoft.javautils.fx.controls.graph.render;
 
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.dataflow.types.NodeType;
+import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
@@ -15,6 +19,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape;
 
 public class ShapeNodeRenderer implements INodeRenderer {
+
+	private static final Logger log = LogManager.getLogger(ShapeNodeRenderer.class);
 
 	@Override
 	public Region createNodeVisual(Node node, NodeType type, RenderContext ctx) {
@@ -61,7 +67,12 @@ public class ShapeNodeRenderer implements INodeRenderer {
 			}
 		}
 
-		StackPane container = new StackPane(shape, label);
+		StackPane container = new StackPane();
+		container.getChildren().add(shape);
+		javafx.scene.Node icon = resolveIcon(type, w, h);
+		if (icon != null)
+			container.getChildren().add(icon);
+		container.getChildren().add(label);
 		container.setAlignment(containerAlignment);
 		container.setPrefSize(w, h);
 		container.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
@@ -112,6 +123,36 @@ public class ShapeNodeRenderer implements INodeRenderer {
 		}
 		default -> new Rectangle(w, h);
 		};
+	}
+
+	/**
+	 * Resolves the node type's {@code iconSpec} (if any) into a scene-graph node
+	 * via {@link ImageUtils}. The spec may reference the node's size through the
+	 * {@code ${nodeWidth}} / {@code ${nodeHeight}} variables (substituted here
+	 * before resolution), so e.g. {@code "myicon.svg|${nodeWidth}|${nodeHeight}"}
+	 * scales the SVG to the node. Returns {@code null} when no icon is configured
+	 * or resolution fails.
+	 */
+	private javafx.scene.Node resolveIcon(NodeType type, double w, double h) {
+		String spec = type.getIconSpec();
+		if (spec == null || spec.isBlank())
+			return null;
+		String resolved = resolveIconSpec(spec, w, h);
+		try {
+			javafx.scene.Node icon = ImageUtils.getIconNode(resolved);
+			if (icon != null)
+				icon.setMouseTransparent(true);
+			return icon;
+		} catch (Exception e) {
+			log.warn("Failed to resolve node iconSpec '{}' (resolved '{}'): {}", spec, resolved, e.getMessage());
+			return null;
+		}
+	}
+
+	/** Substitutes the node-size variables into an icon spec (pixel-rounded). */
+	static String resolveIconSpec(String spec, double w, double h) {
+		return spec.replace("${nodeWidth}", String.valueOf((int) Math.round(w))).replace("${nodeHeight}",
+				String.valueOf((int) Math.round(h)));
 	}
 
 	private String getLabel(Node node, NodeType type) {

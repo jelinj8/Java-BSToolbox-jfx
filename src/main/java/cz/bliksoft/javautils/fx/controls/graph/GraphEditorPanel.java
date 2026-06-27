@@ -16,8 +16,8 @@ import cz.bliksoft.javautils.app.ui.actions.interfaces.ISave;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IUndo;
 import cz.bliksoft.javautils.app.ui.interfaces.IStackedComponent;
 import cz.bliksoft.javautils.app.ui.interfaces.ITitleProvider;
-import cz.bliksoft.javautils.app.ui.utils.state.FxStateMeta;
 import cz.bliksoft.javautils.app.ui.utils.state.FxStateManager;
+import cz.bliksoft.javautils.app.ui.utils.state.FxStateMeta;
 import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.fx.binding.ObjectStatus;
 import cz.bliksoft.javautils.fx.controls.graph.actions.GraphEditorActions;
@@ -27,20 +27,22 @@ import cz.bliksoft.javautils.fx.controls.graph.persistence.GraphDocumentState;
 import cz.bliksoft.javautils.fx.controls.graph.persistence.GraphFileManager;
 import cz.bliksoft.javautils.fx.controls.graph.properties.GraphPropertyPanel;
 import cz.bliksoft.javautils.fx.controls.graph.runtime.ContextInspectorPanel;
+import cz.bliksoft.javautils.fx.controls.graph.runtime.GraphMonitorController;
 import cz.bliksoft.javautils.fx.controls.graph.runtime.GraphRuntimeBridge;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.StringProperty;
 import javafx.collections.SetChangeListener;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.stage.Window;
 
 public class GraphEditorPanel extends BorderPane
@@ -54,6 +56,7 @@ public class GraphEditorPanel extends BorderPane
 	private final GraphFileManager fileManager;
 	private final GroupEditingPane editingPane;
 	private final GraphRuntimeBridge runtimeBridge;
+	private final GraphMonitorController monitorController;
 	private final FxStateManager stateManager;
 	private SplitPane rightPanels;
 
@@ -99,6 +102,8 @@ public class GraphEditorPanel extends BorderPane
 			runtimeBridge = null;
 		}
 
+		monitorController = new GraphMonitorController(canvas, this::loadGraphForMonitoring, this::refreshInspector);
+
 		palette.setTargetCanvas(canvas);
 		palette.refresh();
 		propertyPanel.setCanvas(canvas);
@@ -113,9 +118,46 @@ public class GraphEditorPanel extends BorderPane
 		fileToolBar = buildFileToolBar();
 		editToolBar = buildEditToolBar();
 		graphToolBar = buildGraphToolBar();
+		setupMonitoringMode();
 
 		fileManager.newDocument();
 		editingPane.setRootGraph(canvas.getGraph());
+	}
+
+	/**
+	 * While attached to a managed graph (read-only monitoring), disables editing
+	 * surfaces and shows a banner with a Detach button.
+	 */
+	private void setupMonitoringMode() {
+		BooleanProperty monitoring = monitorController.monitoringProperty();
+		palette.disableProperty().bind(monitoring);
+		fileToolBar.disableProperty().bind(monitoring);
+		editToolBar.disableProperty().bind(monitoring);
+		graphToolBar.disableProperty().bind(monitoring);
+
+		Label bannerLabel = new Label();
+		bannerLabel.textProperty()
+				.bind(javafx.beans.binding.Bindings.concat("Monitoring: ", monitorController.statusTextProperty()));
+		Button detachButton = new Button("Detach");
+		detachButton.setOnAction(e -> monitorController.detach());
+
+		HBox banner = new HBox(8, bannerLabel, detachButton);
+		banner.setAlignment(Pos.CENTER_LEFT);
+		banner.setPadding(new Insets(4, 8, 4, 8));
+		banner.setStyle("-fx-background-color: #FFF3CD; -fx-border-color: #FFE69C; -fx-border-width: 0 0 1 0;");
+		banner.visibleProperty().bind(monitoring);
+		banner.managedProperty().bind(monitoring);
+		setTop(banner);
+	}
+
+	/**
+	 * Loads a graph into the canvas + group editing pane for monitoring (mirrors
+	 * the open path) and reveals the inspector panel.
+	 */
+	private void loadGraphForMonitoring(Graph graph) {
+		canvas.setGraph(graph);
+		editingPane.setRootGraph(canvas.getGraph());
+		showInspectorPanel();
 	}
 
 	// =========================================================================
@@ -172,7 +214,7 @@ public class GraphEditorPanel extends BorderPane
 		tb.getItems().addAll(actionButton("GraphExecute"), actionButton("GraphStepDebug"), new Separator(),
 				actionButton("GraphStepOver"), actionButton("GraphStepAll"), actionButton("GraphResume"),
 				actionButton("GraphRunToEnd"), new Separator(), actionButton("GraphPause"), actionButton("GraphStop"),
-				new Separator(), actionButton("GraphToggleBP"));
+				new Separator(), actionButton("GraphToggleBP"), new Separator(), actionButton("GraphAttach"));
 		return tb;
 	}
 
@@ -228,9 +270,9 @@ public class GraphEditorPanel extends BorderPane
 	}
 
 	private void refreshInspector() {
-		if (runtimeBridge == null)
-			return;
-		GraphInstance instance = runtimeBridge.getLastInstance();
+		GraphInstance instance = (monitorController != null && monitorController.isMonitoring())
+				? monitorController.getMonitoredInstance()
+				: (runtimeBridge != null ? runtimeBridge.getLastInstance() : null);
 		if (instance == null) {
 			inspectorPanel.showEmpty();
 			return;
@@ -403,6 +445,11 @@ public class GraphEditorPanel extends BorderPane
 	@Override
 	public GraphRuntimeBridge getRuntimeBridge() {
 		return runtimeBridge;
+	}
+
+	@Override
+	public GraphMonitorController getMonitorController() {
+		return monitorController;
 	}
 
 	@Override

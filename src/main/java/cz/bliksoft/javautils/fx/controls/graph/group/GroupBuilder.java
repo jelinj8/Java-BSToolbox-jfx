@@ -8,7 +8,6 @@ import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Direction;
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
 import cz.bliksoft.dataflow.model.JoinPointPosition;

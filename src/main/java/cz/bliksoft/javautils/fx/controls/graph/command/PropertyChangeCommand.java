@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
 import cz.bliksoft.dataflow.model.Group;
-import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 
 public class PropertyChangeCommand implements IGraphCommand {

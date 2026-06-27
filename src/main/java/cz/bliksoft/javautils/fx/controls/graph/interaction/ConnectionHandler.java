@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.JoinPoint;
 import cz.bliksoft.dataflow.model.Node;
@@ -16,7 +15,6 @@ import cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 
 public class ConnectionHandler {

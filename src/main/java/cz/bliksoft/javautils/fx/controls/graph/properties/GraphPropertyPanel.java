@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Edge;
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.dataflow.model.schema.ComputedVariable;
@@ -321,6 +320,20 @@ public class GraphPropertyPanel extends VBox {
 		@SuppressWarnings("unchecked")
 		IValueEditorProvider<Object> vdProvider = (IValueEditorProvider<Object>) (IValueEditorProvider<?>) new ValueDefinitionEditorProvider();
 		editor.getTypeProviders().put(ValueDefinition.class, vdProvider);
+
+		// give ValueDefinition properties that fix an output type and/or restrict
+		// their sources a dedicated locked editor (the shared provider above is used
+		// for unconstrained ones)
+		for (PropertyDefinition def : schema.getDefinitions()) {
+			boolean constrained = def.getValueType() != null
+					|| (def.getAllowedSources() != null && !def.getAllowedSources().isEmpty());
+			if (resolveType(def.getType()) == ValueDefinition.class && constrained) {
+				@SuppressWarnings("unchecked")
+				IValueEditorProvider<Object> lockedProvider = (IValueEditorProvider<Object>) (IValueEditorProvider<?>) new ValueDefinitionEditorProvider(
+						def.getValueType(), def.getAllowedSources());
+				editor.getKeyProviders().put(def.getName(), lockedProvider);
+			}
+		}
 		editor.setKeysRestrictedToRegistry(true);
 		editor.setKeysEditable(false);
 		editor.setTitle("Properties");

@@ -1,8 +1,6 @@
 package cz.bliksoft.javautils.fx.controls.graph.group;
 
-import cz.bliksoft.dataflow.model.Graph;
 import cz.bliksoft.dataflow.model.Group;
-import cz.bliksoft.dataflow.model.Node;
 import cz.bliksoft.javautils.fx.controls.graph.render.JoinPointRenderer;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;

@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import cz.bliksoft.dataflow.model.Group;
-import cz.bliksoft.dataflow.model.Group;
 import cz.bliksoft.dataflow.model.Node;
 
 public class MoveNodesCommand implements IGraphCommand {

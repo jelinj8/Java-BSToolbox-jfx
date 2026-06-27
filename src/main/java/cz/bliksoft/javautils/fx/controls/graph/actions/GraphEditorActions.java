@@ -24,8 +24,8 @@ public final class GraphEditorActions {
 	public static List<IUIAction> createAll() {
 		return List.of(new GraphExecuteAction(), new GraphStepDebugAction(), new GraphStepOverAction(),
 				new GraphStepAllAction(), new GraphResumeAction(), new GraphRunToEndAction(), new GraphPauseAction(),
-				new GraphStopAction(), new GraphToggleBreakpointAction(), new GraphGroupAction(),
-				new GraphUngroupAction(), new GraphDeleteAction(), new GraphZoomToFitAction(), new GraphZoom100Action(),
-				new GraphSaveAsAction());
+				new GraphStopAction(), new GraphToggleBreakpointAction(), new GraphAttachAction(),
+				new GraphGroupAction(), new GraphUngroupAction(), new GraphDeleteAction(), new GraphZoomToFitAction(),
+				new GraphZoom100Action(), new GraphSaveAsAction());
 	}
 }
