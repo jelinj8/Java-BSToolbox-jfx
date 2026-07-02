@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
@@ -51,7 +51,7 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		stage.initModality(Modality.WINDOW_MODAL);
 		if (owner != null)
 			stage.initOwner(owner);
-		stage.setTitle(BSAppMessages.getString("Codebook.button.title"));
+		stage.setTitle(BSAppJFXMessages.getString("Codebook.button.title"));
 		String iconSpec = IconspecUtils.getMenuIconspec("codebook/dialog/list");
 		if (iconSpec != null) {
 			Image dialogIcon = ImageUtils.getImage(iconSpec, false);
@@ -60,7 +60,7 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		}
 
 		TextField filterField = new TextField();
-		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
+		filterField.setPromptText(BSAppJFXMessages.getString("Codebook.button.filter.prompt"));
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
 		Predicate<T> initialPred = additionalFilter != null ? additionalFilter : s -> true;
@@ -90,8 +90,8 @@ public class ListCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.textProperty().addListener((obs, o, n) -> applyFilter.run());
 		applyFilter.run();
 
-		Button ok = new Button(BSAppMessages.getString("button.ok"));
-		Button cancel = new Button(BSAppMessages.getString("button.cancel"));
+		Button ok = new Button(BSAppJFXMessages.getString("button.ok"));
+		Button cancel = new Button(BSAppJFXMessages.getString("button.cancel"));
 		ok.setDefaultButton(true);
 		cancel.setCancelButton(true);
 

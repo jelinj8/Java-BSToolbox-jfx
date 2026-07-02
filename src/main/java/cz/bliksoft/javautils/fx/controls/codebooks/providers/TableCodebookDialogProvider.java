@@ -8,7 +8,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -32,7 +32,7 @@ import javafx.stage.Window;
 public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 
 	private final List<Supplier<TableColumn<T, ?>>> columnFactories = new ArrayList<>();
-	private String dialogTitle = BSAppMessages.getString("Codebook.button.title");
+	private String dialogTitle = BSAppJFXMessages.getString("Codebook.button.title");
 
 	public TableCodebookDialogProvider(List<T> items) {
 		super(items);
@@ -86,7 +86,7 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		stage.setTitle(dialogTitle);
 
 		TextField filterField = new TextField();
-		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
+		filterField.setPromptText(BSAppJFXMessages.getString("Codebook.button.filter.prompt"));
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
 		Predicate<T> initialPred = additionalFilter != null ? additionalFilter : s -> true;
@@ -114,8 +114,8 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.textProperty().addListener((obs, o, n) -> applyFilter.run());
 		applyFilter.run();
 
-		Button ok = new Button(BSAppMessages.getString("button.ok"));
-		Button cancel = new Button(BSAppMessages.getString("button.cancel"));
+		Button ok = new Button(BSAppJFXMessages.getString("button.ok"));
+		Button cancel = new Button(BSAppJFXMessages.getString("button.cancel"));
 		ok.setDefaultButton(true);
 		cancel.setCancelButton(true);
 

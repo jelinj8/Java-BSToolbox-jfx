@@ -5,16 +5,17 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
- * Provides access to localized application messages from
- * {@code BSAppMessages.properties}. Returns {@code !key!} when a key is missing
- * so that UI problems are immediately visible without throwing exceptions.
+ * Provides access to localized JavaFX UI messages from
+ * {@code BSAppJFXMessages.properties}. Returns {@code !key!} when a key is
+ * missing so that UI problems are immediately visible without throwing
+ * exceptions.
  */
-public class BSAppMessages {
-	private static final String BUNDLE_NAME = "cz.bliksoft.javautils.app.BSAppMessages"; //$NON-NLS-1$
+public class BSAppJFXMessages {
+	private static final String BUNDLE_NAME = "cz.bliksoft.javautils.app.BSAppJFXMessages"; //$NON-NLS-1$
 
 	private static ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME);
 
-	private BSAppMessages() {
+	private BSAppJFXMessages() {
 	}
 
 	/**

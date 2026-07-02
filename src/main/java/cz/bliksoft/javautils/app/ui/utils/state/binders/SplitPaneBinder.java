@@ -1,6 +1,6 @@
 package cz.bliksoft.javautils.app.ui.utils.state.binders;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.ui.utils.state.FxStateBinder;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -22,13 +22,13 @@ public final class SplitPaneBinder implements FxStateBinder {
 		double[] pos = sp.getDividerPositions();
 		if (pos.length == 0)
 			return;
-		BSApp.getLocalProperties().put(pfx + ".div", join(pos));
+		BSAppJFX.getLocalProperties().put(pfx + ".div", join(pos));
 	}
 
 	@Override
 	public void restore(Node n, String pfx) {
 		SplitPane sp = (SplitPane) n;
-		String raw = BSApp.getLocalProperties().getProperty(pfx + ".div");
+		String raw = BSAppJFX.getLocalProperties().getProperty(pfx + ".div");
 		if (raw == null || raw.isBlank())
 			return;
 		double[] pos = parseDoubles(raw);

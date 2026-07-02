@@ -8,9 +8,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSApp;
-import cz.bliksoft.javautils.app.exceptions.ViewableException;
 import cz.bliksoft.javautils.app.ui.administration.BSAppAdministrationMessages;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
+import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.modules.IModule;
 import cz.bliksoft.javautils.modules.Modules;
 import javafx.beans.property.BooleanProperty;

@@ -9,8 +9,8 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cz.bliksoft.javautils.app.BSApp;
-import cz.bliksoft.javautils.app.exceptions.ViewableException;
+import cz.bliksoft.javautils.app.BSAppJFX;
+import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 import javafx.scene.Node;
@@ -228,9 +228,9 @@ public class WidgetContainer extends StackPane {
 
 	private void resetWidget() {
 		if (bothKeysSet()) {
-			BSApp.removeLocalProperty(propertyKey());
+			BSAppJFX.removeLocalProperty(propertyKey());
 			try {
-				BSApp.saveLocalProperties();
+				BSAppJFX.saveLocalProperties();
 			} catch (ViewableException e) {
 				log.error("Failed to save local properties after widget reset.", e);
 			}
@@ -241,7 +241,7 @@ public class WidgetContainer extends StackPane {
 	private void load() {
 		ensureFactoriesLoaded();
 
-		String saved = BSApp.getLocalProperties().getProperty(propertyKey(), null);
+		String saved = BSAppJFX.getLocalProperties().getProperty(propertyKey(), null);
 
 		if (saved == null) {
 			// No persisted choice → use default if configured
@@ -278,9 +278,9 @@ public class WidgetContainer extends StackPane {
 		String value = activeFactoryName;
 		if (value == null)
 			return;
-		BSApp.setLocalProperty(propertyKey(), value);
+		BSAppJFX.setLocalProperty(propertyKey(), value);
 		try {
-			BSApp.saveLocalProperties();
+			BSAppJFX.saveLocalProperties();
 		} catch (ViewableException e) {
 			log.error("Failed to save widget selection for slot {}.{}.", placementGroup, placementID, e);
 		}
@@ -289,9 +289,9 @@ public class WidgetContainer extends StackPane {
 	private void saveExplicitlyEmpty() {
 		if (!bothKeysSet())
 			return;
-		BSApp.setLocalProperty(propertyKey(), "");
+		BSAppJFX.setLocalProperty(propertyKey(), "");
 		try {
-			BSApp.saveLocalProperties();
+			BSAppJFX.saveLocalProperties();
 		} catch (ViewableException e) {
 			log.error("Failed to save widget removal for slot {}.{}.", placementGroup, placementID, e);
 		}
@@ -341,7 +341,7 @@ public class WidgetContainer extends StackPane {
 				return;
 			widgetFactories = new HashMap<>();
 			log.debug("Loading widget factories from filesystem.");
-			FileObject folder = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, WIDGETS_FOLDER);
+			FileObject folder = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, WIDGETS_FOLDER);
 			if (folder != null) {
 				WidgetFactoryFileLoader loader = new WidgetFactoryFileLoader();
 				for (FileObject fo : folder.getChildFiles()) {

@@ -8,7 +8,7 @@ import javafx.stage.Stage;
 import java.util.List;
 import java.util.Objects;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 
 public final class StageStateBinder {
 
@@ -24,8 +24,8 @@ public final class StageStateBinder {
 		Objects.requireNonNull(stage, "stage");
 		Objects.requireNonNull(pfx, "pfx");
 
-		BSApp.getLocalProperties().putBool(pfx + ".max", stage.isMaximized());
-		BSApp.getLocalProperties().putBool(pfx + ".fs", stage.isFullScreen());
+		BSAppJFX.getLocalProperties().putBool(pfx + ".max", stage.isMaximized());
+		BSAppJFX.getLocalProperties().putBool(pfx + ".fs", stage.isFullScreen());
 
 		// Ulož "normal bounds" pouze pokud okno není max/fullscreen
 		if (!stage.isMaximized() && !stage.isFullScreen()) {
@@ -35,12 +35,12 @@ public final class StageStateBinder {
 			double h = stage.getHeight();
 
 			if (Double.isFinite(x) && Double.isFinite(y)) {
-				BSApp.getLocalProperties().putDouble(pfx + ".x", x);
-				BSApp.getLocalProperties().putDouble(pfx + ".y", y);
+				BSAppJFX.getLocalProperties().putDouble(pfx + ".x", x);
+				BSAppJFX.getLocalProperties().putDouble(pfx + ".y", y);
 			}
 			if (Double.isFinite(w) && Double.isFinite(h) && w > 200 && h > 150) {
-				BSApp.getLocalProperties().putDouble(pfx + ".w", w);
-				BSApp.getLocalProperties().putDouble(pfx + ".h", h);
+				BSAppJFX.getLocalProperties().putDouble(pfx + ".w", w);
+				BSAppJFX.getLocalProperties().putDouble(pfx + ".h", h);
 			}
 		}
 	}
@@ -54,12 +54,12 @@ public final class StageStateBinder {
 		Objects.requireNonNull(pfx, "pfx");
 
 		Platform.runLater(() -> {
-			Double w = BSApp.getLocalProperties().getDouble(pfx + ".w");
-			Double h = BSApp.getLocalProperties().getDouble(pfx + ".h");
-			Double x = BSApp.getLocalProperties().getDouble(pfx + ".x");
-			Double y = BSApp.getLocalProperties().getDouble(pfx + ".y");
-			Boolean max = BSApp.getLocalProperties().getBool(pfx + ".max");
-			Boolean fs = BSApp.getLocalProperties().getBool(pfx + ".fs");
+			Double w = BSAppJFX.getLocalProperties().getDouble(pfx + ".w");
+			Double h = BSAppJFX.getLocalProperties().getDouble(pfx + ".h");
+			Double x = BSAppJFX.getLocalProperties().getDouble(pfx + ".x");
+			Double y = BSAppJFX.getLocalProperties().getDouble(pfx + ".y");
+			Boolean max = BSAppJFX.getLocalProperties().getBool(pfx + ".max");
+			Boolean fs = BSAppJFX.getLocalProperties().getBool(pfx + ".fs");
 
 			// Nejprve velikost/pozice (normal bounds)
 			if (w != null && h != null && Double.isFinite(w) && Double.isFinite(h) && w > 200 && h > 150) {

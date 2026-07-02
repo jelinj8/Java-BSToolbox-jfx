@@ -9,7 +9,7 @@ import javafx.scene.control.TreeTableView;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.ui.utils.state.FxStateBinder;
 
 public final class TreeTableViewBinder implements FxStateBinder {
@@ -27,7 +27,7 @@ public final class TreeTableViewBinder implements FxStateBinder {
 		Map<String, TreeTableColumn<Object, ?>> byId = indexById(cols);
 
 		// order
-		BSApp.getLocalProperties().put(pfx + ".cols.order", cols.stream().map(TreeTableViewBinder::colIdOrNull)
+		BSAppJFX.getLocalProperties().put(pfx + ".cols.order", cols.stream().map(TreeTableViewBinder::colIdOrNull)
 				.filter(Objects::nonNull).collect(Collectors.joining(",")));
 
 		// per column
@@ -37,8 +37,8 @@ public final class TreeTableViewBinder implements FxStateBinder {
 
 			double w = c.getWidth();
 			if (Double.isFinite(w) && w > 5)
-				BSApp.getLocalProperties().putDouble(pfx + ".col." + esc(id) + ".w", w);
-			BSApp.getLocalProperties().putBool(pfx + ".col." + esc(id) + ".vis", c.isVisible());
+				BSAppJFX.getLocalProperties().putDouble(pfx + ".col." + esc(id) + ".w", w);
+			BSAppJFX.getLocalProperties().putBool(pfx + ".col." + esc(id) + ".vis", c.isVisible());
 		}
 
 		// sort
@@ -51,7 +51,7 @@ public final class TreeTableViewBinder implements FxStateBinder {
 				return null;
 			return id + ":" + st.name(); // ASCENDING / DESCENDING
 		}).filter(Objects::nonNull).collect(Collectors.joining(";"));
-		BSApp.getLocalProperties().put(pfx + ".sort", sort);
+		BSAppJFX.getLocalProperties().put(pfx + ".sort", sort);
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -64,7 +64,7 @@ public final class TreeTableViewBinder implements FxStateBinder {
 			Map<String, TreeTableColumn<Object, ?>> byId = indexById(cols);
 
 			// order
-			String rawOrder = BSApp.getLocalProperties().getProperty(pfx + ".cols.order");
+			String rawOrder = BSAppJFX.getLocalProperties().getProperty(pfx + ".cols.order");
 			if (rawOrder != null && !rawOrder.isBlank()) {
 				List<TreeTableColumn<Object, ?>> ordered = new ArrayList<>();
 				Set<TreeTableColumn<Object, ?>> used = new HashSet<>();
@@ -87,18 +87,18 @@ public final class TreeTableViewBinder implements FxStateBinder {
 				String id = e.getKey();
 				TreeTableColumn<Object, ?> c = e.getValue();
 
-				Boolean vis = BSApp.getLocalProperties().getBool(pfx + ".col." + esc(id) + ".vis");
+				Boolean vis = BSAppJFX.getLocalProperties().getBool(pfx + ".col." + esc(id) + ".vis");
 				if (vis != null)
 					c.setVisible(vis);
 
-				Double w = BSApp.getLocalProperties().getDouble(pfx + ".col." + esc(id) + ".w");
+				Double w = BSAppJFX.getLocalProperties().getDouble(pfx + ".col." + esc(id) + ".w");
 				if (w != null && Double.isFinite(w) && w > 5)
 					c.setPrefWidth(w);
 			}
 
 			// sort
 			tableAny.getSortOrder().clear();
-			String rawSort = BSApp.getLocalProperties().getProperty(pfx + ".sort");
+			String rawSort = BSAppJFX.getLocalProperties().getProperty(pfx + ".sort");
 			if (rawSort != null && !rawSort.isBlank()) {
 				for (String entry : split(rawSort, ";")) {
 					int idx = entry.lastIndexOf(':');

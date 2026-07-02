@@ -3,10 +3,10 @@ package cz.bliksoft.javautils.fx.controls.images;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cz.bliksoft.javautils.app.BSApp;
-import cz.bliksoft.javautils.app.exceptions.ViewableException;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.ui.administration.BSAppAdministrationMessages;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
+import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
@@ -119,7 +119,7 @@ public class CameraAdministrationProvider implements IAdministrationProvider {
 			sourceCombo.setItems(FXCollections.observableArrayList(sources));
 			if (sources.isEmpty())
 				return;
-			String savedId = (String) BSApp.getProperty(CameraCapturePane.PREF_HANDSFREE_SOURCE);
+			String savedId = (String) BSAppJFX.getProperty(CameraCapturePane.PREF_HANDSFREE_SOURCE);
 			ICameraSource preferred = sources.stream().filter(s -> s.getId().equals(savedId)).findFirst()
 					.orElse(sources.get(0));
 			sourceCombo.getSelectionModel().select(preferred);
@@ -132,14 +132,14 @@ public class CameraAdministrationProvider implements IAdministrationProvider {
 		CheckBox autocropCheck = new CheckBox(
 				BSAppAdministrationMessages.getString("CameraAdministrationProvider.handsfree.autocropCheckbox"));
 		autocropCheck
-				.setSelected(!"false".equals(BSApp.getProperty(CameraCapturePane.PREF_HANDSFREE_AUTOCROP, "true")));
+				.setSelected(!"false".equals(BSAppJFX.getProperty(CameraCapturePane.PREF_HANDSFREE_AUTOCROP, "true")));
 		autocropCheck.selectedProperty()
 				.addListener((obs, o, n) -> saveProperty(CameraCapturePane.PREF_HANDSFREE_AUTOCROP, String.valueOf(n)));
 
 		int savedMaxDimension;
 		try {
 			savedMaxDimension = Integer
-					.parseInt((String) BSApp.getProperty(CameraCapturePane.PREF_HANDSFREE_MAX_DIMENSION, "0"));
+					.parseInt((String) BSAppJFX.getProperty(CameraCapturePane.PREF_HANDSFREE_MAX_DIMENSION, "0"));
 		} catch (NumberFormatException ex) {
 			savedMaxDimension = 0;
 		}
@@ -170,9 +170,9 @@ public class CameraAdministrationProvider implements IAdministrationProvider {
 	}
 
 	private void saveProperty(String key, String value) {
-		BSApp.setLocalProperty(key, value);
+		BSAppJFX.setLocalProperty(key, value);
 		try {
-			BSApp.saveLocalProperties();
+			BSAppJFX.saveLocalProperties();
 		} catch (ViewableException ex) {
 			log.warn("Failed to save camera preference {}", key, ex);
 		}

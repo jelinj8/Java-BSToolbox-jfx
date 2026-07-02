@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.net.http.BSHttpServer;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 
@@ -426,10 +426,10 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 			if (query != null) {
 				if (query.contains("ok=1"))
 					status = "<p style=\"color:green\">"
-							+ escapeHtml(BSAppMessages.getString("WebServerCameraSource.form.success")) + "</p>";
+							+ escapeHtml(BSAppJFXMessages.getString("WebServerCameraSource.form.success")) + "</p>";
 				else if (query.contains("err=1"))
 					status = "<p style=\"color:red\">"
-							+ escapeHtml(BSAppMessages.getString("WebServerCameraSource.form.error")) + "</p>";
+							+ escapeHtml(BSAppJFXMessages.getString("WebServerCameraSource.form.error")) + "</p>";
 			}
 
 			String subtitle = comment != null && !comment.isBlank() ? "<p>" + escapeHtml(comment) + "</p>" : "";
@@ -444,10 +444,10 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 					+ "<form method=\"POST\" enctype=\"multipart/form-data\">" //
 					+ "<input type=\"file\" name=\"frame\" accept=\"image/*\" capture=\"environment\"><br><br>" //
 					+ "<label><input type=\"checkbox\" name=\"autocrop\"> "
-					+ escapeHtml(BSAppMessages.getString("WebServerCameraSource.form.autocropLabel"))
+					+ escapeHtml(BSAppJFXMessages.getString("WebServerCameraSource.form.autocropLabel"))
 					+ "</label><br><br>" //
 					+ "<input type=\"submit\" value=\""
-					+ escapeHtml(BSAppMessages.getString("WebServerCameraSource.form.uploadButton")) + "\">" //
+					+ escapeHtml(BSAppJFXMessages.getString("WebServerCameraSource.form.uploadButton")) + "\">" //
 					+ "</form>" + status //
 					+ "</body></html>";
 

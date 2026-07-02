@@ -1,6 +1,6 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.help.BSAppHelpMessages;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
@@ -20,7 +20,7 @@ public class ShowHelpAction implements IUIAction {
 	private final ReadOnlyBooleanProperty available;
 
 	public ShowHelpAction() {
-		FileObject ui = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, "ui"); //$NON-NLS-1$
+		FileObject ui = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, "ui"); //$NON-NLS-1$
 		FileObject helpCfg = ui != null ? ui.getFile("help") : null; //$NON-NLS-1$
 		String resolved = helpCfg != null ? helpCfg.getAttribute("url", null) : null; //$NON-NLS-1$
 		url = (resolved != null && !resolved.isBlank()) ? resolved : null;
@@ -29,7 +29,7 @@ public class ShowHelpAction implements IUIAction {
 
 	@Override
 	public void execute() {
-		BSApp.getApplication().getHostServices().showDocument(url);
+		BSAppJFX.getApplication().getHostServices().showDocument(url);
 	}
 
 	@Override

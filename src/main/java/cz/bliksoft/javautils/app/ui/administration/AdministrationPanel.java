@@ -2,7 +2,7 @@ package cz.bliksoft.javautils.app.ui.administration;
 
 import java.util.Optional;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.permissions.Permission;
 import cz.bliksoft.javautils.app.permissions.Permissions;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
@@ -95,7 +95,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 
 	private void buildTree() {
 		TreeItem<AdministrationTreeItem> root = new TreeItem<>();
-		FileObject adminFolder = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ADMINISTRATION_FOLDER_NAME);
+		FileObject adminFolder = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, ADMINISTRATION_FOLDER_NAME);
 		if (adminFolder != null) {
 			buildTreeItems(adminFolder, root, new AdministrationProviderFileLoader());
 		}

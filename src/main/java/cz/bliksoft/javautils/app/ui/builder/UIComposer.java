@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.ActionBinder;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
@@ -851,8 +851,8 @@ public final class UIComposer {
 					return;
 
 				hl.setOnAction(e -> {
-					if (BSApp.getApplication() != null) {
-						BSApp.getApplication().getHostServices().showDocument(url.trim());
+					if (BSAppJFX.getApplication() != null) {
+						BSAppJFX.getApplication().getHostServices().showDocument(url.trim());
 					} else {
 						throw new InitializationException("HostServices not set, cannot open URL: " + url);
 					}

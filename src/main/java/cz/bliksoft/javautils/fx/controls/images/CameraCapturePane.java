@@ -18,16 +18,16 @@ import org.apache.logging.log4j.Logger;
 
 import com.github.sarxos.webcam.Webcam;
 
-import cz.bliksoft.javautils.app.BSApp;
-import cz.bliksoft.javautils.app.BSAppMessages;
-import cz.bliksoft.javautils.app.exceptions.ViewableException;
+import cz.bliksoft.javautils.app.BSAppJFX;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.fx.controls.images.cam.CameraNativeLock;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraPreviewSession;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.WebcamCameraSource;
-import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.controls.images.qr.QrCodeRenderer;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.images.PixelOps;
 import cz.bliksoft.javautils.xmlfilesystem.singletons.Services;
@@ -40,15 +40,15 @@ import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.ContentDisplay;
-import javafx.scene.image.ImageView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -237,7 +237,7 @@ public class CameraCapturePane extends VBox {
 	// =========================================================================
 
 	private void buildContent() {
-		sourceCombo.setPromptText(BSAppMessages.getString("CameraCaptureDialog.sourceCombo.prompt"));
+		sourceCombo.setPromptText(BSAppJFXMessages.getString("CameraCaptureDialog.sourceCombo.prompt"));
 		sourceCombo.setCellFactory(lv -> new CameraSourceListCell());
 		sourceCombo.setButtonCell(new CameraSourceListCell());
 		sourceCombo.setMinWidth(200);
@@ -246,9 +246,9 @@ public class CameraCapturePane extends VBox {
 			if (previewRunning)
 				stopPreview();
 			if (n != null) {
-				BSApp.setLocalProperty(PREF_CAMERA, n.getId());
+				BSAppJFX.setLocalProperty(PREF_CAMERA, n.getId());
 				try {
-					BSApp.saveLocalProperties();
+					BSAppJFX.saveLocalProperties();
 				} catch (ViewableException ex) {
 					log.warn("Failed to save camera preference", ex);
 				}
@@ -266,9 +266,9 @@ public class CameraCapturePane extends VBox {
 		camResCombo.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
 			ICameraSource src = sourceCombo.getValue();
 			if (n != null && src != null) {
-				BSApp.setLocalProperty(PREF_RESOLUTION_PREFIX + src.getId(), n.width + "x" + n.height);
+				BSAppJFX.setLocalProperty(PREF_RESOLUTION_PREFIX + src.getId(), n.width + "x" + n.height);
 				try {
-					BSApp.saveLocalProperties();
+					BSAppJFX.saveLocalProperties();
 				} catch (ViewableException ex) {
 					log.warn("Failed to save camera resolution preference", ex);
 				}
@@ -282,9 +282,9 @@ public class CameraCapturePane extends VBox {
 		camRotationCombo.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
 			ICameraSource src = sourceCombo.getValue();
 			if (n != null && src != null) {
-				BSApp.setLocalProperty(PREF_ROTATION_PREFIX + src.getId(), String.valueOf(n));
+				BSAppJFX.setLocalProperty(PREF_ROTATION_PREFIX + src.getId(), String.valueOf(n));
 				try {
-					BSApp.saveLocalProperties();
+					BSAppJFX.saveLocalProperties();
 				} catch (ViewableException ex) {
 					log.warn("Failed to save camera rotation preference", ex);
 				}
@@ -293,7 +293,7 @@ public class CameraCapturePane extends VBox {
 		camRotationCombo.getSelectionModel().selectFirst();
 
 		// Output resolution combo (right group, hidden until presets configured)
-		String origLabel = BSAppMessages.getString("CameraCaptureDialog.toolbar.outputResOriginal");
+		String origLabel = BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.outputResOriginal");
 		outResCombo.setCellFactory(lv -> new DimensionListCell(origLabel));
 		outResCombo.setButtonCell(new DimensionListCell(origLabel));
 		outResCombo.setVisible(false);
@@ -309,16 +309,17 @@ public class CameraCapturePane extends VBox {
 		});
 
 		// Right-group buttons
-		autocropBtn.setTooltip(new Tooltip(BSAppMessages.getString("CameraCaptureDialog.toolbar.autocropButton")));
+		autocropBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.autocropButton")));
 		autocropBtn.setOnAction(e -> cropPane.autocrop());
 		autocropBtn.setDisable(true);
 
-		rotateLeftBtn.setTooltip(new Tooltip(BSAppMessages.getString("CameraCaptureDialog.toolbar.rotateLeftButton")));
+		rotateLeftBtn
+				.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateLeftButton")));
 		rotateLeftBtn.setOnAction(e -> cropPane.rotateLeft());
 		rotateLeftBtn.setDisable(true);
 
 		rotateRightBtn
-				.setTooltip(new Tooltip(BSAppMessages.getString("CameraCaptureDialog.toolbar.rotateRightButton")));
+				.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateRightButton")));
 		rotateRightBtn.setOnAction(e -> cropPane.rotateRight());
 		rotateRightBtn.setDisable(true);
 
@@ -331,7 +332,7 @@ public class CameraCapturePane extends VBox {
 
 		// Split capture button for live-preview mode
 		captureSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
-		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
+		previewToggleItem.setText(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
 		captureSplitBtn.getItems().add(previewToggleItem);
 		captureBtn.visibleProperty().bind(previewEnabled.not());
 		captureBtn.managedProperty().bind(previewEnabled.not());
@@ -342,14 +343,15 @@ public class CameraCapturePane extends VBox {
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
 
-		outResLabel = new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.outputResLabel"));
+		outResLabel = new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.outputResLabel"));
 		outResLabel.setVisible(false);
 		outResLabel.setManaged(false);
 
-		ToolBar toolbar = new ToolBar(new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
+		ToolBar toolbar = new ToolBar(new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
 				sourceCombo, captureBtn, captureSplitBtn, camResCombo,
-				new Label(BSAppMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")), camRotationCombo,
-				runtimeStatusLabel, spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn, rotateRightBtn);
+				new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")),
+				camRotationCombo, runtimeStatusLabel, spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn,
+				rotateRightBtn);
 
 		statusLabel.setVisible(false);
 		statusLabel.setManaged(false);
@@ -420,7 +422,7 @@ public class CameraCapturePane extends VBox {
 			if (sources.isEmpty())
 				return;
 			// Restore last-used source by id
-			String lastId = (String) BSApp.getProperty(PREF_CAMERA);
+			String lastId = (String) BSAppJFX.getProperty(PREF_CAMERA);
 			ICameraSource preferred = sources.stream().filter(c -> c.getId().equals(lastId)).findFirst()
 					.orElse(sources.get(0));
 			sourceCombo.getSelectionModel().select(preferred);
@@ -452,7 +454,7 @@ public class CameraCapturePane extends VBox {
 		camResCombo.setItems(FXCollections.observableArrayList(sizes));
 
 		// Restore per-source saved resolution
-		Dimension saved = parseDimension((String) BSApp.getProperty(PREF_RESOLUTION_PREFIX + sourceId));
+		Dimension saved = parseDimension((String) BSAppJFX.getProperty(PREF_RESOLUTION_PREFIX + sourceId));
 		Dimension toSelect = null;
 		if (saved != null) {
 			for (Dimension d : sizes) {
@@ -468,7 +470,7 @@ public class CameraCapturePane extends VBox {
 	}
 
 	private void restoreCameraRotation(String sourceId) {
-		String saved = (String) BSApp.getProperty(PREF_ROTATION_PREFIX + sourceId);
+		String saved = (String) BSAppJFX.getProperty(PREF_ROTATION_PREFIX + sourceId);
 		Integer rot = null;
 		if (saved != null) {
 			try {
@@ -505,7 +507,7 @@ public class CameraCapturePane extends VBox {
 			return;
 		captureBtn.setDisable(true);
 		captureSplitBtn.setDisable(true);
-		runtimeStatusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.capturing"));
+		runtimeStatusLabel.setText(BSAppJFXMessages.getString("CameraCaptureDialog.status.capturing"));
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
 		new Thread(() -> {
@@ -525,7 +527,7 @@ public class CameraCapturePane extends VBox {
 			try {
 				img = future.get(10, TimeUnit.SECONDS);
 				if (img == null)
-					error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
+					error = BSAppJFXMessages.getString("CameraCaptureDialog.error.emptyFrame");
 				else {
 					if (preRotation != 0)
 						img = applyRotation(img, preRotation);
@@ -536,10 +538,10 @@ public class CameraCapturePane extends VBox {
 				}
 			} catch (TimeoutException ex) {
 				future.cancel(true);
-				error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
+				error = BSAppJFXMessages.getString("CameraCaptureDialog.error.timeout");
 				log.warn("Camera capture timed out for {}", src.getDisplayName());
 			} catch (Exception ex) {
-				error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
+				error = BSAppJFXMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
 				log.warn("Camera capture failed", ex);
 			} finally {
 				exec.shutdownNow();
@@ -558,7 +560,7 @@ public class CameraCapturePane extends VBox {
 				} else {
 					lastCaptureRawBytes = null;
 					runtimeStatusLabel.setText(finalError != null ? finalError
-							: BSAppMessages.getString("CameraCaptureDialog.error.unknown"));
+							: BSAppJFXMessages.getString("CameraCaptureDialog.error.unknown"));
 				}
 				captureBtn.setDisable(false);
 				captureSplitBtn.setDisable(false);
@@ -602,8 +604,8 @@ public class CameraCapturePane extends VBox {
 		sourceCombo.setDisable(true);
 		camResCombo.setDisable(true);
 		camRotationCombo.setDisable(true);
-		runtimeStatusLabel.setText(BSAppMessages.getString("CameraCaptureDialog.status.previewing"));
-		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStop"));
+		runtimeStatusLabel.setText(BSAppJFXMessages.getString("CameraCaptureDialog.status.previewing"));
+		previewToggleItem.setText(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStop"));
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
 
@@ -622,7 +624,7 @@ public class CameraCapturePane extends VBox {
 				}
 			} catch (Exception ex) {
 				log.warn("Camera preview failed for {}", src.getDisplayName(), ex);
-				final String msg = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
+				final String msg = BSAppJFXMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
 				Platform.runLater(() -> runtimeStatusLabel.setText(msg));
 			} finally {
 				previewRunning = false;
@@ -672,7 +674,7 @@ public class CameraCapturePane extends VBox {
 		sourceCombo.setDisable(false);
 		camResCombo.setDisable(false);
 		camRotationCombo.setDisable(false);
-		previewToggleItem.setText(BSAppMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
+		previewToggleItem.setText(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
 	}
 
 	// =========================================================================
@@ -683,9 +685,9 @@ public class CameraCapturePane extends VBox {
 	}
 
 	static void doHandsfree(Consumer<WritableImage> onSuccess, Runnable onUnavailable, Consumer<String> onError) {
-		String sourceId = (String) BSApp.getProperty(PREF_HANDSFREE_SOURCE);
+		String sourceId = (String) BSAppJFX.getProperty(PREF_HANDSFREE_SOURCE);
 		if (sourceId == null)
-			sourceId = (String) BSApp.getProperty(PREF_CAMERA);
+			sourceId = (String) BSAppJFX.getProperty(PREF_CAMERA);
 		if (sourceId == null) {
 			Platform.runLater(onUnavailable);
 			return;
@@ -697,19 +699,19 @@ public class CameraCapturePane extends VBox {
 			return;
 		}
 
-		Dimension savedRes = parseDimension((String) BSApp.getProperty(PREF_RESOLUTION_PREFIX + sourceId));
+		Dimension savedRes = parseDimension((String) BSAppJFX.getProperty(PREF_RESOLUTION_PREFIX + sourceId));
 		CaptureOutcome outcome = captureFrame(src, savedRes);
 
 		BufferedImage captured = outcome.image();
 		String error = outcome.error();
 		if (captured == null || error != null) {
-			final String msg = error != null ? error : BSAppMessages.getString("CameraCaptureDialog.error.unknown");
+			final String msg = error != null ? error : BSAppJFXMessages.getString("CameraCaptureDialog.error.unknown");
 			Platform.runLater(() -> onError.accept(msg));
 			return;
 		}
 
 		// Pre-rotation
-		String savedRotStr = (String) BSApp.getProperty(PREF_ROTATION_PREFIX + sourceId);
+		String savedRotStr = (String) BSAppJFX.getProperty(PREF_ROTATION_PREFIX + sourceId);
 		if (savedRotStr != null) {
 			try {
 				int rot = Integer.parseInt(savedRotStr);
@@ -721,7 +723,7 @@ public class CameraCapturePane extends VBox {
 
 		// Autocrop
 		BufferedImage result = captured;
-		boolean autocrop = !"false".equals(BSApp.getProperty(PREF_HANDSFREE_AUTOCROP, "true"));
+		boolean autocrop = !"false".equals(BSAppJFX.getProperty(PREF_HANDSFREE_AUTOCROP, "true"));
 		if (autocrop) {
 			java.awt.Rectangle cropRect = ImageCropPane.autocropRect(captured);
 			if (cropRect != null && cropRect.width > 0 && cropRect.height > 0) {
@@ -732,7 +734,7 @@ public class CameraCapturePane extends VBox {
 		// Downscale if a max dimension is configured
 		int maxDimension = 0;
 		try {
-			maxDimension = Integer.parseInt((String) BSApp.getProperty(PREF_HANDSFREE_MAX_DIMENSION, "0"));
+			maxDimension = Integer.parseInt((String) BSAppJFX.getProperty(PREF_HANDSFREE_MAX_DIMENSION, "0"));
 		} catch (NumberFormatException ignore) {
 		}
 		if (maxDimension > 0) {
@@ -778,13 +780,13 @@ public class CameraCapturePane extends VBox {
 		try {
 			captured = future.get(10, TimeUnit.SECONDS);
 			if (captured == null)
-				error = BSAppMessages.getString("CameraCaptureDialog.error.emptyFrame");
+				error = BSAppJFXMessages.getString("CameraCaptureDialog.error.emptyFrame");
 		} catch (TimeoutException ex) {
 			future.cancel(true);
-			error = BSAppMessages.getString("CameraCaptureDialog.error.timeout");
+			error = BSAppJFXMessages.getString("CameraCaptureDialog.error.timeout");
 			log.warn("Handsfree capture timed out for {}", src.getDisplayName());
 		} catch (Exception ex) {
-			error = BSAppMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
+			error = BSAppJFXMessages.getString("CameraCaptureDialog.error.failed", ex.getMessage());
 			log.warn("Handsfree capture failed", ex);
 		} finally {
 			exec.shutdownNow();

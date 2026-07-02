@@ -3,7 +3,7 @@ package cz.bliksoft.javautils.app.ui.actions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 import javafx.scene.input.KeyCodeCombination;
@@ -67,10 +67,10 @@ public final class ShortcutFileLoader {
 	 *         no valid {@code keys} attribute
 	 */
 	public static KeyCombination loadFromKeyBindings(String subpath) {
-		FileObject f = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, KEY_BINDINGS_FOLDER, subpath);
+		FileObject f = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, KEY_BINDINGS_FOLDER, subpath);
 		if (f == null) {
 			log.debug("No key binding defined for {}/{}/{} — create the file to bind a shortcut",
-					BSApp.CORE_CONFIG_FOLDER, KEY_BINDINGS_FOLDER, subpath);
+					BSAppJFX.CORE_CONFIG_FOLDER, KEY_BINDINGS_FOLDER, subpath);
 			return null;
 		}
 		return load(f);

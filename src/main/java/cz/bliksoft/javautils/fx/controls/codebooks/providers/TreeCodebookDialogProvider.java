@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
@@ -33,7 +33,7 @@ import javafx.stage.Window;
 public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 
 	private final List<T> roots;
-	private String dialogTitle = BSAppMessages.getString("Codebook.button.title");
+	private String dialogTitle = BSAppJFXMessages.getString("Codebook.button.title");
 
 	/**
 	 * Single hidden root — its children become the top-level visible nodes.
@@ -84,7 +84,7 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		}
 
 		TextField filterField = new TextField();
-		filterField.setPromptText(BSAppMessages.getString("Codebook.button.filter.prompt"));
+		filterField.setPromptText(BSAppJFXMessages.getString("Codebook.button.filter.prompt"));
 		filterField.setText(initialFilterText == null ? "" : initialFilterText);
 
 		TreeView<T> tree = new TreeView<>();
@@ -103,8 +103,8 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 			}
 		});
 
-		Button ok = new Button(BSAppMessages.getString("button.ok"));
-		Button cancel = new Button(BSAppMessages.getString("button.cancel"));
+		Button ok = new Button(BSAppJFXMessages.getString("button.ok"));
+		Button cancel = new Button(BSAppJFXMessages.getString("button.cancel"));
 		ok.setDefaultButton(true);
 		cancel.setCancelButton(true);
 

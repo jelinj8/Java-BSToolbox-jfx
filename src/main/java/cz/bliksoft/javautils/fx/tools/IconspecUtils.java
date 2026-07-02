@@ -8,7 +8,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 
@@ -132,7 +132,7 @@ public final class IconspecUtils {
 	}
 
 	private static FileObject resolveFile(String key) {
-		FileObject folder = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ICONSPEC_FOLDER);
+		FileObject folder = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, ICONSPEC_FOLDER);
 		if (folder == null) {
 			log.error("Iconspec folder /core/{} not found — key: {}", ICONSPEC_FOLDER, key); //$NON-NLS-1$
 			log.debug("IconspecUtils — caller trace for key {}:", key, new Exception("caller trace")); //$NON-NLS-1$ //$NON-NLS-2$
@@ -199,8 +199,8 @@ public final class IconspecUtils {
 		if (vars != null)
 			return vars;
 		Map<String, String> map = new LinkedHashMap<>();
-		collectAttrs(FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ICONSPEC_FOLDER), map);
-		FileObject themes = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, "ui", "themes"); //$NON-NLS-1$ //$NON-NLS-2$
+		collectAttrs(FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, ICONSPEC_FOLDER), map);
+		FileObject themes = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, "ui", "themes"); //$NON-NLS-1$ //$NON-NLS-2$
 		collectAttrs(themes, map);
 		if (themes != null) {
 			String themeName = Styling.getThemeMode() == Styling.ThemeMode.DARK ? "dark" : "light"; //$NON-NLS-1$ //$NON-NLS-2$

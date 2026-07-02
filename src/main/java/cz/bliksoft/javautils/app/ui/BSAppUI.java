@@ -7,7 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.controlsfx.dialog.ProgressDialog;
 
 import cz.bliksoft.javautils.StringUtils;
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.events.MessageEvent;
 import cz.bliksoft.javautils.app.events.TryCloseEvent;
 import cz.bliksoft.javautils.app.ui.actions.UIActions;
@@ -110,13 +110,13 @@ public class BSAppUI extends ModuleBase {
 
 	/**
 	 * Initialises the UI application framework. Sets the primary stage, registers
-	 * BSAppUI as a module, and delegates to {@link BSApp#init}. Must be called once
-	 * from {@code Application.start()} before any other BSAppUI call.
+	 * BSAppUI as a module, and delegates to {@link BSAppJFX#init}. Must be called
+	 * once from {@code Application.start()} before any other BSAppUI call.
 	 */
 	public static void init(Application app, Stage stage) {
 		setStage(stage);
 		Modules.autoloadModule(BSAppUI.class);
-		BSApp.init(app);
+		BSAppJFX.init(app);
 	}
 
 	/**
@@ -163,7 +163,7 @@ public class BSAppUI extends ModuleBase {
 				}
 			}
 		}
-		Object localThemeObj = BSApp.getProperty(PROP_THEME);
+		Object localThemeObj = BSAppJFX.getProperty(PROP_THEME);
 		if (localThemeObj != null) {
 			switch (localThemeObj.toString().toUpperCase()) {
 			case "LIGHT" -> Styling.setThemeMode(Styling.ThemeMode.LIGHT);

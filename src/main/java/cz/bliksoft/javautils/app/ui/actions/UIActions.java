@@ -11,7 +11,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import cz.bliksoft.javautils.app.BSApp;
+import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.ui.builder.AcceleratorManager;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileObjectClassLoader;
@@ -55,7 +55,7 @@ public class UIActions {
 
 			// the core/actions configuration is optional - an app may register actions
 			// only programmatically or via the IUIAction ServiceLoader (below)
-			FileObject actionsFile = FileSystem.getFile(BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
+			FileObject actionsFile = FileSystem.getFile(BSAppJFX.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
 			if (actionsFile != null) {
 				FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
 				for (FileObject f : actionsFile.getChildFiles()) {
@@ -72,7 +72,7 @@ public class UIActions {
 				}
 			} else {
 				log.debug("No '{}/{}' actions configuration present; loading actions from classpath only.",
-						BSApp.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
+						BSAppJFX.CORE_CONFIG_FOLDER, ACTIONS_FOLDER_NAME);
 			}
 
 			ServiceLoader<IUIAction> svcLoader = ServiceLoader.load(IUIAction.class);
@@ -82,7 +82,7 @@ public class UIActions {
 					IUIAction action = actionIterator.next();
 					registerAction(action.getKey(), action, "classpath");
 				} catch (ServiceConfigurationError e) {
-					log.error("Class doesn't seem to be a valid BSApp IUIAction implementation: {}", e.getMessage());
+					log.error("Class doesn't seem to be a valid BSAppJFX IUIAction implementation: {}", e.getMessage());
 				}
 			}
 

@@ -4,7 +4,7 @@ import java.awt.Dimension;
 import java.util.List;
 import java.util.function.Consumer;
 
-import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
 import javafx.scene.control.Button;
@@ -51,7 +51,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	// =========================================================================
 
 	public CameraCaptureDialog() {
-		setTitle(BSAppMessages.getString("CameraCaptureDialog.title"));
+		setTitle(BSAppJFXMessages.getString("CameraCaptureDialog.title"));
 		getDialogPane().getButtonTypes().setAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);
 		getDialogPane().setContent(capturePane);
 		getDialogPane().setPrefSize(860, 520);

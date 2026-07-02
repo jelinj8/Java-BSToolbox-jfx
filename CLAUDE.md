@@ -22,7 +22,7 @@ Main test entry point: `cz.bliksoft.javautils.fx.test.FxTests`. The primary test
 
 ### Application Lifecycle
 
-`BSApp` is the static hub. It initializes the framework via `BSApp.init()`, which uses ServiceLoader-based `Modules` to load, init, and install app modules in priority order. `BaseAppModule` (priority -10000) is the core framework module.
+`BSAppJFX` is the JavaFX entry point. Call `BSAppJFX.init(app)` from `Application.start()` to initialize the framework — it stores the application instance, installs `Platform.exit()` as the shutdown hook, delegates to `BSApp.init()`, and sets `AnyImageLoader` as the default image loader. For non-JFX applications call `BSApp.init()` directly. `BSApp.init()` uses ServiceLoader-based `Modules` to load, init, and install app modules in priority order. `BaseAppModule` (priority -10000) is the core framework module.
 
 Properties use a two-level hierarchy: local (`~/.{appname}/{appname}.properties`) overrides global (`{app-dir}/.{appname}/{appname}.properties`). Environment-specific values are prefixed with `{configname}.{key}` (default config: `"default"`, set via `app.configname`).
 

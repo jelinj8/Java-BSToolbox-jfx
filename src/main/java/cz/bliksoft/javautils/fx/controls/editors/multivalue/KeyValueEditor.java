@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-import cz.bliksoft.javautils.app.BSAppMessages;
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.IconBinder;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
@@ -147,20 +147,20 @@ public class KeyValueEditor<V> extends VBox {
 		});
 
 		addBtn.setFocusTraversable(false);
-		addBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.add")));
+		addBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.add")));
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.remove")));
+		delBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.remove")));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		editBtn.setFocusTraversable(false);
-		editBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.edit")));
+		editBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.edit")));
 		editBtn.setVisible(false);
 		editBtn.setManaged(false);
 		editBtn.setOnAction(e -> fireEditAction());
 		editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(BSAppMessages.getString("editor.button.preview")));
+		previewBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.preview")));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());
