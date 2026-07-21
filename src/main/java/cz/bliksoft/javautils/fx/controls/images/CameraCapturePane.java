@@ -25,6 +25,8 @@ import cz.bliksoft.javautils.fx.controls.images.cam.CameraNativeLock;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraPreviewSession;
 import cz.bliksoft.javautils.fx.controls.images.cam.ICameraSource;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
+import cz.bliksoft.javautils.fx.controls.images.cam.OpenCvDeviceDiscovery;
+import cz.bliksoft.javautils.fx.controls.images.cam.OpenCvResolutionProbe;
 import cz.bliksoft.javautils.fx.controls.images.cam.WebcamCameraSource;
 import cz.bliksoft.javautils.fx.controls.images.qr.QrCodeRenderer;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
@@ -73,7 +75,11 @@ import javafx.scene.layout.VBox;
  * {@code provided}. When the consuming application provides it at runtime, this
  * pane uses OpenCV to discover and capture at resolutions beyond the 640x480
  * cap of Sarxos's default driver. If absent, capture silently falls back to
- * Sarxos's default behavior (max 640x480).
+ * Sarxos's default behavior (max 640x480). If Sarxos's own enumeration is
+ * unusable (its native driver has no aarch64 build, so
+ * {@code Webcam.getWebcams()} always throws on e.g. a Raspberry Pi), this pane
+ * falls back to discovering USB/V4L2 cameras directly via OpenCV instead - see
+ * {@code OpenCvDeviceDiscovery}.
  *
  * <p>
  * In addition to physical webcams, the source combo also lists any
@@ -396,24 +402,38 @@ public class CameraCapturePane extends VBox {
 	// Camera loading
 	// =========================================================================
 
+	/** Result of background camera enumeration: Sarxos webcams plus whether Sarxos itself was usable. */
+	private record SarxosDiscovery(java.util.List<Webcam> webcams, boolean usable) {
+	}
+
 	private void loadCamerasAsync() {
-		Task<java.util.List<Webcam>> task = new Task<>() {
+		Task<SarxosDiscovery> task = new Task<>() {
 			@Override
-			protected java.util.List<Webcam> call() {
+			protected SarxosDiscovery call() {
 				CameraNativeLock.acquire();
 				try {
-					return Webcam.getWebcams();
+					return new SarxosDiscovery(Webcam.getWebcams(), true);
+				} catch (Throwable t) {
+					// Sarxos's native driver (BridJ/OpenIMAJ) has no aarch64 build and always
+					// throws on e.g. a Raspberry Pi - treated as "no Sarxos cameras found" so
+					// registered ICameraSource services still get listed below, and so the
+					// OpenCV fallback in loadOpenCvSources() kicks in.
+					log.warn("Sarxos webcam enumeration unavailable", t);
+					return new SarxosDiscovery(java.util.List.of(), false);
 				} finally {
 					CameraNativeLock.release();
 				}
 			}
 		};
 		task.setOnSucceeded(e -> {
-			java.util.List<Webcam> cams = task.getValue();
+			SarxosDiscovery discovery = task.getValue();
+			java.util.List<Webcam> cams = discovery.webcams();
 
 			List<ICameraSource> sources = new ArrayList<>();
 			for (int i = 0; i < cams.size(); i++)
 				sources.add(new WebcamCameraSource(cams.get(i), i));
+			if (!discovery.usable())
+				sources.addAll(loadOpenCvSourcesQuietly());
 			sources.addAll(Services.<ICameraSource>getServices(ICameraSource.class));
 
 			sourceCombo.setItems(FXCollections.observableArrayList(sources));
@@ -429,6 +449,24 @@ public class CameraCapturePane extends VBox {
 		});
 		task.setOnFailed(e -> log.warn("Failed to enumerate cameras", task.getException()));
 		new Thread(task, "camera-enumerate").start();
+	}
+
+	/**
+	 * Discovers USB/V4L2 cameras directly via OpenCV, used when Sarxos enumeration
+	 * itself is unusable (see {@link OpenCvCameraSource}). Runs on the same
+	 * background thread as {@link #loadCamerasAsync()}'s task; any failure is
+	 * logged and treated as "no cameras found" rather than failing enumeration
+	 * entirely.
+	 */
+	private static List<ICameraSource> loadOpenCvSourcesQuietly() {
+		try {
+			if (!OpenCvResolutionProbe.isAvailable())
+				return List.of();
+			return new ArrayList<>(OpenCvDeviceDiscovery.discover());
+		} catch (Exception ex) {
+			log.debug("OpenCV camera discovery failed", ex);
+			return List.of();
+		}
 	}
 
 	private void loadCameraResolutionsAsync(ICameraSource src) {
@@ -748,7 +786,8 @@ public class CameraCapturePane extends VBox {
 	/**
 	 * Resolves a saved {@link #PREF_CAMERA} id back to an {@link ICameraSource}:
 	 * first among the registered {@code ICameraSource} singletons, then among
-	 * currently-connected webcams. Returns {@code null} if neither matches.
+	 * currently-connected webcams (Sarxos, or - if Sarxos itself is unusable - the
+	 * OpenCV/V4L2 fallback). Returns {@code null} if none matches.
 	 */
 	private static ICameraSource findSource(String sourceId) {
 		for (ICameraSource src : Services.<ICameraSource>getServices(ICameraSource.class)) {
@@ -761,8 +800,14 @@ public class CameraCapturePane extends VBox {
 				if (cams.get(i).getName().equals(sourceId))
 					return new WebcamCameraSource(cams.get(i), i);
 			}
-		} catch (Exception ex) {
-			log.warn("Handsfree: failed to enumerate cameras", ex);
+		} catch (Throwable t) {
+			// Includes UnsatisfiedLinkError - Sarxos's native driver has no aarch64
+			// build and always throws on e.g. a Raspberry Pi.
+			log.warn("Handsfree: failed to enumerate Sarxos cameras, trying OpenCV fallback", t);
+			for (ICameraSource src : loadOpenCvSourcesQuietly()) {
+				if (src.getId().equals(sourceId))
+					return src;
+			}
 		}
 		return null;
 	}
