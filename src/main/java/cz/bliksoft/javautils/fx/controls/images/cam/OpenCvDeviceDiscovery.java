@@ -36,9 +36,10 @@ public final class OpenCvDeviceDiscovery {
 	}
 
 	/**
-	 * Probes every {@code /dev/videoN} node and returns an {@link OpenCvCameraSource}
-	 * for each one that actually yields a frame, sorted by device index. Returns an
-	 * empty list on non-Linux platforms or if {@code /dev} cannot be listed.
+	 * Probes every {@code /dev/videoN} node backed by the {@code uvcvideo} driver (see
+	 * {@link #isUvcDevice(int)}) and returns an {@link OpenCvCameraSource} for each one
+	 * that actually yields a frame, sorted by device index. Returns an empty list on
+	 * non-Linux platforms or if {@code /dev} cannot be listed.
 	 */
 	public static List<OpenCvCameraSource> discover() {
 		List<OpenCvCameraSource> result = new ArrayList<>();
@@ -58,10 +59,37 @@ public final class OpenCvDeviceDiscovery {
 		indices.sort(Comparator.naturalOrder());
 
 		for (int index : indices) {
-			if (canCapture(index))
+			if (isUvcDevice(index) && canCapture(index))
 				result.add(new OpenCvCameraSource(index, deviceName(index)));
 		}
 		return result;
+	}
+
+	/**
+	 * Checks whether {@code /dev/videoN} is backed by the {@code uvcvideo} kernel
+	 * driver (the standard Linux USB Video Class driver used by virtually every USB
+	 * webcam), via the standard sysfs layout
+	 * {@code /sys/class/video4linux/videoN/device/driver} - a symlink whose target's
+	 * file name is the bound driver's name.
+	 *
+	 * <p>
+	 * A Raspberry Pi's internal ISP/codec media pipeline (RP1's {@code rp1-cfe},
+	 * {@code pispbe}, {@code bcm2835-codec}, etc.) exposes dozens of unrelated
+	 * {@code /dev/videoN} nodes that are never {@code uvcvideo}-backed; several of
+	 * them "open" successfully via OpenCV's V4L2 backend but then block for ~10s on a
+	 * frame read that never arrives (OpenCV's hardcoded V4L2 read timeout - not
+	 * configurable via {@link VideoCapture} properties). Filtering to {@code uvcvideo}
+	 * nodes first avoids ever opening/reading those, without which
+	 * {@link #discover()} would take tens of seconds on such hardware.
+	 */
+	private static boolean isUvcDevice(int index) {
+		Path driverLink = Path.of("/sys/class/video4linux/video" + index + "/device/driver");
+		try {
+			return "uvcvideo".equals(Files.readSymbolicLink(driverLink).getFileName().toString());
+		} catch (Exception ex) {
+			log.debug("Could not resolve driver for /dev/video{}", index, ex);
+			return false;
+		}
 	}
 
 	/**
