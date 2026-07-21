@@ -402,7 +402,10 @@ public class CameraCapturePane extends VBox {
 	// Camera loading
 	// =========================================================================
 
-	/** Result of background camera enumeration: Sarxos webcams plus whether Sarxos itself was usable. */
+	/**
+	 * Result of background camera enumeration: Sarxos webcams plus whether Sarxos
+	 * itself was usable.
+	 */
 	private record SarxosDiscovery(java.util.List<Webcam> webcams, boolean usable) {
 	}
 

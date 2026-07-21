@@ -10,16 +10,16 @@ import org.bytedeco.opencv.opencv_videoio.VideoCapture;
  * no dependency on Sarxos webcam-capture.
  *
  * <p>
- * Sarxos's built-in driver initializes native code (BridJ / OpenIMAJ) that
- * only ships x86/x86_64 binaries - it cannot be loaded on aarch64 Linux (e.g.
+ * Sarxos's built-in driver initializes native code (BridJ / OpenIMAJ) that only
+ * ships x86/x86_64 binaries - it cannot be loaded on aarch64 Linux (e.g.
  * Raspberry Pi), so {@code Webcam.getWebcams()} always throws there and no
- * camera - including this one - can be discovered through it. Instances of
- * this class are produced by {@link OpenCvDeviceDiscovery#discover()} as a
- * fallback used only when Sarxos enumeration is unusable, so USB webcams
- * still show up in {@code CameraCapturePane}'s source combo on such
- * platforms. See {@link WebcamCameraSource} for the normal Sarxos-backed
- * source, which already uses OpenCV for capture/preview once a device has
- * been found, but still relies on Sarxos for discovery itself.
+ * camera - including this one - can be discovered through it. Instances of this
+ * class are produced by {@link OpenCvDeviceDiscovery#discover()} as a fallback
+ * used only when Sarxos enumeration is unusable, so USB webcams still show up
+ * in {@code CameraCapturePane}'s source combo on such platforms. See
+ * {@link WebcamCameraSource} for the normal Sarxos-backed source, which already
+ * uses OpenCV for capture/preview once a device has been found, but still
+ * relies on Sarxos for discovery itself.
  */
 public final class OpenCvCameraSource implements ICameraSource {
 

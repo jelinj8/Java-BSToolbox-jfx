@@ -22,8 +22,8 @@ import org.bytedeco.opencv.opencv_videoio.VideoCapture;
  * <p>
  * Used by {@code CameraCapturePane} as a fallback camera source when Sarxos's
  * {@code Webcam.getWebcams()} itself is unusable (e.g. its native BridJ /
- * OpenIMAJ driver has no aarch64 build, so it always throws on a Raspberry
- * Pi) - see {@link OpenCvCameraSource}. Linux-only: on other platforms Sarxos
+ * OpenIMAJ driver has no aarch64 build, so it always throws on a Raspberry Pi)
+ * - see {@link OpenCvCameraSource}. Linux-only: on other platforms Sarxos
  * enumeration works, so this is never invoked there.
  */
 public final class OpenCvDeviceDiscovery {
@@ -36,10 +36,10 @@ public final class OpenCvDeviceDiscovery {
 	}
 
 	/**
-	 * Probes every {@code /dev/videoN} node backed by the {@code uvcvideo} driver (see
-	 * {@link #isUvcDevice(int)}) and returns an {@link OpenCvCameraSource} for each one
-	 * that actually yields a frame, sorted by device index. Returns an empty list on
-	 * non-Linux platforms or if {@code /dev} cannot be listed.
+	 * Probes every {@code /dev/videoN} node backed by the {@code uvcvideo} driver
+	 * (see {@link #isUvcDevice(int)}) and returns an {@link OpenCvCameraSource} for
+	 * each one that actually yields a frame, sorted by device index. Returns an
+	 * empty list on non-Linux platforms or if {@code /dev} cannot be listed.
 	 */
 	public static List<OpenCvCameraSource> discover() {
 		List<OpenCvCameraSource> result = new ArrayList<>();
@@ -69,17 +69,17 @@ public final class OpenCvDeviceDiscovery {
 	 * Checks whether {@code /dev/videoN} is backed by the {@code uvcvideo} kernel
 	 * driver (the standard Linux USB Video Class driver used by virtually every USB
 	 * webcam), via the standard sysfs layout
-	 * {@code /sys/class/video4linux/videoN/device/driver} - a symlink whose target's
-	 * file name is the bound driver's name.
+	 * {@code /sys/class/video4linux/videoN/device/driver} - a symlink whose
+	 * target's file name is the bound driver's name.
 	 *
 	 * <p>
 	 * A Raspberry Pi's internal ISP/codec media pipeline (RP1's {@code rp1-cfe},
 	 * {@code pispbe}, {@code bcm2835-codec}, etc.) exposes dozens of unrelated
 	 * {@code /dev/videoN} nodes that are never {@code uvcvideo}-backed; several of
-	 * them "open" successfully via OpenCV's V4L2 backend but then block for ~10s on a
-	 * frame read that never arrives (OpenCV's hardcoded V4L2 read timeout - not
-	 * configurable via {@link VideoCapture} properties). Filtering to {@code uvcvideo}
-	 * nodes first avoids ever opening/reading those, without which
+	 * them "open" successfully via OpenCV's V4L2 backend but then block for ~10s on
+	 * a frame read that never arrives (OpenCV's hardcoded V4L2 read timeout - not
+	 * configurable via {@link VideoCapture} properties). Filtering to
+	 * {@code uvcvideo} nodes first avoids ever opening/reading those, without which
 	 * {@link #discover()} would take tens of seconds on such hardware.
 	 */
 	private static boolean isUvcDevice(int index) {
@@ -94,8 +94,8 @@ public final class OpenCvDeviceDiscovery {
 
 	/**
 	 * Some {@code /dev/videoN} nodes exposed by a V4L2 device are metadata-only
-	 * (e.g. UVC controls), not actual capture nodes - opening them "succeeds" but no
-	 * frame can be read. A single frame read distinguishes real capture devices.
+	 * (e.g. UVC controls), not actual capture nodes - opening them "succeeds" but
+	 * no frame can be read. A single frame read distinguishes real capture devices.
 	 */
 	private static boolean canCapture(int index) {
 		CameraNativeLock.acquire();
@@ -114,8 +114,9 @@ public final class OpenCvDeviceDiscovery {
 	}
 
 	/**
-	 * Reads the device's friendly name from {@code /sys/class/video4linux/videoN/name},
-	 * falling back to {@code "Camera N"} if unavailable.
+	 * Reads the device's friendly name from
+	 * {@code /sys/class/video4linux/videoN/name}, falling back to
+	 * {@code "Camera N"} if unavailable.
 	 */
 	private static String deviceName(int index) {
 		Path namePath = Path.of("/sys/class/video4linux/video" + index + "/name");

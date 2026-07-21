@@ -24,14 +24,17 @@ import cz.bliksoft.javautils.xmlfilesystem.FileObject;
  * folder (e.g. a folder synced from a phone via Syncthing, Google Drive, etc.).
  *
  * <p>
- * Registered declaratively via the {@code /singletons} XmlFilesystem registry
- * (see {@code cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons}).
- * Example registration in the application's local configuration:
+ * Registered declaratively via the {@code /services} XmlFilesystem registry
+ * (see {@code cz.bliksoft.javautils.xmlfilesystem.singletons.Services}), looked
+ * up with {@code Services.getServices(ICameraSource.class)} from
+ * {@code CameraCapturePane}. Example registration in the application's local
+ * configuration:
  *
  * <pre>{@code
- * <file name="singletons">
- *     <file name="phone-sync-folder" type=
-"cz.bliksoft.javautils.fx.controls.images.cam.FolderMonitorCameraSource">
+ * <file name="services">
+ *     <file name="phone-sync-folder" type="Class">
+ *         <attribute name="class" value=
+"cz.bliksoft.javautils.fx.controls.images.cam.FolderMonitorCameraSource"/>
  *         <attribute name="name" value="Phone sync folder"/>
  *         <attribute name="path" value="C:\Users\jakub\SyncthingCamera"/>
  *         <attribute name="extensions" value="jpg,jpeg,png"/>

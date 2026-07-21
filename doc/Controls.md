@@ -209,15 +209,30 @@ The source combo lists every `ICameraSource` available:
 - **`NetworkCameraSource`** — an HTTP snapshot endpoint (e.g. a phone running an
   IP-camera app such as Android "IP Webcam"), captured via a plain HTTP GET +
   `ImageIO` (`NetworkCameraCapture`), no extra dependency required.
+- **`FolderMonitorCameraSource`** — returns the newest stable image file in a
+  monitored folder (e.g. one synced from a phone via Syncthing or Google
+  Drive), instead of talking to a device directly.
+- **`WebServerCameraSource`** — receives frames pushed via HTTP POST to an
+  embedded server, for phones/devices that upload rather than being polled;
+  applies EXIF-orientation correction on decode since phones typically store
+  un-rotated sensor data plus an orientation tag.
+- **`RaspberryPiCameraSource`** — shells out to `rpicam-still`/`rpicam-vid`
+  (configurable command names, for older `libcamera-*`-named images) for a Pi
+  Camera Module. `rpicam-apps` only supports `--rotation 0`/`180` in hardware —
+  90°/270° require a sensor/ISP transpose that isn't supported and fail with
+  `ERROR: *** transforms requiring transpose not supported ***` — so this
+  source never requests hardware rotation at all (only the hardware-safe
+  `hflip`/`vflip`) and relies on the rotation combo below for 90°/270°.
 
-Network cameras are not auto-detected — they are registered declaratively as
-`ICameraSource` singletons via the XmlFilesystem `/singletons` registry (see
-`cz.bliksoft.javautils.xmlfilesystem.singletons.Singletons`), e.g. in the
-application's local `settings.xml`:
+The last four are not auto-detected — they are registered declaratively as
+`ICameraSource` services via the XmlFilesystem `/services` registry (see
+`cz.bliksoft.javautils.xmlfilesystem.singletons.Services`, `type="Class"`),
+e.g. in the application's local `settings.xml`:
 
 ```xml
-<file name="singletons">
-    <file name="warehouse-phone" type="cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource">
+<file name="services">
+    <file name="warehouse-phone" type="Class">
+        <attribute name="class" value="cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource"/>
         <attribute name="name" value="Warehouse phone"/>
         <attribute name="url" value="http://192.168.1.50:8080/shot.jpg"/>
     </file>
@@ -228,12 +243,13 @@ application's local `settings.xml`:
 entirely through the `ICameraSource` interface — `getAvailableResolutions()`,
 `grabFrame(Dimension)`, and `openPreview(Dimension)` (returning an
 `ICameraPreviewSession`) — with no type-specific handling. Applications can
-therefore implement their own `ICameraSource`, register it as a singleton the
+therefore implement their own `ICameraSource`, register it as a service the
 same way as `NetworkCameraSource`, and it works in the source combo, capture,
 preview, and handsfree capture without further changes.
 
 `ICameraSource`, `ICameraPreviewSession`, `WebcamCameraSource`,
-`NetworkCameraSource`, `NetworkCameraCapture`, `OpenCvCapture`, and
+`NetworkCameraSource`, `NetworkCameraCapture`, `FolderMonitorCameraSource`,
+`WebServerCameraSource`, `RaspberryPiCameraSource`, `OpenCvCapture`, and
 `OpenCvResolutionProbe` are all public, so applications can also reuse the
 capture helpers directly.
 
