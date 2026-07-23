@@ -52,6 +52,25 @@ import cz.bliksoft.javautils.xmlfilesystem.FileObject;
  *     </file>
  * </file>
  * }</pre>
+ *
+ * <p>
+ * <b>Autofocus:</b> on AF-capable modules (e.g. Camera Module 3), stills are
+ * captured with a one-shot autofocus cycle ({@code --autofocus-mode auto}, the
+ * {@link #stillAutofocusMode} default) and preview streams run continuous
+ * autofocus ({@code --autofocus-mode continuous}, the
+ * {@link #previewAutofocusMode} default). {@code rpicam-apps} silently ignores
+ * these flags on modules without a motorized lens, so they are always passed
+ * unless {@code autofocus="false"}. Optional {@code autofocus-range}
+ * ({@code normal}/{@code macro}/{@code full}) and {@code autofocus-speed}
+ * ({@code normal}/{@code fast}) attributes are forwarded verbatim when set:
+ *
+ * <pre>{@code
+ *         <attribute name="autofocus" value="true"/>
+ *         <attribute name="stillAutofocusMode" value="auto"/>
+ *         <attribute name="previewAutofocusMode" value="continuous"/>
+ *         <attribute name="autofocusRange" value="full"/>
+ *         <attribute name="autofocusSpeed" value="fast"/>
+ * }</pre>
  */
 public final class RaspberryPiCameraSource implements ICameraSource {
 
@@ -81,6 +100,11 @@ public final class RaspberryPiCameraSource implements ICameraSource {
 	private final Dimension[] resolutions;
 	private final boolean hflip;
 	private final boolean vflip;
+	private final boolean autofocus;
+	private final String stillAutofocusMode;
+	private final String previewAutofocusMode;
+	private final String autofocusRange;
+	private final String autofocusSpeed;
 	private final long stillTimeoutMs;
 	private final long previewFrameTimeoutMs;
 
@@ -94,6 +118,11 @@ public final class RaspberryPiCameraSource implements ICameraSource {
 		this.resolutions = parseResolutions(fo.getAttribute("resolutions", null));
 		this.hflip = fo.getBool("hflip", false);
 		this.vflip = fo.getBool("vflip", false);
+		this.autofocus = fo.getBool("autofocus", true);
+		this.stillAutofocusMode = fo.getAttribute("stillAutofocusMode", "auto");
+		this.previewAutofocusMode = fo.getAttribute("previewAutofocusMode", "continuous");
+		this.autofocusRange = fo.getAttribute("autofocusRange", null);
+		this.autofocusSpeed = fo.getAttribute("autofocusSpeed", null);
 		this.stillTimeoutMs = fo.getInt("stillTimeoutMs", (int) DEFAULT_STILL_TIMEOUT_MS);
 		this.previewFrameTimeoutMs = fo.getInt("previewFrameTimeoutMs", (int) DEFAULT_PREVIEW_FRAME_TIMEOUT_MS);
 	}
@@ -143,6 +172,7 @@ public final class RaspberryPiCameraSource implements ICameraSource {
 		cmd.add("--encoding");
 		cmd.add("jpg");
 		addResolutionAndFlipArgs(cmd, resolution);
+		addAutofocusArgs(cmd, stillAutofocusMode);
 		cmd.add("-o");
 		cmd.add("-");
 
@@ -167,6 +197,7 @@ public final class RaspberryPiCameraSource implements ICameraSource {
 		cmd.add("mjpeg");
 		cmd.add("--low-latency");
 		addResolutionAndFlipArgs(cmd, resolution);
+		addAutofocusArgs(cmd, previewAutofocusMode);
 		cmd.add("-o");
 		cmd.add("-");
 
@@ -186,6 +217,31 @@ public final class RaspberryPiCameraSource implements ICameraSource {
 			cmd.add("--hflip");
 		if (vflip)
 			cmd.add("--vflip");
+	}
+
+	/**
+	 * Appends autofocus flags for a given command - {@code mode} is
+	 * {@link #stillAutofocusMode} ({@code "auto"} by default) for a still capture
+	 * or {@link #previewAutofocusMode} ({@code "continuous"} by default) for a
+	 * preview stream. {@code rpicam-apps} ignores these on modules without a
+	 * motorized lens (e.g. HQ Camera), so they're safe to pass unconditionally once
+	 * {@link #autofocus} is enabled.
+	 */
+	private void addAutofocusArgs(List<String> cmd, String mode) {
+		if (!autofocus)
+			return;
+		if (mode != null && !mode.isBlank()) {
+			cmd.add("--autofocus-mode");
+			cmd.add(mode);
+		}
+		if (autofocusRange != null && !autofocusRange.isBlank()) {
+			cmd.add("--autofocus-range");
+			cmd.add(autofocusRange);
+		}
+		if (autofocusSpeed != null && !autofocusSpeed.isBlank()) {
+			cmd.add("--autofocus-speed");
+			cmd.add(autofocusSpeed);
+		}
 	}
 
 	/**
