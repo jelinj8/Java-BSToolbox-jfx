@@ -40,13 +40,13 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
@@ -55,7 +55,11 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Polygon;
+import javafx.scene.shape.Rectangle;
 
 /**
  * Camera selection toolbar + {@link ImageCropPane} panel.
@@ -123,8 +127,7 @@ public class CameraCapturePane extends VBox {
 
 	// ---- Live preview ----
 	private final BooleanProperty previewEnabled = new SimpleBooleanProperty(false);
-	private final SplitMenuButton captureSplitBtn = new SplitMenuButton();
-	private final MenuItem previewToggleItem = new MenuItem();
+	private final Button previewBtn = new Button();
 	private volatile boolean previewRunning = false;
 
 	// ---- Raw bytes of the last capture (if pass-through is possible) ----
@@ -223,8 +226,8 @@ public class CameraCapturePane extends VBox {
 	}
 
 	/**
-	 * When true, the capture button becomes a split button with a live-preview
-	 * toggle in its dropdown. Default: false.
+	 * When true, a live-preview start/stop toggle button is shown next to the
+	 * capture button. Default: false.
 	 */
 	public BooleanProperty previewEnabledProperty() {
 		return previewEnabled;
@@ -336,14 +339,10 @@ public class CameraCapturePane extends VBox {
 			rotateRightBtn.setDisable(!hasImage);
 		});
 
-		// Split capture button for live-preview mode
-		captureSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera")));
-		previewToggleItem.setText(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
-		captureSplitBtn.getItems().add(previewToggleItem);
-		captureBtn.visibleProperty().bind(previewEnabled.not());
-		captureBtn.managedProperty().bind(previewEnabled.not());
-		captureSplitBtn.visibleProperty().bind(previewEnabled);
-		captureSplitBtn.managedProperty().bind(previewEnabled);
+		// Separate live-preview toggle button, shown only in live-preview mode
+		updatePreviewButton(false);
+		previewBtn.visibleProperty().bind(previewEnabled);
+		previewBtn.managedProperty().bind(previewEnabled);
 
 		// Spacer between left and right toolbar groups
 		Region spacer = new Region();
@@ -354,7 +353,7 @@ public class CameraCapturePane extends VBox {
 		outResLabel.setManaged(false);
 
 		ToolBar toolbar = new ToolBar(new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
-				sourceCombo, captureBtn, captureSplitBtn, camResCombo,
+				sourceCombo, captureBtn, previewBtn, camResCombo,
 				new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")),
 				camRotationCombo, runtimeStatusLabel, spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn,
 				rotateRightBtn);
@@ -527,14 +526,13 @@ public class CameraCapturePane extends VBox {
 	// =========================================================================
 
 	private void wireCaptureButton() {
-		captureBtn.setOnAction(e -> doCapture());
-		captureSplitBtn.setOnAction(e -> {
+		captureBtn.setOnAction(e -> {
 			if (previewRunning)
 				stopPreview(); // freeze: last preview frame is already in the crop pane
 			else
 				doCapture();
 		});
-		previewToggleItem.setOnAction(e -> {
+		previewBtn.setOnAction(e -> {
 			if (previewRunning)
 				stopPreview();
 			else
@@ -542,12 +540,37 @@ public class CameraCapturePane extends VBox {
 		});
 	}
 
+	/**
+	 * Sets the preview button's icon and tooltip for the given state: the camera
+	 * icon with a green play badge when idle (click starts the live preview), or
+	 * with a red stop-square badge while the preview is running.
+	 */
+	private void updatePreviewButton(boolean running) {
+		Node camera = ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/camera"));
+		Node badge;
+		if (running) {
+			Rectangle square = new Rectangle(7, 7, Color.web("#d32f2f"));
+			badge = square;
+		} else {
+			Polygon play = new Polygon(0, 0, 8, 4, 0, 8);
+			play.setFill(Color.web("#2e9e3e"));
+			badge = play;
+		}
+		badge.setMouseTransparent(true);
+		StackPane graphic = new StackPane(camera, badge);
+		StackPane.setAlignment(badge, Pos.BOTTOM_RIGHT);
+		previewBtn.setGraphic(graphic);
+		String tooltip = running ? BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStop")
+				: BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStart");
+		previewBtn.setTooltip(new Tooltip(tooltip));
+	}
+
 	private void doCapture() {
 		ICameraSource src = sourceCombo.getValue();
 		if (src == null)
 			return;
 		captureBtn.setDisable(true);
-		captureSplitBtn.setDisable(true);
+		previewBtn.setDisable(true);
 		runtimeStatusLabel.setText(BSAppJFXMessages.getString("CameraCaptureDialog.status.capturing"));
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
@@ -604,7 +627,7 @@ public class CameraCapturePane extends VBox {
 							: BSAppJFXMessages.getString("CameraCaptureDialog.error.unknown"));
 				}
 				captureBtn.setDisable(false);
-				captureSplitBtn.setDisable(false);
+				previewBtn.setDisable(false);
 			});
 		}, "camera-capture-ctrl").start();
 	}
@@ -646,7 +669,7 @@ public class CameraCapturePane extends VBox {
 		camResCombo.setDisable(true);
 		camRotationCombo.setDisable(true);
 		runtimeStatusLabel.setText(BSAppJFXMessages.getString("CameraCaptureDialog.status.previewing"));
-		previewToggleItem.setText(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStop"));
+		updatePreviewButton(true);
 		Dimension selectedRes = camResCombo.isVisible() ? camResCombo.getValue() : null;
 		int preRotation = camRotationCombo.getValue() != null ? camRotationCombo.getValue() : 0;
 
@@ -715,7 +738,7 @@ public class CameraCapturePane extends VBox {
 		sourceCombo.setDisable(false);
 		camResCombo.setDisable(false);
 		camRotationCombo.setDisable(false);
-		previewToggleItem.setText(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStart"));
+		updatePreviewButton(false);
 	}
 
 	// =========================================================================

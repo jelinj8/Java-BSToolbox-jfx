@@ -615,8 +615,12 @@ public class ImageCropPane extends StackPane {
 			return;
 		}
 
-		double dispW = overlay.getWidth();
-		double dispH = overlay.getHeight();
+		// The image is rendered preserve-ratio inside the pane, so it occupies
+		// only a centered sub-rectangle (letterboxed/pillarboxed) - the mapping
+		// must be relative to the displayed image bounds, not the overlay size.
+		var b = imageView.getBoundsInParent();
+		double dispW = b.getWidth();
+		double dispH = b.getHeight();
 		if (dispW <= 0 || dispH <= 0) {
 			cropRectInImagePixels.set(null);
 			return;
@@ -625,8 +629,8 @@ public class ImageCropPane extends StackPane {
 		double sx = img.getWidth() / dispW;
 		double sy = img.getHeight() / dispH;
 
-		int ix = (int) Math.floor(selection.getX() * sx);
-		int iy = (int) Math.floor(selection.getY() * sy);
+		int ix = (int) Math.floor((selection.getX() - b.getMinX()) * sx);
+		int iy = (int) Math.floor((selection.getY() - b.getMinY()) * sy);
 		int iw = (int) Math.ceil(selection.getWidth() * sx);
 		int ih = (int) Math.ceil(selection.getHeight() * sy);
 
