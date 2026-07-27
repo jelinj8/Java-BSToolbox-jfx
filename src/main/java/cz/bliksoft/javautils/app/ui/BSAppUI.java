@@ -103,6 +103,95 @@ public class BSAppUI extends ModuleBase {
 		return mainStage;
 	}
 
+	/**
+	 * Ensures {@code window} is fully visible on screen: moves it inside the
+	 * screen's visual bounds when it overlaps a border, and shrinks it first when
+	 * it is larger than the screen (e.g. bounds saved on a big monitor restored on
+	 * a 1280x720 display). No-op when the window already fits.
+	 *
+	 * <p>
+	 * A window fully contained in the union of all screens is considered fitting,
+	 * so multi-monitor layouts (window spanning screens) are left untouched.
+	 * Otherwise the window is fitted to the screen it overlaps the most (primary
+	 * screen when it overlaps none). Called automatically by
+	 * {@code StageStateBinder.restore()} for non-maximized windows.
+	 *
+	 * @param window the window (stage or dialog window) to fit; {@code null} is
+	 *               ignored
+	 */
+	public static void fitToScreen(javafx.stage.Window window) {
+		if (window == null)
+			return;
+
+		double x = window.getX();
+		double y = window.getY();
+		double w = window.getWidth();
+		double h = window.getHeight();
+		if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(w) || !Double.isFinite(h) || w <= 0
+				|| h <= 0)
+			return;
+
+		java.util.List<Screen> screens = Screen.getScreens();
+		if (screens.isEmpty())
+			return;
+
+		// Fully inside the union of all screens = fits (keeps windows spanning
+		// multiple monitors untouched).
+		double unionMinX = Double.POSITIVE_INFINITY, unionMinY = Double.POSITIVE_INFINITY;
+		double unionMaxX = Double.NEGATIVE_INFINITY, unionMaxY = Double.NEGATIVE_INFINITY;
+		for (Screen s : screens) {
+			Rectangle2D b = s.getVisualBounds();
+			unionMinX = Math.min(unionMinX, b.getMinX());
+			unionMinY = Math.min(unionMinY, b.getMinY());
+			unionMaxX = Math.max(unionMaxX, b.getMaxX());
+			unionMaxY = Math.max(unionMaxY, b.getMaxY());
+		}
+		if (x >= unionMinX && y >= unionMinY && x + w <= unionMaxX && y + h <= unionMaxY)
+			return;
+
+		// Fit to the screen the window overlaps the most; primary when none.
+		Screen target = Screen.getPrimary();
+		double bestOverlap = 0;
+		for (Screen s : screens) {
+			Rectangle2D b = s.getVisualBounds();
+			double ow = Math.min(x + w, b.getMaxX()) - Math.max(x, b.getMinX());
+			double oh = Math.min(y + h, b.getMaxY()) - Math.max(y, b.getMinY());
+			double overlap = Math.max(0, ow) * Math.max(0, oh);
+			if (overlap > bestOverlap) {
+				bestOverlap = overlap;
+				target = s;
+			}
+		}
+
+		Rectangle2D vb = target.getVisualBounds();
+		double newW = Math.min(w, vb.getWidth());
+		double newH = Math.min(h, vb.getHeight());
+		double newX = Math.max(vb.getMinX(), Math.min(x, vb.getMaxX() - newW));
+		double newY = Math.max(vb.getMinY(), Math.min(y, vb.getMaxY() - newH));
+
+		if (newW != w)
+			window.setWidth(newW);
+		if (newH != h)
+			window.setHeight(newH);
+		if (newX != x)
+			window.setX(newX);
+		if (newY != y)
+			window.setY(newY);
+	}
+
+	/**
+	 * {@link #fitToScreen(javafx.stage.Window)} convenience for dialogs — fits the
+	 * dialog's window. Call after the dialog is shown (or from {@code setOnShown}),
+	 * when the window exists and has its final size.
+	 *
+	 * @param dialog the dialog to fit; {@code null} or not-yet-shown is ignored
+	 */
+	public static void fitToScreen(Dialog<?> dialog) {
+		if (dialog == null || dialog.getDialogPane() == null || dialog.getDialogPane().getScene() == null)
+			return;
+		fitToScreen(dialog.getDialogPane().getScene().getWindow());
+	}
+
 	@Override
 	public int getModuleLoadingOrder() {
 		return 10000;

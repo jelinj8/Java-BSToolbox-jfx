@@ -24,13 +24,13 @@ Main test entry point: `cz.bliksoft.javautils.fx.test.FxTests`. The primary test
 
 `BSAppJFX` is the JavaFX entry point. Call `BSAppJFX.init(app)` from `Application.start()` to initialize the framework — it stores the application instance, installs `Platform.exit()` as the shutdown hook, delegates to `BSApp.init()`, and sets `AnyImageLoader` as the default image loader. For non-JFX applications call `BSApp.init()` directly. `BSApp.init()` uses ServiceLoader-based `Modules` to load, init, and install app modules in priority order. `BaseAppModule` (priority -10000) is the core framework module.
 
-Properties use a two-level hierarchy: local (`~/.{appname}/{appname}.properties`) overrides global (`{app-dir}/.{appname}/{appname}.properties`). Environment-specific values are prefixed with `{configname}.{key}` (default config: `"default"`, set via `app.configname`).
+Properties use a two-level hierarchy of XML-format `settings.xml` files: local (`~/.{appname}/settings.xml`) overrides global (`{workingDir}/.{appname}/settings.xml`). Environment-specific values are prefixed with `{configname}.{key}` (default config: `"default"`, set via `app.configname`).
 
 Events (app close, user info change, messages) flow through a shared event bus.
 
-### Rights & Session
+### Permissions & Session
 
-`SessionManager` (abstract) provides the current `UserInfo` and rights context. The default implementation (`DefaultUnrestrictedSessionManager`) grants all rights. Implement `Right` interface and register via ServiceLoader or `Rights` registry to define permissions. Check with `Rights.isAllowed(MyRight.class)`.
+The permission/session model lives in the base library (`cz.bliksoft.javautils.app.permissions` in BSToolbox). `SessionManager` (abstract) provides the current `UserInfo` with its permission set. The default implementation (`DefaultUnrestrictedSessionManager`) grants all permissions. Subclass `Permission` and register via ServiceLoader or the XML filesystem `core/permissions` folder. Check with `Permissions.isAllowed(MyPermission.class)`.
 
 ### Action Framework
 

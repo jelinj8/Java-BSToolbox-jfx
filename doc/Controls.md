@@ -205,7 +205,12 @@ The source combo lists every `ICameraSource` available:
   `Webcam.getWebcams()`. If `org.bytedeco:opencv-platform` is available at
   runtime (BSToolbox-jfx declares it as `provided`), `OpenCvResolutionProbe` /
   `OpenCvCapture` are used to discover and capture resolutions beyond Sarxos's
-  hardcoded 640x480 cap; otherwise Sarxos's own capture is used.
+  hardcoded 640x480 cap; otherwise Sarxos's own capture is used. When Sarxos
+  enumeration itself is unusable (its native driver has no aarch64 build, so it
+  always throws on e.g. a Raspberry Pi), `OpenCvDeviceDiscovery` probes
+  `/dev/videoN` V4L2 devices directly via OpenCV (uvcvideo-backed nodes only)
+  and lists each working one as an **`OpenCvCameraSource`** instead
+  (Linux-only fallback).
 - **`NetworkCameraSource`** — an HTTP snapshot endpoint (e.g. a phone running an
   IP-camera app such as Android "IP Webcam"), captured via a plain HTTP GET +
   `ImageIO` (`NetworkCameraCapture`), no extra dependency required.
@@ -249,9 +254,9 @@ preview, and handsfree capture without further changes.
 
 `ICameraSource`, `ICameraPreviewSession`, `WebcamCameraSource`,
 `NetworkCameraSource`, `NetworkCameraCapture`, `FolderMonitorCameraSource`,
-`WebServerCameraSource`, `RaspberryPiCameraSource`, `OpenCvCapture`, and
-`OpenCvResolutionProbe` are all public, so applications can also reuse the
-capture helpers directly.
+`WebServerCameraSource`, `RaspberryPiCameraSource`, `OpenCvCameraSource`,
+`OpenCvDeviceDiscovery`, `OpenCvCapture`, and `OpenCvResolutionProbe` are all
+public, so applications can also reuse the capture helpers directly.
 
 ---
 

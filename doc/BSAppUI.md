@@ -13,6 +13,14 @@ registers `BSAppUI` in the module system and triggers the full startup sequence
 (see **BSApp.md**). After `installModules()` runs, `BSAppUI.install()` makes the
 primary stage visible.
 
+The `BSAppUI.init(app, stage, root)` overload hosts an *externally-built* root
+node on the primary stage instead of composing one from the `/AppUI` scene
+definition. The framework bindings still apply: the root is wrapped in a
+`Scene`, registered action accelerators are bound, window state is
+restored/persisted, and the close handler is wired. A non-`null` `root` takes
+precedence over any scene definition; passing `null` behaves exactly like the
+two-argument form. Theming and global CSS are applied in both cases.
+
 ---
 
 ## Scene builder (UIComposer)
@@ -60,6 +68,7 @@ A minimal declaration in a module's XML:
 | `region` | child of BorderPane | `top`/`bottom`/`left`/`right`/`center` |
 | `into` | any Node | injects into a named slot published by an `ISlotPublisher` |
 | `hgrow` / `vgrow` | child of HBox/VBox | `Priority.ALWAYS` / `NEVER` / `SOMETIMES` |
+| `overflowFocusable` | ToolBar | `false` makes the skin's overflow button non-focus-traversable (it is focusable by default and CSS cannot override it); toolbar children are already non-focusable by default |
 | `grid.row`, `grid.col` | child of GridPane | grid position |
 | `grid.rowSpan`, `grid.colSpan` | child of GridPane | grid span |
 
@@ -261,6 +270,15 @@ the main stage:
 StageStateBinder.restore(stage, "@main");   // called in BSAppUI.init()
 StageStateBinder.persist(stage, "@main");   // called on close
 ```
+
+When restoring a non-maximized window, `restore` calls
+`BSAppUI.fitToScreen(window)`: if the saved bounds overlap a screen border or
+exceed the screen (e.g. saved on a large monitor, restored on a 1280x720
+display), the window is shrunk to the screen's visual bounds and moved fully
+into view. A window that already fits — including one intentionally spanning
+multiple monitors — is left untouched. `fitToScreen` is public with `Window`
+and `Dialog` overloads, so custom dialogs can use it too (call it once the
+window is shown and sized).
 
 Add custom binders by implementing `FxStateBinder` and registering it in a
 `FxStateManager` instance if needed.

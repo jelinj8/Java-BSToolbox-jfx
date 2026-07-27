@@ -26,8 +26,19 @@ public class MyApp extends Application {
 ```
 
 `BSAppUI.init(app, stage)` registers `BSAppUI` as a module (so it participates
-in the normal module lifecycle) and then delegates to `BSApp.init(app)`, which
-drives the full module startup sequence: load → init → install.
+in the normal module lifecycle) and then delegates to `BSAppJFX.init(app)` —
+which stores the application instance, installs `Platform.exit()` as the
+before-exit hook, sets `AnyImageLoader` as the default image loader, and calls
+`BSApp.init()` to drive the full module startup sequence: load → init → install.
+
+The `BSAppUI.init(app, stage, root)` overload hosts an externally-built root
+node on the primary stage instead of composing one from the `/core/ui/main`
+definition, while keeping the standard window behaviour (scene wrapping,
+accelerators, window-state persistence, close handling) — see **BSAppUI.md**.
+
+`BSApp` itself (properties, lifecycle, permissions) lives in the base BSToolbox
+library (`cz.bliksoft.javautils.app`); see its `doc/app.md` for the full
+reference. This page covers the parts relevant to JavaFX applications.
 
 ### Running from an IDE
 
@@ -37,7 +48,7 @@ user settings directory automatically from the application name.
 Set the application name **before** calling `BSAppUI.init()`:
 
 ```java
-BSApp.setAppName("myapp");   // sets ~/.myapp/ and APPDATA/.myapp/ directories
+BSApp.setAppName("myapp");   // sets ~/.myapp/ and {workingDir}/.myapp/ directories
 BSAppUI.init(this, stage);
 ```
 
@@ -67,12 +78,13 @@ BSAppUI.init(this, stage);
 
 ## Properties
 
-Two property files are maintained:
+Two XML-format property files (`XmlProperties`, i.e. `java.util.Properties`
+`storeToXML` format) are maintained, both named `settings.xml`:
 
 | Store | Location | Purpose |
 |---|---|---|
-| Global | `{app-dir}/.{appName}/{appName}.properties` | Shared/machine config |
-| Local | `{user-home}/.{appName}/{appName}.properties` | Per-user overrides |
+| Global | `{workingDir}/.{appName}/settings.xml` | Shared/machine config |
+| Local | `{user-home}/.{appName}/settings.xml` | Per-user overrides |
 
 `BSApp.getProperty(key)` reads local first, falling back to global.
 `BSApp.getProperty(key, default)` adds a further fallback.
