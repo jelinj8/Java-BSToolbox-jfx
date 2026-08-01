@@ -73,9 +73,19 @@ jobs:
           </settings>
           PART3
 
+      # -U forces Maven to re-check the registry for newer SNAPSHOT dependencies every run,
+      # rather than trusting its default once-per-day update policy - necessary now that the
+      # local repo cache persists across separate job runs (see K8s_Talos/talos-minipc/
+      # k8s_forgejo/04-runner-config-configmap.yaml's maven-cache volume), otherwise a consumer
+      # of an internal SNAPSHOT dependency can keep resolving a stale locally-cached copy
+      # indefinitely instead of picking up a newer publish (observed 2026-08-01: this project's
+      # own build resolved common-java-utils:0.7-SNAPSHOT straight from the shared cache without
+      # ever checking the registry, since Java-BSToolbox's own build had already installed it
+      # there). Applied unconditionally, not just when a snapshot dependency is known today - a
+      # harmless no-op otherwise, and this project may gain snapshot dependencies later.
       - name: Build and test
         working-directory: src
-        run: mvn -B verify -s ../settings.xml
+        run: mvn -B -U verify -s ../settings.xml
         env:
           MVN_TOKEN: ${{ secrets.ORG_PACKAGES_TOKEN }}
 
@@ -88,7 +98,7 @@ jobs:
       - name: Deploy
         working-directory: src
         run: |
-          mvn -B -s ../settings.xml deploy -DskipTests \
+          mvn -B -U -s ../settings.xml deploy -DskipTests \
             -DaltDeploymentRepository=forgejo-deploy::default::https://${{ vars.REGISTRY_URL }}/api/packages/${{ github.repository_owner }}/maven
         env:
           MVN_TOKEN: ${{ secrets.ORG_PACKAGES_TOKEN }}
