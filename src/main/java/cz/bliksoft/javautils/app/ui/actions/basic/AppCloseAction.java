@@ -2,17 +2,23 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.events.TryCloseEvent;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
+import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
+import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableBooleanValue;
 
 /**
  * Application close action. Fires a {@code TryCloseEvent} which gives modules
  * the opportunity to veto the close (e.g. to prompt for unsaved changes).
  */
-public class AppCloseAction implements IUIAction {
+public class AppCloseAction implements IUIAction, IIconSpecPropertyProvider {
+
+	private final Property<String> iconSpec = new SimpleStringProperty(IconspecUtils.getIconspec("action/appclose"));
 
 	/** Creates a new application close action. */
 	public AppCloseAction() {
@@ -34,6 +40,11 @@ public class AppCloseAction implements IUIAction {
 	@Override
 	public ReadOnlyStringProperty textProperty() {
 		return CONST_TEXT;
+	}
+
+	@Override
+	public Property<String> iconSpecProperty() {
+		return iconSpec;
 	}
 
 	@Override

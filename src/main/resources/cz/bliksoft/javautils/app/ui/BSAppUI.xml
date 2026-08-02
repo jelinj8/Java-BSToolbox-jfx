@@ -211,6 +211,10 @@
 					<attribute name="iconspec">*ANCHOR|C#svg/shapes/outline/square.svg|24#svg/shapes/outline/x.svg|24|||${stroke-remove}#*+
 					</attribute>
 				</file>
+				<file name="appclose">
+					<attribute name="iconspec">svg/shapes/outline/x.svg|${button-size}|||${stroke-remove}
+					</attribute>
+				</file>
 				<file name="close-all">
 					<attribute name="iconspec">svg/shapes/outline/square.svg|20#*PUSH#*ANCHOR|C|4|4#*+|E#svg/shapes/outline/x.svg|16|||${stroke-remove}#*ANCHOR|C|0|0#*+
 					</attribute>
