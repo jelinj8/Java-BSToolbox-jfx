@@ -1,6 +1,7 @@
 package cz.bliksoft.javautils.fx.controls.images;
 
 import java.awt.Dimension;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -84,6 +85,23 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	 */
 	public byte[] getResultRawBytes() {
 		return capturePane.getResultRawBytes();
+	}
+
+	/**
+	 * Returns the captured frame before any crop was applied, letting a caller keep
+	 * the full-resolution source around for a later re-crop. See
+	 * {@link CameraCapturePane#getUncroppedImage()}.
+	 */
+	public BufferedImage getUncroppedImage() {
+		return capturePane.getUncroppedImage();
+	}
+
+	/**
+	 * Returns the crop rectangle (in {@link #getUncroppedImage()}'s pixel
+	 * coordinates) applied to produce the result, or {@code null} if none.
+	 */
+	public java.awt.Rectangle getCropRect() {
+		return capturePane.getCropRect();
 	}
 
 	/**

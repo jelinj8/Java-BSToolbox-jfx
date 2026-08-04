@@ -194,6 +194,27 @@ public class CameraCapturePane extends VBox {
 		return cropPane.hasActiveSelection() ? null : lastCaptureRawBytes;
 	}
 
+	/**
+	 * Returns the currently-loaded frame before any crop is applied (still
+	 * reflecting rotation, if any) - i.e. the full image
+	 * {@link #getImageAsWritable()} would otherwise trim down to just the selected
+	 * region. Lets a caller keep the full-resolution source around for a later
+	 * re-crop instead of only ever retaining the once-cropped result. Returns
+	 * {@code null} if no image is loaded.
+	 */
+	public BufferedImage getUncroppedImage() {
+		Image img = cropPane.imageProperty().get();
+		return img == null ? null : SwingFXUtils.fromFXImage(img, null);
+	}
+
+	/**
+	 * Returns the crop rectangle (in {@link #getUncroppedImage()}'s pixel
+	 * coordinates) currently selected, or {@code null} if none.
+	 */
+	public java.awt.Rectangle getCropRect() {
+		return ImageCropPane.toAwtRect(cropPane.cropRectInImagePixelsProperty().get());
+	}
+
 	/** Starts background enumeration of available cameras. */
 	public void initCameras() {
 		loadCamerasAsync();

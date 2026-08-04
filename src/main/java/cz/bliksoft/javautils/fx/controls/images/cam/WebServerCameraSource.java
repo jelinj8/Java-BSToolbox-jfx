@@ -414,7 +414,8 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 				boolean isFormUpload = contentType != null
 						&& contentType.toLowerCase().startsWith("multipart/form-data");
 
-				byte[] imageBytes = isFormUpload ? extractFilePart(body, contentType) : body;
+				UploadedPart part = isFormUpload ? extractFilePart(body, contentType) : new UploadedPart(body, null);
+				byte[] imageBytes = part == null ? null : part.bytes();
 				BufferedImage frame = imageBytes == null ? null : decodeImage(imageBytes);
 
 				if (frame == null) {
@@ -439,7 +440,8 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 					lock.notifyAll();
 				}
 				if (unsolicited)
-					UnsolicitedFrameEvent.fire(id, displayName, frame, imageBytes, autocrop);
+					UnsolicitedFrameEvent.fire(id, displayName, frame, orientation <= 1 ? imageBytes : null,
+							part.filename(), autocrop);
 
 				if (isFormUpload)
 					redirect(exchange, path + "?ok=1");
@@ -486,10 +488,19 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 		}
 
 		/**
-		 * Extracts the bytes of the first {@code multipart/form-data} part that has a
-		 * non-empty {@code filename}, or {@code null} if none is found.
+		 * Bytes of an uploaded multipart file part, plus its client-supplied
+		 * {@code filename} (may be {@code null} - e.g. a plain, non-multipart POST has
+		 * no filename at all).
 		 */
-		private byte[] extractFilePart(byte[] body, String contentType) {
+		private record UploadedPart(byte[] bytes, String filename) {
+		}
+
+		/**
+		 * Extracts the bytes (and original filename, if present) of the first
+		 * {@code multipart/form-data} part that has a non-empty {@code filename}, or
+		 * {@code null} if none is found.
+		 */
+		private UploadedPart extractFilePart(byte[] body, String contentType) {
 			String boundary = null;
 			for (String part : contentType.split(";")) {
 				part = part.trim();
@@ -521,11 +532,27 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 					if (bodyEnd >= bodyStart + 2 && body[bodyEnd - 1] == '\n' && body[bodyEnd - 2] == '\r')
 						bodyEnd -= 2;
 					if (bodyEnd > bodyStart)
-						return Arrays.copyOfRange(body, bodyStart, bodyEnd);
+						return new UploadedPart(Arrays.copyOfRange(body, bodyStart, bodyEnd), extractFilename(headers));
 				}
 				pos = nextDelimiter;
 			}
 			return null;
+		}
+
+		/**
+		 * Parses the {@code filename="..."} value out of a multipart part's headers, or
+		 * {@code null} if absent/empty.
+		 */
+		private String extractFilename(String headers) {
+			int idx = headers.indexOf("filename=\"");
+			if (idx < 0)
+				return null;
+			int start = idx + "filename=\"".length();
+			int end = headers.indexOf('"', start);
+			if (end < 0)
+				return null;
+			String name = headers.substring(start, end).trim();
+			return name.isEmpty() ? null : name;
 		}
 
 		/**

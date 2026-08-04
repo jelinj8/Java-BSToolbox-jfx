@@ -38,15 +38,17 @@ public class UnsolicitedFrameEvent implements IConsumableEvent, ILevelEvent {
 	private final String sourceName;
 	private final BufferedImage image;
 	private final byte[] imageBytes;
+	private final String uploadedFileName;
 	private final boolean autocrop;
 	private final LocalDateTime received;
 
 	public UnsolicitedFrameEvent(String sourceId, String sourceName, BufferedImage image, byte[] imageBytes,
-			boolean autocrop) {
+			String uploadedFileName, boolean autocrop) {
 		this.sourceId = sourceId;
 		this.sourceName = sourceName;
 		this.image = image;
 		this.imageBytes = imageBytes;
+		this.uploadedFileName = uploadedFileName;
 		this.autocrop = autocrop;
 		this.received = LocalDateTime.now();
 	}
@@ -65,6 +67,14 @@ public class UnsolicitedFrameEvent implements IConsumableEvent, ILevelEvent {
 
 	public byte[] getImageBytes() {
 		return imageBytes;
+	}
+
+	/**
+	 * The filename the uploader supplied (e.g. multipart filename), or
+	 * {@code null}.
+	 */
+	public String getUploadedFileName() {
+		return uploadedFileName;
 	}
 
 	public boolean isAutocrop() {
@@ -86,8 +96,9 @@ public class UnsolicitedFrameEvent implements IConsumableEvent, ILevelEvent {
 	 * run on a background thread and {@link Context#fireGUIEvent} enforces the EDT.
 	 */
 	public static void fire(String sourceId, String sourceName, BufferedImage image, byte[] imageBytes,
-			boolean autocrop) {
-		UnsolicitedFrameEvent evt = new UnsolicitedFrameEvent(sourceId, sourceName, image, imageBytes, autocrop);
+			String uploadedFileName, boolean autocrop) {
+		UnsolicitedFrameEvent evt = new UnsolicitedFrameEvent(sourceId, sourceName, image, imageBytes, uploadedFileName,
+				autocrop);
 		Platform.runLater(() -> Context.getCurrentContext().fireGUIEvent(evt));
 	}
 }

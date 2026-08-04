@@ -218,16 +218,54 @@ public class ImageCropPane extends StackPane {
 		if (box == null)
 			return;
 
-		rx = (double) box[0] / w;
-		ry = (double) box[1] / h;
-		rw = (double) (box[2] - box[0]) / w;
-		rh = (double) (box[3] - box[1]) / h;
+		applyRelativeSelection((double) box[0] / w, (double) box[1] / h, (double) (box[2] - box[0]) / w,
+				(double) (box[3] - box[1]) / h);
+	}
+
+	/**
+	 * Pre-selects an explicit crop rectangle (in source-image pixel coordinates),
+	 * e.g. to restore a previously-applied crop rather than re-running
+	 * {@link #autocrop()}. Passing {@code null} clears the selection.
+	 */
+	public void setCropRect(java.awt.Rectangle rect) {
+		Image img = getImage();
+		if (img == null)
+			return;
+		if (rect == null) {
+			clearSelection();
+			return;
+		}
+		int w = (int) img.getWidth();
+		int h = (int) img.getHeight();
+		if (w <= 0 || h <= 0)
+			return;
+
+		applyRelativeSelection((double) rect.x / w, (double) rect.y / h, (double) rect.width / w,
+				(double) rect.height / h);
+	}
+
+	private void applyRelativeSelection(double rx, double ry, double rw, double rh) {
+		this.rx = rx;
+		this.ry = ry;
+		this.rw = rw;
+		this.rh = rh;
 
 		selectionNormalizedValid = true;
 		selection.setVisible(true);
 		applySelectionFromNormalized();
 		updateCropRectInImagePixels();
 		updateShades();
+	}
+
+	/**
+	 * Converts an image-pixel {@link javafx.geometry.Rectangle2D} (as returned by
+	 * {@link #cropRectInImagePixelsProperty()}) to an AWT rectangle, or
+	 * {@code null} if {@code r} is {@code null}.
+	 */
+	static java.awt.Rectangle toAwtRect(javafx.geometry.Rectangle2D r) {
+		return r == null ? null
+				: new java.awt.Rectangle((int) Math.round(r.getMinX()), (int) Math.round(r.getMinY()),
+						(int) Math.round(r.getWidth()), (int) Math.round(r.getHeight()));
 	}
 
 	/**
