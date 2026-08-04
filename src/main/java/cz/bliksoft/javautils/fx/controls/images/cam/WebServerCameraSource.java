@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 
@@ -77,6 +78,13 @@ import cz.bliksoft.javautils.xmlfilesystem.FileObject;
  * uploads via {@code multipart/form-data}. The optional {@code comment}
  * attribute (localizable) is shown on that page between the title and the file
  * picker, e.g. to give the person taking the photo some instructions.
+ *
+ * <p>
+ * If a frame arrives while nobody in the app is actually capturing from this
+ * source - no live {@link ICameraPreviewSession} open and no
+ * {@link #grabFrame}/{@link #grabFrameBytes} call in flight - an
+ * {@link UnsolicitedFrameEvent} is fired, letting listeners react to a
+ * "background" push (e.g. propose creating an attachment from it).
  */
 public final class WebServerCameraSource implements ICameraSource, Closeable {
 
@@ -109,6 +117,14 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 	private int latestFrameOrientation;
 	private boolean latestFrameAutocrop;
 	private long sequence = 0;
+
+	/** Number of {@link ICameraPreviewSession}s currently open on this source. */
+	private final AtomicInteger activePreviewSessions = new AtomicInteger(0);
+	/**
+	 * Number of {@link #grabFrame}/{@link #grabFrameBytes} calls currently in
+	 * flight.
+	 */
+	private final AtomicInteger pendingGrabs = new AtomicInteger(0);
 
 	public WebServerCameraSource(FileObject fo) {
 		this.id = "webserver-" + fo.getName();
@@ -189,39 +205,50 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 
 	@Override
 	public BufferedImage grabFrame(Dimension resolution) throws InterruptedException {
-		synchronized (lock) {
-			if (sequence > 0)
-				return latestFrame;
-
-			long deadline = System.currentTimeMillis() + GRAB_TIMEOUT_MS;
-			while (sequence == 0) {
-				long remaining = deadline - System.currentTimeMillis();
-				if (remaining <= 0)
+		pendingGrabs.incrementAndGet();
+		try {
+			synchronized (lock) {
+				if (sequence > 0)
 					return latestFrame;
-				lock.wait(remaining);
+
+				long deadline = System.currentTimeMillis() + GRAB_TIMEOUT_MS;
+				while (sequence == 0) {
+					long remaining = deadline - System.currentTimeMillis();
+					if (remaining <= 0)
+						return latestFrame;
+					lock.wait(remaining);
+				}
+				return latestFrame;
 			}
-			return latestFrame;
+		} finally {
+			pendingGrabs.decrementAndGet();
 		}
 	}
 
 	@Override
 	public ICameraPreviewSession openPreview(Dimension resolution) {
+		activePreviewSessions.incrementAndGet();
 		return new PreviewSession();
 	}
 
 	@Override
 	public byte[] grabFrameBytes(Dimension resolution) throws InterruptedException {
-		synchronized (lock) {
-			if (sequence == 0) {
-				long deadline = System.currentTimeMillis() + GRAB_TIMEOUT_MS;
-				while (sequence == 0) {
-					long remaining = deadline - System.currentTimeMillis();
-					if (remaining <= 0)
-						break;
-					lock.wait(remaining);
+		pendingGrabs.incrementAndGet();
+		try {
+			synchronized (lock) {
+				if (sequence == 0) {
+					long deadline = System.currentTimeMillis() + GRAB_TIMEOUT_MS;
+					while (sequence == 0) {
+						long remaining = deadline - System.currentTimeMillis();
+						if (remaining <= 0)
+							break;
+						lock.wait(remaining);
+					}
 				}
+				return latestFrameOrientation <= 1 ? latestFrameBytes : null;
 			}
-			return latestFrameOrientation <= 1 ? latestFrameBytes : null;
+		} finally {
+			pendingGrabs.decrementAndGet();
 		}
 	}
 
@@ -401,14 +428,18 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 				int orientation = readExifOrientation(imageBytes);
 				boolean autocrop = isFormUpload && extractFieldValue(body, contentType, "autocrop") != null;
 
+				boolean unsolicited;
 				synchronized (lock) {
 					latestFrame = frame;
 					latestFrameBytes = imageBytes;
 					latestFrameOrientation = orientation;
 					latestFrameAutocrop = autocrop;
 					sequence++;
+					unsolicited = pendingGrabs.get() == 0 && activePreviewSessions.get() == 0;
 					lock.notifyAll();
 				}
+				if (unsolicited)
+					UnsolicitedFrameEvent.fire(id, displayName, frame, imageBytes, autocrop);
 
 				if (isFormUpload)
 					redirect(exchange, path + "?ok=1");
@@ -593,6 +624,7 @@ public final class WebServerCameraSource implements ICameraSource, Closeable {
 
 		@Override
 		public void close() {
+			activePreviewSessions.decrementAndGet();
 		}
 	}
 }
