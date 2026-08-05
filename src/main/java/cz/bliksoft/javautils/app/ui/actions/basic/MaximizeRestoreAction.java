@@ -27,8 +27,7 @@ public class MaximizeRestoreAction implements IUIAction, IIconSpecPropertyProvid
 	/** Creates a new maximize/restore toggle action. */
 	public MaximizeRestoreAction() {
 		Stage stage = BSAppUI.getStage();
-		text.bind(Bindings.createStringBinding(() -> BSAppJFXMessages.getString(
-				stage.isMaximized() ? "MaximizeRestoreAction.restore.text" : "MaximizeRestoreAction.maximize.text"),
+		text.bind(Bindings.createStringBinding(() -> stage.isMaximized() ? restoreText() : maximizeText(),
 				stage.maximizedProperty()));
 		((SimpleStringProperty) iconSpec).bind(Bindings.createStringBinding(
 				() -> IconspecUtils
@@ -40,6 +39,14 @@ public class MaximizeRestoreAction implements IUIAction, IIconSpecPropertyProvid
 	public void execute() {
 		Stage stage = BSAppUI.getStage();
 		stage.setMaximized(!stage.isMaximized());
+	}
+
+	private static String maximizeText() {
+		return BSAppJFXMessages.getString("MaximizeRestoreAction.maximize.text");
+	}
+
+	private static String restoreText() {
+		return BSAppJFXMessages.getString("MaximizeRestoreAction.restore.text");
 	}
 
 	private static final ReadOnlyBooleanProperty CONST_ENABLED = new ReadOnlyBooleanWrapper(true);
