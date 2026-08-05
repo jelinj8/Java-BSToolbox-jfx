@@ -767,7 +767,7 @@ public class BSAppUI extends ModuleBase {
 	}
 
 	public static void setStageIcons(Stage stage, String basePath) {
-		int[] sizes = { 16, 32, 48, 256 };
+		int[] sizes = { 16, 22, 24, 32, 48, 64, 128, 256 };
 		for (int s : sizes) {
 			String path = basePath.contains("${size}") ? basePath.replace("${size}", String.valueOf(s))
 					: String.format("%s%d.png", basePath, s);

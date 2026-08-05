@@ -125,16 +125,19 @@ The `iconBase` attribute on the scene node sets the window/taskbar icons.
 **PNG variant** — append size + `.png` suffix to a base path:
 ```xml
 <attribute name="iconBase" value="/icons/app/Home_" />
-<!-- loads: /icons/app/Home_16.png, _32.png, _48.png, _256.png -->
+<!-- loads: /icons/app/Home_16.png, _22.png, _24.png, _32.png, _48.png, _64.png, _128.png, _256.png -->
 ```
 
 **SVG variant** — use any ImageUtils spec with `${size}` placeholder:
 ```xml
 <attribute name="iconBase" value="[F]:icons/app/Home.svg|${size}" />
-<!-- renders: [F]:icons/app/Home.svg|16, |32, |48, |256 via SvgConverter -->
+<!-- renders: [F]:icons/app/Home.svg|16, |22, |24, |32, |48, |64, |128, |256 via SvgConverter -->
 ```
 
-Sizes tried in both cases: `16`, `32`, `48`, `256`. Missing sizes are skipped.
+Sizes tried in both cases: `16`, `22`, `24`, `32`, `48`, `64`, `128`, `256`. Missing sizes are skipped. The
+in-between sizes (`22`/`24`/`64`/`128`) exist mainly for Linux taskbars/panels (e.g. lxpanel on Raspbian) that
+pick a nearby exact size rather than scaling well from a distant one — without them some panels fall back to a
+generic icon even though the window's own icon (title bar, Alt-Tab) renders fine.
 
 ### SVG default colors
 

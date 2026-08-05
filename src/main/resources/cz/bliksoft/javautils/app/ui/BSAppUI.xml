@@ -267,6 +267,30 @@
 					<attribute name="menu-iconspec">svg/file-plus.svg|${menu-icon-size}
 					</attribute>
 				</file>
+				<file name="window-minimize">
+					<attribute name="iconspec">svg/minimize.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/minimize.svg|${menu-icon-size}
+					</attribute>
+				</file>
+				<file name="window-maximize">
+					<attribute name="iconspec">svg/maximize.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/maximize.svg|${menu-icon-size}
+					</attribute>
+				</file>
+				<file name="window-restore">
+					<attribute name="iconspec">svg/restore.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/restore.svg|${menu-icon-size}
+					</attribute>
+				</file>
+				<file name="window-fullscreen">
+					<attribute name="iconspec">svg/fullscreen.svg|${toolbar-size}
+					</attribute>
+					<attribute name="menu-iconspec">svg/fullscreen.svg|${menu-icon-size}
+					</attribute>
+				</file>
 			</file>
 
 			<file name="editor">
@@ -368,6 +392,12 @@
 				name="cz.bliksoft.javautils.app.ui.actions.basic.ShowHelpAction" />
 			<file
 				name="cz.bliksoft.javautils.app.ui.actions.basic.ContextHelpAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.MinimizeAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.MaximizeRestoreAction" />
+			<file
+				name="cz.bliksoft.javautils.app.ui.actions.basic.FullscreenToggleAction" />
 		</file>
 		<file name="ui">
 			<file name="help" />

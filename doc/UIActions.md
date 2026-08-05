@@ -355,6 +355,9 @@ ServiceLoader (or `core/actions` in the XML filesystem).
 | `ShowAbout` | _(static)_ | Opens the About dialog (module versions + credits) |
 | `ShowHelp` | _(static)_ | Opens the help URL in the browser; hidden when no URL is configured |
 | `ContextHelp` | `IContextHelp` | Calls `openHelp()` on the current context object |
+| `Minimize` | _(static)_ | Iconifies the primary stage |
+| `MaximizeRestore` | _(static)_ | Toggles the primary stage between maximized and its previous bounds; text/icon reflect current state |
+| `FullscreenToggle` | _(static)_ | Toggles fullscreen mode on the primary stage |
 
 ---
 

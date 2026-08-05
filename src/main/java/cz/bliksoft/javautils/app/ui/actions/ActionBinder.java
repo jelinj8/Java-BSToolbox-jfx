@@ -205,10 +205,11 @@ public final class ActionBinder {
 
 	private static void bindHint(Control c, IUIAction a) {
 		ReadOnlyStringProperty hint = a.hintProperty();
-		if (hint == null)
+		ReadOnlyStringProperty source = hint != null ? hint : a.textProperty();
+		if (source == null)
 			return;
 		Tooltip tt = new Tooltip();
-		tt.textProperty().bind(hint);
+		tt.textProperty().bind(source);
 		c.setTooltip(tt);
 	}
 }
