@@ -1,8 +1,12 @@
 # BSAppUI — UI Framework
 
-`BSAppUI` is a `ModuleBase` subclass (loading order `10000`) that owns the main
-window and the UI context stack. It provides the scene builder, the UI stack
-API, status messaging, and progress dialogs.
+`BSAppUI` is a `ModuleBase` subclass (loading order `-8000`, right after
+`BaseAppModule`'s `-10000`) that owns the main window and the UI context stack.
+It provides the scene builder, the UI stack API, status messaging, and progress
+dialogs. Loading this early means its `/core/...` filesystem definitions
+(theme, iconspec variables, etc.) merge in *before* application modules —
+letting a client app's own config override framework defaults, not the other
+way around.
 
 ---
 
@@ -117,6 +121,28 @@ Scene wrappers: `SceneBorder` (BorderPane-rooted scene),
 Declared via the `theme` attribute on the scene node (`LIGHT`, `DARK`, `SYSTEM`,
 `NONE`). Overridden at runtime by the `ui.theme` property in local/global
 properties. `Styling.installGlobalCss()` applies the framework CSS.
+
+### UI zoom (`ui.scale`)
+
+`ui.scale` (local/global property, default `1.0`) sets a live, restart-free zoom
+factor applied to every window: `Styling.setUiScale(double)` cascades an
+`-fx-font-size` onto each scene root (the default stylesheets size controls in
+`em` units, so this scales fonts, spacing, and control sizing together). Read
+once at startup (before `Styling.installGlobalCss()`) from the `ui.scale`
+property; call `Styling.setUiScale(...)` directly at runtime for an in-app
+zoom-in/zoom-out action — it re-applies immediately to all open windows.
+
+`-fx-font-size` only cascades to controls whose sizing is `em`-relative — icons
+are rasterized at a fixed pixel size and don't follow it. At the same point,
+`BSAppUI` also pushes the same value into `IconspecUtils` as its `ui-scale`
+iconspec variable (`IconspecUtils.setVariable("ui-scale", ...)`), so icon sizes
+at least start out proportionate — see the `icon-scale`/`ui-scale` iconspec
+variables in **ImageUtils.md**. Unlike the live font-size cascade, this only
+takes effect at startup: a runtime `ui.scale` change does not retroactively
+re-rasterize already-bound icons.
+
+This is independent of the OS DPI override documented in **BSApp.md**, which
+corrects how JavaFX reads the display's physical scale.
 
 ### Stage icons (`iconBase`)
 

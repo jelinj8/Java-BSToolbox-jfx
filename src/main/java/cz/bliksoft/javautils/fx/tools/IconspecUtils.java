@@ -4,11 +4,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSAppJFX;
+import cz.bliksoft.javautils.math.polynomial.PolynomialEvaluator;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 
@@ -27,6 +29,13 @@ import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
  * {@code /core/ui/themes/<current>}, in that order, then cached. Resolved
  * iconspec strings are cached by key+variant, so the filesystem is only
  * traversed once per key.
+ *
+ * <p>
+ * Some variables are pushed programmatically instead of being declared in the
+ * XmlFilesystem — e.g. {@code ui-scale}, sourced from the live {@code ui.scale}
+ * setting via {@link #setVariable}, rather than a static config attribute. See
+ * {@code icon-scale} in {@code /core/iconspec} for the static, deployment-time
+ * icon-size knob.
  */
 public final class IconspecUtils {
 
@@ -45,7 +54,38 @@ public final class IconspecUtils {
 	/** Substitution variable map — built once on first use, then reused. */
 	private static volatile Map<String, String> vars = null;
 
+	/**
+	 * Variables pushed programmatically (not declared in the XmlFilesystem). Takes
+	 * precedence over XmlFilesystem-declared variables of the same name. Defaults
+	 * {@code ui-scale} to {@code "1"} so iconspec expressions that reference it
+	 * stay valid even when nothing ever pushes a live value.
+	 */
+	private static final Map<String, String> pushedVars = new ConcurrentHashMap<>();
+	static {
+		pushedVars.put("ui-scale", "1"); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
 	private IconspecUtils() {
+	}
+
+	/**
+	 * Registers a substitution variable programmatically, taking precedence over
+	 * any XmlFilesystem-declared variable of the same name. Use this for values
+	 * sourced from settings/properties rather than static config — e.g.
+	 * {@code ui-scale}, pushed from the live {@code ui.scale} setting so icon sizes
+	 * stay proportionate to the live UI zoom at startup. Clears the resolved-spec
+	 * cache so subsequently-resolved specs pick up the new value.
+	 *
+	 * @param name  the variable name (referenced as {@code ${name}})
+	 * @param value the value to substitute, or {@code null} to remove a
+	 *              previously-pushed override
+	 */
+	public static void setVariable(String name, String value) {
+		if (value == null)
+			pushedVars.remove(name);
+		else
+			pushedVars.put(name, value);
+		cache.clear();
 	}
 
 	// -------------------------------------------------------------------------
@@ -91,16 +131,17 @@ public final class IconspecUtils {
 
 	/**
 	 * Reads a numeric size variable from the substitution variable map (e.g.
-	 * {@code "toolbar-size"} → {@code 24.0}). Returns {@code defaultVal} when the
-	 * variable is absent or cannot be parsed.
+	 * {@code "toolbar-size"} → {@code 24.0}), evaluating arithmetic expressions
+	 * (e.g. {@code "24*${ui-scale}"} once substituted). Returns {@code defaultVal}
+	 * when the variable is absent or cannot be evaluated.
 	 */
 	public static double getIconspecSize(String varName, double defaultVal) {
-		String val = vars().get(varName);
+		String val = mergedVars().get(varName);
 		if (val == null || val.isBlank())
 			return defaultVal;
 		try {
-			return Double.parseDouble(val.trim());
-		} catch (NumberFormatException e) {
+			return PolynomialEvaluator.eval(substitute(val.trim()));
+		} catch (IllegalArgumentException e) {
 			return defaultVal;
 		}
 	}
@@ -149,12 +190,13 @@ public final class IconspecUtils {
 
 	private static String substitute(String raw) {
 		String resolved = raw;
+		Map<String, String> vars = mergedVars();
 		boolean changed;
 		do {
 			if (!resolved.contains("${")) //$NON-NLS-1$
 				break;
 			changed = false;
-			for (Map.Entry<String, String> e : vars().entrySet()) {
+			for (Map.Entry<String, String> e : vars.entrySet()) {
 				String next = resolved.replace("${" + e.getKey() + "}", e.getValue()); //$NON-NLS-1$ //$NON-NLS-2$
 				if (next != resolved)
 					changed = true;
@@ -181,12 +223,13 @@ public final class IconspecUtils {
 	}
 
 	/**
-	 * Returns the substitution variable map built from the XmlFilesystem
-	 * ({@code /core/iconspec}, {@code /core/ui/themes}, current theme folder). The
-	 * map is unmodifiable and built lazily on first access.
+	 * Returns the substitution variable map: XmlFilesystem-declared variables
+	 * ({@code /core/iconspec}, {@code /core/ui/themes}, current theme folder)
+	 * merged with programmatically-pushed variables (see {@link #setVariable}),
+	 * which take precedence. A fresh snapshot is returned on every call.
 	 */
 	public static Map<String, String> getVars() {
-		return vars();
+		return Collections.unmodifiableMap(mergedVars());
 	}
 
 	/**
@@ -208,6 +251,15 @@ public final class IconspecUtils {
 		}
 		vars = Collections.unmodifiableMap(map);
 		return vars;
+	}
+
+	/**
+	 * {@link #vars()} with {@link #pushedVars} layered on top, taking precedence.
+	 */
+	private static Map<String, String> mergedVars() {
+		Map<String, String> merged = new LinkedHashMap<>(vars());
+		merged.putAll(pushedVars);
+		return merged;
 	}
 
 	private static void collectAttrs(FileObject f, Map<String, String> target) {

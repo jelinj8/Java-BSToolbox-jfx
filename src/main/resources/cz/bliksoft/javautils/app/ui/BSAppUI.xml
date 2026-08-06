@@ -114,17 +114,24 @@
 		<file name="actions" id="registered-actions" />
 
 		<file name="iconspec">
+			<!-- Static, deployment-time icon-size knob — override it in a domain
+				file layered over this one (e.g. for touchscreen/HiDPI deployments)
+				to rasterize icons at a proportionally larger size. Combined with
+				${ui-scale} below (pushed programmatically from the live ui.scale
+				setting, not declared here — see IconspecUtils.setVariable). -->
+			<attribute name="icon-scale" value="1.0" />
+
 			<!-- Named size variables -->
-			<attribute name="toolbar-size" value="24" />
-			<attribute name="toolbar-small" value="16" />
-			<attribute name="toolbar-large" value="32" />
-			<attribute name="label-icon-size" value="16" />
-			<attribute name="tab-icon-size" value="16" />
-			<attribute name="menu-icon-size" value="16" />
-			<attribute name="main-title-icon-size" value="32" />
-			<attribute name="window-title-icon-size" value="16" />
-			<attribute name="edit-button-size" value="12" />
-			<attribute name="button-size" value="16" />
+			<attribute name="toolbar-size" value="24*${icon-scale}*${ui-scale}" />
+			<attribute name="toolbar-small" value="16*${icon-scale}*${ui-scale}" />
+			<attribute name="toolbar-large" value="32*${icon-scale}*${ui-scale}" />
+			<attribute name="label-icon-size" value="16*${icon-scale}*${ui-scale}" />
+			<attribute name="tab-icon-size" value="16*${icon-scale}*${ui-scale}" />
+			<attribute name="menu-icon-size" value="16*${icon-scale}*${ui-scale}" />
+			<attribute name="main-title-icon-size" value="32*${icon-scale}*${ui-scale}" />
+			<attribute name="window-title-icon-size" value="16*${icon-scale}*${ui-scale}" />
+			<attribute name="edit-button-size" value="12*${icon-scale}*${ui-scale}" />
+			<attribute name="button-size" value="16*${icon-scale}*${ui-scale}" />
 
 			<attribute name="overlay-size" value="${button-size}/2" />
 			<attribute name="toolbar-overlay-size"

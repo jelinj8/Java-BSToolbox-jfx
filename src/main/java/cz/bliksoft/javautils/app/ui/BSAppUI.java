@@ -23,6 +23,7 @@ import cz.bliksoft.javautils.context.ContextSearchResult;
 import cz.bliksoft.javautils.context.IContextProvider;
 import cz.bliksoft.javautils.context.holders.StackedContextHolder;
 import cz.bliksoft.javautils.fx.VersionInfo;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.images.svg.SvgConverter;
 import cz.bliksoft.javautils.fx.tools.Styling;
@@ -56,6 +57,10 @@ public class BSAppUI extends ModuleBase {
 	public static final String FS_UI_ROOT = "/core/ui"; //$NON-NLS-1$
 
 	public static final String PROP_THEME = "ui.theme"; //$NON-NLS-1$
+
+	public static final String PROP_UI_SCALE = "ui.scale"; //$NON-NLS-1$
+
+	public static final String PROP_DPI_SCALE = "ui.dpiScale"; //$NON-NLS-1$
 
 	private static Context uiContext = new Context("global UI context");
 
@@ -194,7 +199,29 @@ public class BSAppUI extends ModuleBase {
 
 	@Override
 	public int getModuleLoadingOrder() {
-		return 10000;
+		return -8000;
+	}
+
+	/**
+	 * Reads the {@value #PROP_DPI_SCALE} local/global property and, if present,
+	 * applies it as the Glass display-scale override ({@code glass.win.uiScale} /
+	 * {@code glass.gtk.uiScale}). Glass only reads these once, at JavaFX toolkit
+	 * init, so this must be called from {@code main()} — before
+	 * {@code Application.launch(...)} — never from {@code Application.start()},
+	 * which runs too late to have any effect. Requires {@link BSAppJFX#setAppName}
+	 * to have already been called, since property resolution needs the app name.
+	 *
+	 * @return the resolved scale value if an override was applied, or {@code null}
+	 *         if {@value #PROP_DPI_SCALE} wasn't set
+	 */
+	public static String applyDpiOverrideFromSettings() {
+		Object dpiScale = BSAppJFX.getProperty(PROP_DPI_SCALE);
+		if (dpiScale == null)
+			return null;
+		String value = dpiScale.toString();
+		System.setProperty("glass.win.uiScale", value); //$NON-NLS-1$
+		System.setProperty("glass.gtk.uiScale", value); //$NON-NLS-1$
+		return value;
 	}
 
 	/**
@@ -261,6 +288,19 @@ public class BSAppUI extends ModuleBase {
 			case "NONE" -> Styling.setThemeMode(Styling.ThemeMode.NONE);
 			}
 		}
+		Object uiScaleObj = BSAppJFX.getProperty(PROP_UI_SCALE);
+		if (uiScaleObj != null) {
+			String uiScaleStr = uiScaleObj.toString().trim();
+			try {
+				Styling.setUiScale(Double.parseDouble(uiScaleStr));
+				// pushed, not XML-declared, so icon sizes track the live ui.scale
+				// setting at startup — see IconspecUtils.setVariable
+				IconspecUtils.setVariable("ui-scale", uiScaleStr);
+			} catch (NumberFormatException e) {
+				log.warn("Invalid {} value: {}", PROP_UI_SCALE, uiScaleObj);
+			}
+		}
+
 		Styling.installGlobalCss();
 
 		FileObject colorsNode = FileSystem.getRoot().getFile(FS_UI_ROOT + "/colors/themes");

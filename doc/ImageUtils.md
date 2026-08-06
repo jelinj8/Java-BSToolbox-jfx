@@ -125,6 +125,47 @@ Before lookup, every spec is passed through a two-step token replacement:
 
    Tokens are applied in insertion order. Passing `null` as value to `registerToken` removes that token.
 
+### Named iconspec variables, `icon-scale`, and `ui-scale`
+
+Separately from the token substitution above, `IconspecUtils` resolves the
+`iconspec`/`menu-iconspec` attributes registered under `/core/iconspec` (and
+per-theme overrides under `/core/ui/themes/<light|dark>`). Values there use the
+same `${name}` textual substitution, but since the *resolved* spec string is
+parsed by the postfix/composition engine (`IconSpecEngine`), which evaluates
+numeric fields (SVG `w`/`h`/`scale`, `EMPTY`/`ICO` sizes, etc.) as arithmetic
+expressions, substituted variables can be combined with arithmetic even though
+the variables themselves are plain text, e.g.:
+
+```xml
+<attribute name="button-size" value="16*${icon-scale}*${ui-scale}" />
+<attribute name="overlay-size" value="${button-size}/2" />
+```
+
+Every named built-in size variable (`toolbar-size`, `button-size`,
+`menu-icon-size`, etc.) is multiplied by two independent factors, so SVG icons
+rasterize crisply at the scaled size instead of being generated small and
+stretched:
+
+- **`icon-scale`** (default `1.0`) — declared as a plain `/core/iconspec`
+  attribute, like any other iconspec variable. A **static, deployment-time**
+  knob: override it in a domain file layered over the framework's
+  `/core/iconspec` definitions (e.g. for a touchscreen or HiDPI deployment) and
+  restart.
+- **`ui-scale`** (default `"1"`) — *not* declared anywhere in the
+  XmlFilesystem. It's pushed programmatically via
+  `IconspecUtils.setVariable("ui-scale", value)`, which `BSAppUI` calls at
+  startup with the live `ui.scale` setting (see **BSAppUI.md**) so icon sizes
+  start out proportionate to the live UI zoom. Pushed variables take
+  precedence over any XmlFilesystem-declared variable of the same name.
+  Because `IconspecUtils` caches resolved specs once icons are first resolved,
+  this only takes effect at startup — a runtime `ui.scale` change (Part A's
+  live zoom) does **not** retroactively re-rasterize already-bound icons.
+
+**Known gap**: inline-path specs (`[P]:`/`[PI]:`/`[PS]:`) parse their `w`/`h`
+fields directly as numbers, not through the arithmetic evaluator, so
+`${icon-scale}`/`${ui-scale}`-style expressions won't resolve inside them. None
+of the framework's built-in iconspecs use this form for sizes.
+
 ---
 
 ## Postfix composition

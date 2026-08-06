@@ -5,11 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 
 public final class Styling {
@@ -96,6 +98,7 @@ public final class Styling {
 				sheets.add(css);
 		}
 		installThemePseudoClass(scene);
+		installUiScale(scene);
 	}
 
 	private static final PseudoClass DARK = PseudoClass.getPseudoClass("dark");
@@ -181,6 +184,122 @@ public final class Styling {
 
 	public static ThemeMode getThemeMode() {
 		return themeMode;
+	}
+
+	private static final double BASE_FONT_SIZE_PX = 13.0;
+
+	private static volatile double uiScale = 1.0;
+
+	/**
+	 * Sets the live UI zoom factor (1.0 = 100%) and immediately re-applies it to
+	 * every currently open window. Cascades via {@code -fx-font-size} on each scene
+	 * root, which the default stylesheets size in {@code em} units.
+	 */
+	public static void setUiScale(double scale) {
+		uiScale = scale;
+		for (Window w : Window.getWindows()) {
+			Scene s = w.getScene();
+			if (s != null) {
+				applyUiScale(s);
+			}
+		}
+	}
+
+	public static double getUiScale() {
+		return uiScale;
+	}
+
+	private static final String KEY_SCALE_INSTALL = Styling.class.getName() + ".scaleInstalled";
+	private static final java.util.regex.Pattern FONT_SIZE_DECL = java.util.regex.Pattern
+			.compile("-fx-font-size\\s*:\\s*[^;]+;?\\s*");
+
+	private static void installUiScale(Scene scene) {
+		Objects.requireNonNull(scene, "scene");
+
+		if (Boolean.TRUE.equals(scene.getProperties().get(KEY_SCALE_INSTALL))) {
+			applyUiScale(scene);
+			return;
+		}
+		scene.getProperties().put(KEY_SCALE_INSTALL, Boolean.TRUE);
+
+		ChangeListener<Parent> rootListener = (obs, oldRoot, newRoot) -> {
+			if (newRoot != null) {
+				applyUiScale(scene);
+			}
+		};
+		scene.rootProperty().addListener(rootListener);
+		scene.getProperties().put(KEY_SCALE_INSTALL + ".rootListener", rootListener);
+
+		applyUiScale(scene);
+	}
+
+	private static void applyUiScale(Scene scene) {
+		Parent root = scene.getRoot();
+		if (root == null)
+			return;
+
+		String existing = root.getStyle();
+		String withoutOurs = existing == null ? "" : FONT_SIZE_DECL.matcher(existing).replaceAll("");
+
+		if (uiScale == 1.0) {
+			root.setStyle(withoutOurs);
+		} else {
+			String ours = String.format(java.util.Locale.ROOT, "-fx-font-size: %.2fpx; ", BASE_FONT_SIZE_PX * uiScale);
+			root.setStyle(ours + withoutOurs);
+		}
+
+		// Font-size changes affect content dimensions. Controls already shown when
+		// the scale changes won't grow on their own — force a relayout and, for an
+		// already-visible window, resize it to fit.
+		//
+		// Deferred to the next pulse: this runs from a Window.getWindows() listener,
+		// which for freshly-shown windows (e.g. an Alert's own Stage) can fire before
+		// that window's own internal show()/sizeToScene() sequence has finished, so
+		// resizing synchronously here can be overwritten right after by JavaFX's own
+		// logic. Platform.runLater lets that finish first.
+		Platform.runLater(() -> {
+			root.applyCss();
+			scaleButtonBars(root);
+			root.layout();
+			Window window = scene.getWindow();
+			if (window instanceof Stage stage && stage.isShowing()) {
+				stage.sizeToScene();
+			}
+		});
+	}
+
+	/**
+	 * {@link javafx.scene.control.ButtonBar}'s constructor hardcodes
+	 * {@code setButtonMinWidth(75)} in plain Java — not CSS, so no stylesheet can
+	 * touch it — and its skin uses that floor to explicitly
+	 * {@code Region.setMinWidth(...)}/{@code setPrefWidth(...)} every button (see
+	 * {@code ButtonBarSkin.layoutButtons()}/{@code resizeButtons()}). Once a
+	 * button's prefWidth has been explicitly set that way, later
+	 * {@code prefWidth(-1)} calls (including the skin's own "widest button"
+	 * measurement) just echo that fixed number back instead of re-measuring content
+	 * — so after a font-size change, dialog buttons stay pinned to the unscaled
+	 * 75px floor and their now-much-wider text renders as a bare ellipsis. Fix:
+	 * reset each button's prefWidth to computed/auto so it measures fresh, then
+	 * call the real setter (not CSS) with a scaled minimum — that setter change
+	 * fires {@code buttonMinWidthProperty}'s listener, which re-runs
+	 * {@code resizeButtons()} using the now-correct measurements.
+	 */
+	private static final double DEFAULT_BUTTON_MIN_WIDTH_PX = 75.0;
+
+	private static void scaleButtonBars(javafx.scene.Node n) {
+		if (n instanceof javafx.scene.control.ButtonBar bar) {
+			for (javafx.scene.Node btn : bar.getButtons()) {
+				if (btn instanceof javafx.scene.layout.Region r) {
+					r.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+				}
+			}
+			bar.setButtonMinWidth(DEFAULT_BUTTON_MIN_WIDTH_PX * uiScale);
+		}
+		if (n instanceof Parent p) {
+			for (javafx.scene.Node c : p.getChildrenUnmodifiable()) {
+				scaleButtonBars(c);
+			}
+		}
 	}
 
 	private static void installThemePseudoClass(Scene scene) {

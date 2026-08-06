@@ -110,6 +110,37 @@ String val = (String) BSApp.getEnvironmentProperty("DisabledModules", "");
 
 ---
 
+## HiDPI / OS display-scale override
+
+JavaFX (via Glass) auto-detects the OS display scale, but only reads it once, at
+toolkit init — before `Application.start()` ever runs. To force a specific scale
+(e.g. correct a misdetected HiDPI factor), call
+`BSAppUI.applyDpiOverrideFromSettings()` in `main()`, **before** calling
+`Application.launch(...)`:
+
+```java
+public static void main(String[] args) {
+    BSApp.setAppName("myapp");                     // must run before any property read
+    BSAppUI.applyDpiOverrideFromSettings();         // reads ui.dpiScale, sets Glass system properties
+    Application.launch(MyApp.class, args);
+}
+```
+
+`applyDpiOverrideFromSettings()` reads the `ui.dpiScale` local/global property
+and, if set, applies it as `glass.win.uiScale`/`glass.gtk.uiScale` — returning
+the resolved value (or `null` if unset) so the caller can log it. This means
+`BSApp.setAppName(...)` must move to `main()` for apps that use this override —
+earlier than the "Running from an IDE" example above, and earlier than its
+usual place right before `BSAppUI.init()`. `setAppName()` itself has no other
+dependencies, so moving it is safe either way. The setting only takes effect
+after a restart, since Glass never re-reads it later.
+
+This is a different knob from the live, restart-free `ui.scale` UI-zoom setting
+and the static `ui-scale` iconspec variable — see **BSAppUI.md** and
+**ImageUtils.md**.
+
+---
+
 ## BaseAppModule
 
 `BaseAppModule` is always force-enabled regardless of `EnabledModules` /
