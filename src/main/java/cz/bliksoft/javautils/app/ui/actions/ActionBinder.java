@@ -208,15 +208,20 @@ public final class ActionBinder {
 	private static void bindHint(Control c, IUIAction a) {
 		ReadOnlyStringProperty hint = a.hintProperty();
 		ReadOnlyStringProperty source = hint != null ? hint : a.textProperty();
-		if (source == null)
+		ReadOnlyObjectProperty<KeyCombination> accelerator = a.acceleratorProperty();
+		if (source == null && accelerator == null)
 			return;
 		Tooltip tt = new Tooltip();
-		ReadOnlyObjectProperty<KeyCombination> accelerator = a.acceleratorProperty();
-		if (accelerator != null) {
+		if (source != null && accelerator != null) {
 			tt.textProperty().bind(Bindings.createStringBinding(() -> withAccelerator(source.get(), accelerator.get()),
 					source, accelerator));
-		} else {
+		} else if (source != null) {
 			tt.textProperty().bind(source);
+		} else {
+			// Neither hint nor text is set, but there's an accelerator — show just the
+			// shortcut (e.g. "F10") rather than no tooltip at all.
+			tt.textProperty()
+					.bind(Bindings.createStringBinding(() -> withAccelerator(null, accelerator.get()), accelerator));
 		}
 		c.setTooltip(tt);
 	}

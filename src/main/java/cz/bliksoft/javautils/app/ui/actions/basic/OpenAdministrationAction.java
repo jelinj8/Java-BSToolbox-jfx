@@ -4,15 +4,33 @@ import cz.bliksoft.javautils.app.permissions.UserInfo;
 import cz.bliksoft.javautils.app.permissions.basic.PermissionOpenAdministration;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
+import cz.bliksoft.javautils.app.ui.administration.BSAppAdministrationMessages;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.app.ui.administration.AdministrationPanel;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 
+/**
+ * Extends {@link cz.bliksoft.javautils.app.ui.actions.UIActionBase} (via
+ * {@link BasicContextUIAction}), so a {@code keys} attribute on the action's
+ * {@code core/actions} XmlFilesystem node is applied as a keyboard accelerator,
+ * and {@link #textProperty()} — combined with that accelerator by
+ * {@code ActionBinder.bindHint} — supplies the button/menu-item tooltip.
+ */
 public class OpenAdministrationAction extends BasicContextUIAction<UserInfo> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppAdministrationMessages.getString("OpenAdministrationAction.text")); //$NON-NLS-1$
 
 	public OpenAdministrationAction() {
 		super(UserInfo.class);
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

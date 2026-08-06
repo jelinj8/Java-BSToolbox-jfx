@@ -3,6 +3,8 @@ package cz.bliksoft.javautils.fx.controls.images;
 import java.awt.image.BufferedImage;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
+import cz.bliksoft.javautils.app.ui.utils.state.binders.StageStateBinder;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
@@ -12,7 +14,11 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Region;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
@@ -31,10 +37,21 @@ import javafx.stage.Window;
  */
 public class ImageCropDialog extends Dialog<ImageCropDialog.CropResult> {
 
+	/** Accepts the current crop, provided there's actually an image loaded. */
+	private static final KeyCombination SHORTCUT_ACCEPT = KeyCombination.keyCombination("Ctrl+Enter");
+
+	/**
+	 * {@link StageStateBinder} key — stable across instances so position/size
+	 * persist.
+	 */
+	private static final String STATE_KEY = "ImageCropDialog";
+
 	private final ImageCropPane cropPane = new ImageCropPane();
 
 	private final Button autocropBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/crop")));
+	private final Button clearCropBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/crop-clear")));
 	private final Button rotateLeftBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/rotate-left")));
 	private final Button rotateRightBtn = new Button(null,
@@ -58,28 +75,71 @@ public class ImageCropDialog extends Dialog<ImageCropDialog.CropResult> {
 		setTitle(BSAppJFXMessages.getString("ImageCropDialog.title"));
 		getDialogPane().getButtonTypes().setAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);
 
-		autocropBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.autocropButton")));
+		autocropBtn.setTooltip(new Tooltip(
+				CameraCapturePane.withShortcut(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.autocropButton"),
+						ImageCropPane.SHORTCUT_AUTOCROP)));
 		autocropBtn.setOnAction(e -> cropPane.autocrop());
 
-		rotateLeftBtn
-				.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateLeftButton")));
+		clearCropBtn.setTooltip(new Tooltip(CameraCapturePane.withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.clearCropButton"),
+				ImageCropPane.SHORTCUT_CLEAR_CROP)));
+		clearCropBtn.setOnAction(e -> cropPane.clearSelection());
+		// Unlike autocrop/rotate (usable as soon as an image is loaded), clearing only
+		// makes sense once there's an actual crop selection to clear.
+		clearCropBtn.disableProperty().bind(cropPane.cropRectInImagePixelsProperty().isNull());
+
+		rotateLeftBtn.setTooltip(new Tooltip(CameraCapturePane.withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateLeftButton"),
+				ImageCropPane.SHORTCUT_ROTATE_LEFT)));
 		rotateLeftBtn.setOnAction(e -> cropPane.rotateLeft());
 
-		rotateRightBtn
-				.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateRightButton")));
+		rotateRightBtn.setTooltip(new Tooltip(CameraCapturePane.withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateRightButton"),
+				ImageCropPane.SHORTCUT_ROTATE_RIGHT)));
 		rotateRightBtn.setOnAction(e -> cropPane.rotateRight());
 
-		ToolBar toolbar = new ToolBar(autocropBtn, rotateLeftBtn, rotateRightBtn);
+		ToolBar toolbar = new ToolBar(autocropBtn, clearCropBtn, rotateLeftBtn, rotateRightBtn);
+		// See CameraCapturePane's identical fix: ToolBar's own minWidth is
+		// intentionally small (just enough for the overflow arrow), so floor it at
+		// its preferred width instead, so it never voluntarily hides buttons behind
+		// overflow.
+		toolbar.setMinWidth(Region.USE_PREF_SIZE);
 
 		BorderPane content = new BorderPane();
 		content.setTop(toolbar);
 		content.setCenter(cropPane);
 		getDialogPane().setContent(content);
-		getDialogPane().setPrefSize(760, 520);
+		getDialogPane().setPrefSize(860, 520);
+		setResizable(true);
 
 		Button okButton = (Button) getDialogPane().lookupButton(BSButtonTypes.OK);
 		okButton.setDisable(true);
+		okButton.setTooltip(new Tooltip(SHORTCUT_ACCEPT.getDisplayText()));
 		cropPane.imageProperty().addListener((obs, o, n) -> okButton.setDisable(n == null));
+
+		getDialogPane().addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+			if (SHORTCUT_ACCEPT.match(e)) {
+				if (!okButton.isDisabled())
+					okButton.fire();
+				e.consume();
+			} else if (ImageCropPane.SHORTCUT_AUTOCROP.match(e)) {
+				if (!autocropBtn.isDisabled())
+					autocropBtn.fire();
+				e.consume();
+			} else if (ImageCropPane.SHORTCUT_CLEAR_CROP.match(e)) {
+				if (!clearCropBtn.isDisabled())
+					clearCropBtn.fire();
+				e.consume();
+			} else if (ImageCropPane.SHORTCUT_ROTATE_LEFT.match(e)) {
+				if (!rotateLeftBtn.isDisabled())
+					rotateLeftBtn.fire();
+				e.consume();
+			} else if (ImageCropPane.SHORTCUT_ROTATE_RIGHT.match(e)) {
+				if (!rotateRightBtn.isDisabled())
+					rotateRightBtn.fire();
+				e.consume();
+			}
+		});
 
 		setResultConverter(bt -> {
 			if (bt != BSButtonTypes.OK)
@@ -89,6 +149,21 @@ public class ImageCropDialog extends Dialog<ImageCropDialog.CropResult> {
 				return null;
 			return new CropResult(SwingFXUtils.fromFXImage(img, null),
 					ImageCropPane.toAwtRect(cropPane.cropRectInImagePixelsProperty().get()));
+		});
+
+		// See CameraCaptureDialog's identical wiring: the dialog's underlying
+		// Stage/Scene don't exist until JavaFX lazily builds them right before
+		// showing, so this can't be done in the constructor above.
+		setOnShowing(e -> {
+			if (getDialogPane().getScene().getWindow() instanceof Stage stage) {
+				StageAutoSizer.install(stage);
+				StageStateBinder.restore(stage, STATE_KEY);
+			}
+		});
+		setOnHiding(e -> {
+			if (getDialogPane().getScene().getWindow() instanceof Stage stage) {
+				StageStateBinder.save(stage, STATE_KEY);
+			}
 		});
 	}
 

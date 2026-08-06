@@ -6,11 +6,17 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
+import cz.bliksoft.javautils.app.ui.utils.state.binders.StageStateBinder;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
 import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
@@ -45,6 +51,15 @@ import javafx.stage.Window;
  */
 public class CameraCaptureDialog extends Dialog<WritableImage> {
 
+	/** Accepts the current capture, provided there's actually one to accept. */
+	private static final KeyCombination SHORTCUT_ACCEPT = KeyCombination.keyCombination("Ctrl+Enter");
+
+	/**
+	 * {@link StageStateBinder} key — stable across instances so position/size
+	 * persist.
+	 */
+	private static final String STATE_KEY = "CameraCaptureDialog";
+
 	private final CameraCapturePane capturePane = new CameraCapturePane();
 
 	// =========================================================================
@@ -55,13 +70,41 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 		setTitle(BSAppJFXMessages.getString("CameraCaptureDialog.title"));
 		getDialogPane().getButtonTypes().setAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);
 		getDialogPane().setContent(capturePane);
-		getDialogPane().setPrefSize(860, 520);
+		getDialogPane().setPrefSize(960, 520);
+		setResizable(true);
 
 		Button okButton = (Button) getDialogPane().lookupButton(BSButtonTypes.OK);
 		okButton.setDisable(true);
+		okButton.setTooltip(new Tooltip(SHORTCUT_ACCEPT.getDisplayText()));
 		capturePane.imageProperty().addListener((obs, o, n) -> okButton.setDisable(n == null));
 
+		getDialogPane().addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+			if (SHORTCUT_ACCEPT.match(e)) {
+				if (!okButton.isDisabled())
+					okButton.fire();
+				e.consume();
+			}
+		});
+
 		setResultConverter(bt -> bt == BSButtonTypes.OK ? capturePane.getImageAsWritable() : null);
+
+		// StageAutoSizer floors the window at the toolbar's actual content width, so
+		// resizing (or restoring a saved size from a wider screen/toolbar state)
+		// can't shrink it enough to force the toolbar into overflow. Wired in
+		// onShowing (not the constructor): the dialog's underlying Stage/Scene don't
+		// exist yet at construction time — Dialog builds them lazily, immediately
+		// before firing this event.
+		setOnShowing(e -> {
+			if (getDialogPane().getScene().getWindow() instanceof Stage stage) {
+				StageAutoSizer.install(stage);
+				StageStateBinder.restore(stage, STATE_KEY);
+			}
+		});
+		setOnHiding(e -> {
+			if (getDialogPane().getScene().getWindow() instanceof Stage stage) {
+				StageStateBinder.save(stage, STATE_KEY);
+			}
+		});
 
 		setOnShown(e -> capturePane.initCameras());
 	}

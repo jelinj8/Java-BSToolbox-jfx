@@ -40,6 +40,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -52,6 +53,8 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -102,6 +105,14 @@ public class CameraCapturePane extends VBox {
 
 	static final String PREF_HANDSFREE_SOURCE = "camera.handsfree.source";
 	static final String PREF_HANDSFREE_AUTOCROP = "camera.handsfree.autocrop"; // "true"/"false", default true
+
+	// ---- Keyboard shortcuts ----
+	private static final KeyCombination SHORTCUT_CAPTURE = KeyCombination.keyCombination("Shift+Enter");
+	private static final KeyCombination SHORTCUT_PREVIEW_TOGGLE = KeyCombination.keyCombination("Alt+Enter");
+	private static final KeyCombination SHORTCUT_AUTOCROP = ImageCropPane.SHORTCUT_AUTOCROP;
+	private static final KeyCombination SHORTCUT_CLEAR_CROP = ImageCropPane.SHORTCUT_CLEAR_CROP;
+	private static final KeyCombination SHORTCUT_ROTATE_LEFT = ImageCropPane.SHORTCUT_ROTATE_LEFT;
+	private static final KeyCombination SHORTCUT_ROTATE_RIGHT = ImageCropPane.SHORTCUT_ROTATE_RIGHT;
 	static final String PREF_HANDSFREE_MAX_DIMENSION = "camera.handsfree.maxDimension"; // int, 0/absent = no limit
 
 	// ---- Controls ----
@@ -113,6 +124,8 @@ public class CameraCapturePane extends VBox {
 	private final ComboBox<Dimension> outResCombo = new ComboBox<>();
 	private final Button autocropBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/crop")));
+	private final Button clearCropBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/crop-clear")));
 	private final Button rotateLeftBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("buttons/rotate-left")));
 	private final Button rotateRightBtn = new Button(null,
@@ -338,18 +351,29 @@ public class CameraCapturePane extends VBox {
 			}
 		});
 
+		captureBtn.setTooltip(new Tooltip(withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.captureButton"), SHORTCUT_CAPTURE)));
+
 		// Right-group buttons
-		autocropBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.autocropButton")));
+		autocropBtn.setTooltip(new Tooltip(withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.autocropButton"), SHORTCUT_AUTOCROP)));
 		autocropBtn.setOnAction(e -> cropPane.autocrop());
 		autocropBtn.setDisable(true);
 
-		rotateLeftBtn
-				.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateLeftButton")));
+		clearCropBtn.setTooltip(new Tooltip(withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.clearCropButton"), SHORTCUT_CLEAR_CROP)));
+		clearCropBtn.setOnAction(e -> cropPane.clearSelection());
+		// Unlike autocrop/rotate (usable as soon as an image is loaded), clearing only
+		// makes sense once there's an actual crop selection to clear.
+		clearCropBtn.disableProperty().bind(cropPane.cropRectInImagePixelsProperty().isNull());
+
+		rotateLeftBtn.setTooltip(new Tooltip(withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateLeftButton"), SHORTCUT_ROTATE_LEFT)));
 		rotateLeftBtn.setOnAction(e -> cropPane.rotateLeft());
 		rotateLeftBtn.setDisable(true);
 
-		rotateRightBtn
-				.setTooltip(new Tooltip(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateRightButton")));
+		rotateRightBtn.setTooltip(new Tooltip(withShortcut(
+				BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.rotateRightButton"), SHORTCUT_ROTATE_RIGHT)));
 		rotateRightBtn.setOnAction(e -> cropPane.rotateRight());
 		rotateRightBtn.setDisable(true);
 
@@ -365,6 +389,8 @@ public class CameraCapturePane extends VBox {
 		previewBtn.visibleProperty().bind(previewEnabled);
 		previewBtn.managedProperty().bind(previewEnabled);
 
+		installShortcuts();
+
 		// Spacer between left and right toolbar groups
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -376,8 +402,16 @@ public class CameraCapturePane extends VBox {
 		ToolBar toolbar = new ToolBar(new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.cameraLabel")),
 				sourceCombo, captureBtn, previewBtn, camResCombo,
 				new Label(BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.cameraRotationLabel")),
-				camRotationCombo, runtimeStatusLabel, spacer, outResLabel, outResCombo, autocropBtn, rotateLeftBtn,
-				rotateRightBtn);
+				camRotationCombo, runtimeStatusLabel, spacer, outResLabel, outResCombo, autocropBtn, clearCropBtn,
+				rotateLeftBtn, rotateRightBtn);
+		// ToolBar's own minWidth is intentionally small (just enough for the overflow
+		// arrow) so it CAN shrink and push content behind it — that's the overflow
+		// mechanism itself. Floor it at its preferred width instead, so it never
+		// voluntarily shrinks below "everything visible", and so StageAutoSizer (which
+		// floors the window at this pane's minWidth) sees the toolbar's true required
+		// width — including e.g. runtimeStatusLabel's longer "Capturing…" state — not
+		// the artificially small one ToolBar reports by design.
+		toolbar.setMinWidth(Region.USE_PREF_SIZE);
 
 		statusLabel.setVisible(false);
 		statusLabel.setManaged(false);
@@ -386,10 +420,6 @@ public class CameraCapturePane extends VBox {
 		VBox.setVgrow(cropPane, Priority.ALWAYS);
 
 		getChildren().addAll(toolbar, statusLabel, cropPane);
-
-		// Ensure the toolbar can always show the source/rotation combos plus its
-		// overflow button, even if the rest of the window shrinks further.
-		setMinWidth(360);
 
 		updateOutResCombo();
 
@@ -562,6 +592,67 @@ public class CameraCapturePane extends VBox {
 	}
 
 	/**
+	 * Wires the pane-local keyboard mnemonics: Shift+Enter to capture, Alt+Enter to
+	 * toggle live preview (only while {@link #previewEnabled}), Alt+C autocrop,
+	 * Alt+Shift+C clear crop, Alt+L/Alt+R rotate. Each just fires the corresponding
+	 * button when it isn't disabled, so button-level enable/disable logic (no image
+	 * loaded yet, capture already in progress, etc.) is respected automatically.
+	 *
+	 * <p>
+	 * Attached to the {@link javafx.scene.Scene}, not this pane: when hosted in a
+	 * {@code Dialog} (e.g. {@link CameraCaptureDialog}), the initial focus commonly
+	 * lands on the button bar (OK/Cancel) — a <em>sibling</em> of this pane, not a
+	 * descendant — so a handler registered on the pane itself would never see key
+	 * events bubbling from there. The scene is the common ancestor of both,
+	 * regardless of which control currently has focus. Re-attaches automatically if
+	 * the pane is moved to a different scene.
+	 */
+	private void installShortcuts() {
+		EventHandler<KeyEvent> handler = e -> {
+			if (SHORTCUT_CAPTURE.match(e)) {
+				fireIfEnabled(captureBtn);
+				e.consume();
+			} else if (previewEnabled.get() && SHORTCUT_PREVIEW_TOGGLE.match(e)) {
+				fireIfEnabled(previewBtn);
+				e.consume();
+			} else if (SHORTCUT_AUTOCROP.match(e)) {
+				fireIfEnabled(autocropBtn);
+				e.consume();
+			} else if (SHORTCUT_CLEAR_CROP.match(e)) {
+				fireIfEnabled(clearCropBtn);
+				e.consume();
+			} else if (SHORTCUT_ROTATE_LEFT.match(e)) {
+				fireIfEnabled(rotateLeftBtn);
+				e.consume();
+			} else if (SHORTCUT_ROTATE_RIGHT.match(e)) {
+				fireIfEnabled(rotateRightBtn);
+				e.consume();
+			}
+		};
+		sceneProperty().addListener((obs, oldScene, newScene) -> {
+			if (oldScene != null)
+				oldScene.removeEventHandler(KeyEvent.KEY_PRESSED, handler);
+			if (newScene != null)
+				newScene.addEventHandler(KeyEvent.KEY_PRESSED, handler);
+		});
+		if (getScene() != null)
+			getScene().addEventHandler(KeyEvent.KEY_PRESSED, handler);
+	}
+
+	private static void fireIfEnabled(Button button) {
+		if (!button.isDisabled())
+			button.fire();
+	}
+
+	/**
+	 * Appends {@code shortcut}'s display text to {@code baseText} as a tooltip
+	 * hint.
+	 */
+	static String withShortcut(String baseText, KeyCombination shortcut) {
+		return baseText + " (" + shortcut.getDisplayText() + ")";
+	}
+
+	/**
 	 * Sets the preview button's icon and tooltip for the given state: the camera
 	 * icon with a green play badge when idle (click starts the live preview), or
 	 * with a red stop-square badge while the preview is running.
@@ -583,7 +674,7 @@ public class CameraCapturePane extends VBox {
 		previewBtn.setGraphic(graphic);
 		String tooltip = running ? BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStop")
 				: BSAppJFXMessages.getString("CameraCaptureDialog.toolbar.previewStart");
-		previewBtn.setTooltip(new Tooltip(tooltip));
+		previewBtn.setTooltip(new Tooltip(withShortcut(tooltip, SHORTCUT_PREVIEW_TOGGLE)));
 	}
 
 	private void doCapture() {

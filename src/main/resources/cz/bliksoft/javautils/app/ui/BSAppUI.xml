@@ -363,6 +363,10 @@
 					<attribute name="iconspec">svg/crop.svg|${button-size}|||${stroke-button}
 					</attribute>
 				</file>
+				<file name="crop-clear">
+					<attribute name="iconspec">*ANCHOR|BR#svg/crop.svg|${button-size}|||${stroke-button}#svg/shapes/outline/x.svg|${button-size}/3*2|||${stroke-remove}#*+
+					</attribute>
+				</file>
 				<file name="rotate-left">
 					<attribute name="iconspec">svg/rotate-2.svg|${button-size}|||${stroke-button}
 					</attribute>
@@ -409,7 +413,9 @@
 			<file id="action.Redo"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.RedoAction" />
 			<file id="action.OpenAdministration"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenAdministrationAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenAdministrationAction">
+				<attribute name="keys" value="F10" />
+			</file>
 			<file id="action.OpenLocalConfiguration"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenLocalConfigurationAction" />
 			<file id="action.ShowAbout"

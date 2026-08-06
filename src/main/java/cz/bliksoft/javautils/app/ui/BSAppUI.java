@@ -8,6 +8,7 @@ import org.controlsfx.dialog.ProgressDialog;
 
 import cz.bliksoft.javautils.StringUtils;
 import cz.bliksoft.javautils.app.BSAppJFX;
+import cz.bliksoft.javautils.app.events.AppClosedEvent;
 import cz.bliksoft.javautils.app.events.MessageEvent;
 import cz.bliksoft.javautils.app.events.TryCloseEvent;
 import cz.bliksoft.javautils.app.ui.actions.UIActions;
@@ -21,6 +22,7 @@ import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.ContextChangedEvent;
 import cz.bliksoft.javautils.context.ContextSearchResult;
 import cz.bliksoft.javautils.context.IContextProvider;
+import cz.bliksoft.javautils.context.events.EventListener;
 import cz.bliksoft.javautils.context.holders.StackedContextHolder;
 import cz.bliksoft.javautils.fx.VersionInfo;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
@@ -415,6 +417,19 @@ public class BSAppUI extends ModuleBase {
 			}
 
 			StageStateBinder.restore(mainStage, "@main");
+
+			// StageStateBinder.restore() above has no matching save — nothing
+			// previously persisted the main window's position/size back on close.
+			// AppClosedEvent fires once TryCloseEvent is confirmed (not vetoed),
+			// while mainStage is still fully valid, so this captures the final
+			// bounds before Platform.exit() (installed as the before-exit hook by
+			// BSAppJFX.init()) tears the window down.
+			Context.getRoot().addEventListener(new EventListener<AppClosedEvent>(AppClosedEvent.class, "BSAppUI") {
+				@Override
+				public void fired(AppClosedEvent event) {
+					StageStateBinder.save(mainStage, "@main");
+				}
+			});
 		}
 	}
 

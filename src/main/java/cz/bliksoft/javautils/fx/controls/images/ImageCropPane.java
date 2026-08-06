@@ -9,6 +9,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -24,6 +25,18 @@ public class ImageCropPane extends StackPane {
 	private static final double AUTOCROP_MIN_CONTENT_FRACTION = 0.015;
 	private static final double AUTOCROP_BORDER_FRACTION = 0.06;
 	private static final double AUTOCROP_MARGIN_FRACTION = 0.02;
+
+	/**
+	 * Keyboard shortcuts for {@link #autocrop()}, {@link #clearSelection()},
+	 * {@link #rotateLeft()} and {@link #rotateRight()}, shared by every host (e.g.
+	 * {@code CameraCapturePane}, {@code ImageCropDialog}) that wires them up and
+	 * shows them as button-tooltip hints, so the same keys mean the same thing
+	 * everywhere this pane is embedded.
+	 */
+	public static final KeyCombination SHORTCUT_AUTOCROP = KeyCombination.keyCombination("Alt+C");
+	public static final KeyCombination SHORTCUT_CLEAR_CROP = KeyCombination.keyCombination("Alt+Shift+C");
+	public static final KeyCombination SHORTCUT_ROTATE_LEFT = KeyCombination.keyCombination("Alt+L");
+	public static final KeyCombination SHORTCUT_ROTATE_RIGHT = KeyCombination.keyCombination("Alt+R");
 
 	private final ImageView imageView = new ImageView();
 	private final Pane overlay = new Pane();

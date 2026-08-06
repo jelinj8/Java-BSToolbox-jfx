@@ -250,7 +250,7 @@ public final class Styling {
 
 		// Font-size changes affect content dimensions. Controls already shown when
 		// the scale changes won't grow on their own — force a relayout and, for an
-		// already-visible window, resize it to fit.
+		// already-visible, non-resizable window, resize it to fit.
 		//
 		// Deferred to the next pulse: this runs from a Window.getWindows() listener,
 		// which for freshly-shown windows (e.g. an Alert's own Stage) can fire before
@@ -262,7 +262,14 @@ public final class Styling {
 			scaleButtonBars(root);
 			root.layout();
 			Window window = scene.getWindow();
-			if (window instanceof Stage stage && stage.isShowing()) {
+			// Only for non-resizable windows (e.g. a plain Alert/Dialog, which has no
+			// user-set or persisted size to protect and normally auto-fits its content
+			// anyway). A resizable window — the main window, or a dialog that installs
+			// StageAutoSizer/StageStateBinder like CameraCaptureDialog/ImageCropDialog —
+			// manages its own size; unconditionally calling sizeToScene() here would
+			// snap it back to its bare content size, undoing a user resize or a just
+			// restored saved size.
+			if (window instanceof Stage stage && stage.isShowing() && !stage.isResizable()) {
 				stage.sizeToScene();
 			}
 		});
