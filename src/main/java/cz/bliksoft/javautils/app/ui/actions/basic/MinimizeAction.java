@@ -2,25 +2,26 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
-import cz.bliksoft.javautils.app.ui.actions.IUIAction;
-import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import cz.bliksoft.javautils.app.ui.actions.UIActionBase;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
-import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableBooleanValue;
 
-/** Minimizes the primary application window. */
-public class MinimizeAction implements IUIAction, IIconSpecPropertyProvider {
-
-	private final Property<String> iconSpec = new SimpleStringProperty(
-			IconspecUtils.getIconspec("action/window-minimize"));
+/**
+ * Minimizes the primary application window.
+ *
+ * <p>
+ * Extends {@link UIActionBase} so a {@code keys} attribute on the action's
+ * {@code core/actions} XmlFilesystem node is applied as a keyboard accelerator.
+ */
+public class MinimizeAction extends UIActionBase {
 
 	/** Creates a new minimize action. */
 	public MinimizeAction() {
+		setIconSpec(IconspecUtils.getIconspec("action/window-minimize"));
 	}
 
 	@Override
@@ -40,11 +41,6 @@ public class MinimizeAction implements IUIAction, IIconSpecPropertyProvider {
 	@Override
 	public ReadOnlyStringProperty textProperty() {
 		return CONST_TEXT;
-	}
-
-	@Override
-	public Property<String> iconSpecProperty() {
-		return iconSpec;
 	}
 
 	@Override

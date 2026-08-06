@@ -1,8 +1,9 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.BSAppJFX;
-import cz.bliksoft.javautils.app.ui.actions.IUIAction;
+import cz.bliksoft.javautils.app.ui.actions.UIActionBase;
 import cz.bliksoft.javautils.app.ui.help.BSAppHelpMessages;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -11,7 +12,11 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableBooleanValue;
 
-public class ShowHelpAction implements IUIAction {
+/**
+ * Extends {@link UIActionBase} so a {@code keys} attribute on the action's
+ * {@code core/actions} XmlFilesystem node is applied as a keyboard accelerator.
+ */
+public class ShowHelpAction extends UIActionBase {
 
 	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
 			BSAppHelpMessages.getString("ShowHelpAction.text")); //$NON-NLS-1$
@@ -25,6 +30,7 @@ public class ShowHelpAction implements IUIAction {
 		String resolved = helpCfg != null ? helpCfg.getAttribute("url", null) : null; //$NON-NLS-1$
 		url = (resolved != null && !resolved.isBlank()) ? resolved : null;
 		available = new ReadOnlyBooleanWrapper(url != null);
+		setIconSpec(IconspecUtils.getIconspec("action/help"));
 	}
 
 	@Override

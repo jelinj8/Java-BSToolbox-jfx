@@ -90,6 +90,76 @@ Iterates all registered actions and calls `manager.bind(action)` for each.
 Calling `bind` on an already-bound action is idempotent, so `bindAll` is safe to
 call after individual actions have already been bound via XML button processing.
 
+### Action catalog (`core/availableActions`)
+
+`core/availableActions` is a plain XmlFilesystem folder — **not** read by
+`UIActions.loadActions()` — where a module lists ready-made `IUIAction`
+implementations it ships without forcing every app to register (and pay the
+keyboard-shortcut/menu footprint of) all of them. Every entry in the framework's
+catalog carries a stable `id` (`action.Save`, `action.Delete`, `action.Minimize`,
+…) precisely so an app can target it — either to link it in as-is or to merge a
+`keys` binding onto it, whether or not the entry ships a default. A few
+entries ship a conventional default — `FullscreenToggleAction` (`F11`),
+`ShowHelpAction` (`F1`), `ShowAboutAction` (`Alt+F1`) — the rest are
+keyboard-silent until an app opts one in and binds a `keys` value itself:
+
+```xml
+<file name="core">
+    <file name="availableActions">
+        <file id="action.FullscreenToggle"
+              name="cz.bliksoft.javautils.app.ui.actions.basic.FullscreenToggleAction">
+            <attribute name="keys" value="F11" />
+        </file>
+    </file>
+</file>
+```
+
+An app opts an entry into the live registry by declaring a `<symlink>` under
+its own `core/actions`, pointing at the catalog entry by its **absolute**
+path (a leading `/`; `FileObject.getFile` resolves symlink targets relative
+to the symlink itself, not the filesystem root, unless the path is rooted).
+The symlink's `name` must match the target's FQCN — `FileObjectClassLoader`
+resolves the class via `Class.forName(fo.getName())` — and its attributes,
+including `keys`, are transparently inherited from the target:
+
+```xml
+<!-- app module XML -->
+<file name="core">
+    <file name="actions">
+        <symlink name="cz.bliksoft.javautils.app.ui.actions.basic.FullscreenToggleAction"
+                 path="/core/availableActions/cz.bliksoft.javautils.app.ui.actions.basic.FullscreenToggleAction" />
+    </file>
+</file>
+```
+
+Once linked, `FullscreenToggleAction` is registered with `UIActions` and its
+`F11` accelerator (defined on the catalog entry) becomes active — no button or
+menu item needs to reference it. Actions distributed this way should extend
+`UIActionBase` (see below); a plain `IUIAction` implementation has no settable
+`acceleratorProperty()`, so a loaded `keys` attribute has nowhere to go.
+
+**Binding (or overriding) a key** — merge extra attributes onto an existing
+`id`'d node (the catalog entry or your symlink to it) from your own XML via
+`target`. This works the same whether the entry already has a default `keys`
+value (override) or none at all (first binding) — e.g. giving `Save`, which
+ships with no default, a `Ctrl+S` accelerator:
+
+```xml
+<file name="core">
+    <file name="actions">
+        <file target="action.Save">
+            <attribute name="keys" value="Ctrl+S" />
+        </file>
+    </file>
+</file>
+```
+
+`target` looks up the node by `id` anywhere in the loaded filesystem and
+merges this file's attributes/children onto it (`FileObject.importFile`); the
+node itself is not moved, so `target` alone does not register a catalog
+action — combine it with a `<symlink>` (or declare the action directly under
+`core/actions`, skipping the catalog) to actually pull it into the registry.
+
 ---
 
 ## ActionBinder
@@ -206,7 +276,9 @@ Add a `keys` attribute to the file node in your module's XML:
 
 ```xml
 <!-- in core/actions — shortcut on an action file -->
-<file name="com.example.MyAction" keys="Ctrl+M" />
+<file name="com.example.MyAction">
+    <attribute name="keys" value="Ctrl+M" />
+</file>
 
 <!-- in core/key-bindings — standalone lookup node -->
 <file name="core">
@@ -332,8 +404,12 @@ public class LoginAction extends BasicAbsentContextUIAction<UserInfo> {
 
 ## Built-in actions
 
-All live in `cz.bliksoft.javautils.app.ui.actions.basic` and are registered via
-ServiceLoader (or `core/actions` in the XML filesystem).
+All live in `cz.bliksoft.javautils.app.ui.actions.basic` and are only listed in
+the [action catalog](#action-catalog-coreavailableactions) (`core/availableActions`)
+— an app must link the ones it wants into `core/actions` (directly, or with a
+`<symlink>`) to actually register and, where relevant, key-bind them. Every
+entry's catalog `id` follows the pattern `action.<Key>` (e.g. `action.Save`);
+see that section for how to link an entry in and bind a `keys` value.
 
 | Key | Marker interface | Effect |
 |---|---|---|
@@ -349,15 +425,19 @@ ServiceLoader (or `core/actions` in the XML filesystem).
 | `Reload` | `IReload` | Calls `reload()` |
 | `Preview` | `IPreview` | Calls `preview()`; enabled by `getPreviewEnabled()` |
 | `Print` | `IPrint` | Calls `print()`; enabled by `getPrintEnabled()` |
+| `New` | `INew` | Calls `newDocument()`; enabled by `getNewEnabled()` |
+| `Open` | `IOpen` | Calls `open()`; enabled by `getOpenEnabled()` |
+| `Undo` | `IUndo` | Calls `undo()`; enabled by `getUndoEnabled()` |
+| `Redo` | `IRedo` | Calls `redo()`; enabled by `getRedoEnabled()` |
 | `AppClose` | _(static)_ | Fires `TryCloseEvent` to close the application |
 | `OpenAdministration` | `UserInfo` | Opens `AdministrationPanel`; enabled by `PermissionOpenAdministration` |
 | `OpenLocalConfiguration` | `IConfigurable` | Calls `configure()`; enabled by `isConfigurable()` |
-| `ShowAbout` | _(static)_ | Opens the About dialog (module versions + credits) |
-| `ShowHelp` | _(static)_ | Opens the help URL in the browser; hidden when no URL is configured |
+| `ShowAbout` | _(static)_ | Opens the About dialog (module versions + credits); catalog default `keys="Alt+F1"` |
+| `ShowHelp` | _(static)_ | Opens the help URL in the browser; hidden when no URL is configured; catalog default `keys="F1"` |
 | `ContextHelp` | `IContextHelp` | Calls `openHelp()` on the current context object |
-| `Minimize` | _(static)_ | Iconifies the primary stage |
-| `MaximizeRestore` | _(static)_ | Toggles the primary stage between maximized and its previous bounds; text/icon reflect current state |
-| `FullscreenToggle` | _(static)_ | Toggles fullscreen mode on the primary stage |
+| `Minimize` | _(static)_ | Iconifies the primary stage; no default key binding |
+| `MaximizeRestore` | _(static)_ | Toggles the primary stage between maximized and its previous bounds; text/icon reflect current state; no default key binding |
+| `FullscreenToggle` | _(static)_ | Toggles fullscreen mode on the primary stage; catalog default `keys="F11"`; disables OpenJFX's default Esc-to-exit shortcut (replaced by its own hint) as soon as the action is instantiated |
 
 ---
 

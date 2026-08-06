@@ -1,18 +1,28 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.ui.BSAppUI;
-import cz.bliksoft.javautils.app.ui.actions.IUIAction;
+import cz.bliksoft.javautils.app.ui.actions.UIActionBase;
 import cz.bliksoft.javautils.app.ui.help.BSAppHelpMessages;
 import cz.bliksoft.javautils.app.ui.help.HelpAboutPane;
+import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 
-public class ShowAboutAction implements IUIAction {
+/**
+ * Extends {@link UIActionBase} so a {@code keys} attribute on the action's
+ * {@code core/actions} XmlFilesystem node is applied as a keyboard accelerator.
+ */
+public class ShowAboutAction extends UIActionBase {
 
 	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
 			BSAppHelpMessages.getString("ShowAboutAction.text")); //$NON-NLS-1$
+
+	/** Creates a new show-about action. */
+	public ShowAboutAction() {
+		setIconSpec(IconspecUtils.getIconspec("action/about"));
+	}
 
 	@Override
 	public void execute() {

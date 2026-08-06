@@ -6,6 +6,7 @@ import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.Property;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -16,6 +17,7 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCombination;
 
 /**
  * Wires {@link IUIAction} properties to JavaFX controls. All {@code bind}
@@ -209,7 +211,24 @@ public final class ActionBinder {
 		if (source == null)
 			return;
 		Tooltip tt = new Tooltip();
-		tt.textProperty().bind(source);
+		ReadOnlyObjectProperty<KeyCombination> accelerator = a.acceleratorProperty();
+		if (accelerator != null) {
+			tt.textProperty().bind(Bindings.createStringBinding(() -> withAccelerator(source.get(), accelerator.get()),
+					source, accelerator));
+		} else {
+			tt.textProperty().bind(source);
+		}
 		c.setTooltip(tt);
+	}
+
+	private static String withAccelerator(String text, KeyCombination accelerator) {
+		if (accelerator == null)
+			return text;
+		String keys = accelerator.getDisplayText();
+		if (keys == null || keys.isBlank())
+			return text;
+		if (text == null || text.isBlank())
+			return keys;
+		return text + " (" + keys + ")"; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 }

@@ -2,37 +2,36 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.BSAppUI;
-import cz.bliksoft.javautils.app.ui.actions.IUIAction;
-import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
+import cz.bliksoft.javautils.app.ui.actions.UIActionBase;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.stage.Stage;
 
 /**
  * Toggles the primary application window between maximized and its previous
  * bounds. Text and icon reflect the current window state.
+ *
+ * <p>
+ * Extends {@link UIActionBase} so a {@code keys} attribute on the action's
+ * {@code core/actions} XmlFilesystem node is applied as a keyboard accelerator.
  */
-public class MaximizeRestoreAction implements IUIAction, IIconSpecPropertyProvider {
+public class MaximizeRestoreAction extends UIActionBase {
 
 	private final ReadOnlyStringWrapper text = new ReadOnlyStringWrapper();
-	private final Property<String> iconSpec = new SimpleStringProperty();
 
 	/** Creates a new maximize/restore toggle action. */
 	public MaximizeRestoreAction() {
 		Stage stage = BSAppUI.getStage();
 		text.bind(Bindings.createStringBinding(() -> stage.isMaximized() ? restoreText() : maximizeText(),
 				stage.maximizedProperty()));
-		((SimpleStringProperty) iconSpec).bind(Bindings.createStringBinding(
-				() -> IconspecUtils
-						.getIconspec(stage.isMaximized() ? "action/window-restore" : "action/window-maximize"),
-				stage.maximizedProperty()));
+		setIconSpec(IconspecUtils.getIconspec("action/window-maximize"));
+		stage.maximizedProperty().addListener((obs, o, isMaximized) -> setIconSpec(
+				IconspecUtils.getIconspec(isMaximized ? "action/window-restore" : "action/window-maximize")));
 	}
 
 	@Override
@@ -59,11 +58,6 @@ public class MaximizeRestoreAction implements IUIAction, IIconSpecPropertyProvid
 	@Override
 	public ReadOnlyStringProperty textProperty() {
 		return text.getReadOnlyProperty();
-	}
-
-	@Override
-	public Property<String> iconSpecProperty() {
-		return iconSpec;
 	}
 
 	@Override
