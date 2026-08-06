@@ -169,19 +169,50 @@ public class BSAppUI extends ModuleBase {
 		}
 
 		Rectangle2D vb = target.getVisualBounds();
-		double newW = Math.min(w, vb.getWidth());
-		double newH = Math.min(h, vb.getHeight());
-		double newX = Math.max(vb.getMinX(), Math.min(x, vb.getMaxX() - newW));
-		double newY = Math.max(vb.getMinY(), Math.min(y, vb.getMaxY() - newH));
+		double minW = window instanceof Stage stage ? stage.getMinWidth() : 0;
+		double minH = window instanceof Stage stage ? stage.getMinHeight() : 0;
+		Rectangle2D fit = computeFitBounds(x, y, w, h, minW, minH, vb);
 
-		if (newW != w)
-			window.setWidth(newW);
-		if (newH != h)
-			window.setHeight(newH);
+		if (fit.getWidth() != w)
+			window.setWidth(fit.getWidth());
+		if (fit.getHeight() != h)
+			window.setHeight(fit.getHeight());
+
+		// setWidth/setHeight can still clamp further than the minW/minH read above
+		// if it's stale — e.g. StageAutoSizer recomputing the real minimum
+		// concurrently. Re-read the ACTUAL resulting size before positioning: using
+		// our own (possibly smaller) computed width/height here would position the
+		// window as if it were that size, while it actually renders larger and
+		// spills off the screen edge.
+		double actualW = window.getWidth();
+		double actualH = window.getHeight();
+		double newX = Math.max(vb.getMinX(), Math.min(x, vb.getMaxX() - actualW));
+		double newY = Math.max(vb.getMinY(), Math.min(y, vb.getMaxY() - actualH));
+
 		if (newX != x)
 			window.setX(newX);
 		if (newY != y)
 			window.setY(newY);
+	}
+
+	/**
+	 * Pure geometry for {@link #fitToScreen}: reduces {@code w}/{@code h} only as
+	 * far as needed to fit inside {@code target} (a screen's visual bounds) — never
+	 * below {@code minW}/{@code minH}. The minimum is a floor the window can't go
+	 * below (JavaFX itself won't allow it), not a target to shrink to: when the
+	 * screen is roomy enough, the result is the screen-constrained size, not the
+	 * minimum. Only when {@code minW}/{@code minH} themselves exceed the screen
+	 * does the result exceed it too — unavoidable without clipping content.
+	 * Package-private so it's unit-testable without a live {@code Stage}/JavaFX
+	 * toolkit.
+	 */
+	static Rectangle2D computeFitBounds(double x, double y, double w, double h, double minW, double minH,
+			Rectangle2D target) {
+		double targetW = Math.max(minW, Math.min(w, target.getWidth()));
+		double targetH = Math.max(minH, Math.min(h, target.getHeight()));
+		double targetX = Math.max(target.getMinX(), Math.min(x, target.getMaxX() - targetW));
+		double targetY = Math.max(target.getMinY(), Math.min(y, target.getMaxY() - targetH));
+		return new Rectangle2D(targetX, targetY, targetW, targetH);
 	}
 
 	/**
