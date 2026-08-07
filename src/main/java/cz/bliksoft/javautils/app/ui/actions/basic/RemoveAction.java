@@ -1,12 +1,18 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IRemove;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
 
 public class RemoveAction extends BasicContextUIAction<IRemove> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppJFXMessages.getString("RemoveAction.text")); //$NON-NLS-1$
 
 	public RemoveAction() {
 		super(IRemove.class);
@@ -35,6 +41,11 @@ public class RemoveAction extends BasicContextUIAction<IRemove> {
 	@Override
 	protected String getBaseMenuIconSpec() {
 		return IconspecUtils.getMenuIconspec("action/remove"); //$NON-NLS-1$
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

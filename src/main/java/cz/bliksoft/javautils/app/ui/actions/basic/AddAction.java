@@ -1,9 +1,12 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IAdd;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
 
 /**
@@ -12,6 +15,9 @@ import javafx.beans.property.StringProperty;
  * context.
  */
 public class AddAction extends BasicContextUIAction<IAdd> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppJFXMessages.getString("AddAction.text")); //$NON-NLS-1$
 
 	/** Creates the action and registers it with the current context. */
 	public AddAction() {
@@ -41,6 +47,11 @@ public class AddAction extends BasicContextUIAction<IAdd> {
 	@Override
 	protected String getBaseMenuIconSpec() {
 		return IconspecUtils.getMenuIconspec("action/add"); //$NON-NLS-1$
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

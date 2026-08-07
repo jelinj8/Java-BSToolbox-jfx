@@ -1,12 +1,18 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.app.ui.interfaces.IConfigurable;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 
 public class OpenLocalConfigurationAction extends BasicContextUIAction<IConfigurable> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppJFXMessages.getString("OpenLocalConfigurationAction.text")); //$NON-NLS-1$
 
 	public OpenLocalConfigurationAction() {
 		super(IConfigurable.class);
@@ -30,6 +36,11 @@ public class OpenLocalConfigurationAction extends BasicContextUIAction<IConfigur
 	@Override
 	protected String getBaseMenuIconSpec() {
 		return IconspecUtils.getMenuIconspec("action/local-settings"); //$NON-NLS-1$
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

@@ -2,40 +2,40 @@ package cz.bliksoft.javautils.app.ui.actions.basic;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
-import cz.bliksoft.javautils.app.ui.actions.interfaces.IUndo;
+import cz.bliksoft.javautils.app.ui.actions.interfaces.ISaveAs;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
 
-public class UndoAction extends BasicContextUIAction<IUndo> {
+public class SaveAsAction extends BasicContextUIAction<ISaveAs> {
 
 	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
-			BSAppJFXMessages.getString("UndoAction.text")); //$NON-NLS-1$
+			BSAppJFXMessages.getString("SaveAsAction.text")); //$NON-NLS-1$
 
-	public UndoAction() {
-		super(IUndo.class);
+	public SaveAsAction() {
+		super(ISaveAs.class);
 	}
 
 	@Override
-	protected void execute(IUndo current) {
-		current.undo();
+	protected void execute(ISaveAs current) {
+		current.saveAs();
 	}
 
 	@Override
-	protected BooleanProperty getEnabledProperty(IUndo current) {
-		return current.getUndoEnabled();
+	protected BooleanProperty getEnabledProperty(ISaveAs current) {
+		return current.getSaveAsEnabled();
 	}
 
 	@Override
-	protected StringProperty getIconOverlay(IUndo current) {
-		return current.getUndoIconProperty();
+	protected StringProperty getIconOverlay(ISaveAs current) {
+		return current.getSaveAsIconProperty();
 	}
 
 	@Override
 	protected String getBaseIconSpec() {
-		return IconspecUtils.getIconspec("action/undo"); //$NON-NLS-1$
+		return IconspecUtils.getIconspec("action/save-as"); //$NON-NLS-1$
 	}
 
 	@Override
@@ -45,6 +45,7 @@ public class UndoAction extends BasicContextUIAction<IUndo> {
 
 	@Override
 	public String getKey() {
-		return "Undo";
+		return "SaveAs";
 	}
+
 }

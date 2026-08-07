@@ -1,12 +1,18 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IPrint;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
 
 public class PrintAction extends BasicContextUIAction<IPrint> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppJFXMessages.getString("PrintAction.text")); //$NON-NLS-1$
 
 	public PrintAction() {
 		super(IPrint.class);
@@ -30,6 +36,11 @@ public class PrintAction extends BasicContextUIAction<IPrint> {
 	@Override
 	protected String getBaseIconSpec() {
 		return IconspecUtils.getIconspec("action/print"); //$NON-NLS-1$
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

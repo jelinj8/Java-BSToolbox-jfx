@@ -1,12 +1,18 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IRefresh;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
 
 public class RefreshAction extends BasicContextUIAction<IRefresh> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppJFXMessages.getString("RefreshAction.text")); //$NON-NLS-1$
 
 	public RefreshAction() {
 		super(IRefresh.class);
@@ -30,6 +36,11 @@ public class RefreshAction extends BasicContextUIAction<IRefresh> {
 	@Override
 	protected String getBaseIconSpec() {
 		return IconspecUtils.getIconspec("action/refresh"); //$NON-NLS-1$
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

@@ -1,12 +1,18 @@
 package cz.bliksoft.javautils.app.ui.actions.basic;
 
+import cz.bliksoft.javautils.app.BSAppJFXMessages;
 import cz.bliksoft.javautils.app.ui.actions.BasicContextUIAction;
 import cz.bliksoft.javautils.app.ui.actions.interfaces.IDelete;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
 
 public class DeleteAction extends BasicContextUIAction<IDelete> {
+
+	private static final ReadOnlyStringProperty TEXT = new ReadOnlyStringWrapper(
+			BSAppJFXMessages.getString("DeleteAction.text")); //$NON-NLS-1$
 
 	public DeleteAction() {
 		super(IDelete.class);
@@ -35,6 +41,11 @@ public class DeleteAction extends BasicContextUIAction<IDelete> {
 	@Override
 	protected String getBaseMenuIconSpec() {
 		return IconspecUtils.getMenuIconspec("action/delete"); //$NON-NLS-1$
+	}
+
+	@Override
+	public ReadOnlyStringProperty textProperty() {
+		return TEXT;
 	}
 
 	@Override

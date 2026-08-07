@@ -98,10 +98,12 @@ implementations it ships without forcing every app to register (and pay the
 keyboard-shortcut/menu footprint of) all of them. Every entry in the framework's
 catalog carries a stable `id` (`action.Save`, `action.Delete`, `action.Minimize`,
 …) precisely so an app can target it — either to link it in as-is or to merge a
-`keys` binding onto it, whether or not the entry ships a default. A few
-entries ship a conventional default — `FullscreenToggleAction` (`F11`),
-`ShowHelpAction` (`F1`), `ShowAboutAction` (`Alt+F1`) — the rest are
-keyboard-silent until an app opts one in and binds a `keys` value itself:
+`keys` binding onto it, whether or not the entry ships a default. Most of the
+common actions ship a conventional default `keys` value already — see the
+[Built-in actions](#built-in-actions) table below for the full list — the rest
+(`AppClose`, `Delete`, `Add`, `AddSelect`, `Remove`, `Refresh`,
+`OpenLocalConfiguration`, `Minimize`, `MaximizeRestore`) are keyboard-silent
+until an app opts one in and binds a `keys` value itself:
 
 ```xml
 <file name="core">
@@ -115,19 +117,27 @@ keyboard-silent until an app opts one in and binds a `keys` value itself:
 ```
 
 An app opts an entry into the live registry by declaring a `<symlink>` under
-its own `core/actions`, pointing at the catalog entry by its **absolute**
-path (a leading `/`; `FileObject.getFile` resolves symlink targets relative
-to the symlink itself, not the filesystem root, unless the path is rooted).
-The symlink's `name` must match the target's FQCN — `FileObjectClassLoader`
-resolves the class via `Class.forName(fo.getName())` — and its attributes,
-including `keys`, are transparently inherited from the target:
+its own `core/actions`, pointing at the catalog entry either by its
+**absolute** path (a leading `/`; `FileObject.getFile` resolves symlink
+targets relative to the symlink itself, not the filesystem root, unless the
+path is rooted) or, more simply, by the catalog entry's `id` via `target-id`
+(resolved via `FileObject.getFileByID`, so no path/FQCN duplication needed —
+if both `path` and `target-id` are given, `path` wins). The symlink's `name`
+must match the target's FQCN — `FileObjectClassLoader` resolves the class via
+`Class.forName(fo.getName())` — but can be omitted entirely: a `<symlink>`
+with no `name` inherits it from the resolved target, resolved *eagerly* (at
+parse time, unlike attribute/children inheritance below, which stays lazy) so
+the catalog entry must already be registered by the time the symlink is
+parsed — true for anything in BSToolbox-jfx's own catalog, since
+`BaseAppModule` (priority `-10000`) always loads first. Its other attributes,
+including `keys`, are transparently inherited from the target regardless of
+whether `name` was given:
 
 ```xml
 <!-- app module XML -->
 <file name="core">
     <file name="actions">
-        <symlink name="cz.bliksoft.javautils.app.ui.actions.basic.FullscreenToggleAction"
-                 path="/core/availableActions/cz.bliksoft.javautils.app.ui.actions.basic.FullscreenToggleAction" />
+        <symlink target-id="action.FullscreenToggle" />
     </file>
 </file>
 ```
@@ -141,14 +151,14 @@ menu item needs to reference it. Actions distributed this way should extend
 **Binding (or overriding) a key** — merge extra attributes onto an existing
 `id`'d node (the catalog entry or your symlink to it) from your own XML via
 `target`. This works the same whether the entry already has a default `keys`
-value (override) or none at all (first binding) — e.g. giving `Save`, which
-ships with no default, a `Ctrl+S` accelerator:
+value (override) or none at all (first binding) — e.g. giving `Refresh`,
+which ships with no default, a `Ctrl+R` accelerator:
 
 ```xml
 <file name="core">
     <file name="actions">
-        <file target="action.Save">
-            <attribute name="keys" value="Ctrl+S" />
+        <file target="action.Refresh">
+            <attribute name="keys" value="Ctrl+R" />
         </file>
     </file>
 </file>
@@ -159,6 +169,14 @@ merges this file's attributes/children onto it (`FileObject.importFile`); the
 node itself is not moved, so `target` alone does not register a catalog
 action — combine it with a `<symlink>` (or declare the action directly under
 `core/actions`, skipping the catalog) to actually pull it into the registry.
+This is also why `target` can't be folded onto the `<symlink>` element itself
+as a shortcut: a `target`-bearing node is rerouted to merge onto the id'd file
+"regardless of its current path" and never becomes a real child where it was
+declared, so a combined `<symlink target="...">` would merge onto the catalog
+entry and vanish from `core/actions` instead of registering. (Note `target`
+and `target-id` are unrelated despite the similar names: `target` always
+means "merge my attributes onto the file with this id"; `target-id`, only
+valid on `<symlink>`, means "resolve to the file with this id".)
 
 ---
 
@@ -413,28 +431,29 @@ see that section for how to link an entry in and bind a `keys` value.
 
 | Key | Marker interface | Effect |
 |---|---|---|
-| `Save` | `ISave` | Calls `save()`; enabled by `getSaveEnabled()` |
-| `SaveAll` | `ISaveAll` | Calls `saveAll()`; enabled by `getSaveAllEnabled()` |
-| `Close` | `IClose` | Calls `close()`; enabled by `getCloseEnabled()` |
-| `CloseAll` | `ICloseAll` | Calls `closeAll()` |
-| `Delete` | `IDelete` | Calls `delete()`; enabled by `getDeleteEnabled()` |
-| `Remove` | `IRemove` | Calls `remove()`; enabled by `getRemoveEnabled()` |
-| `Add` | `IAdd` | Calls `add()`; enabled by `getAddEnabled()` |
-| `AddSelect` | `IAddOptions` | Calls `addOptions()` |
-| `Refresh` | `IRefresh` | Calls `refresh()` |
-| `Reload` | `IReload` | Calls `reload()` |
-| `Preview` | `IPreview` | Calls `preview()`; enabled by `getPreviewEnabled()` |
-| `Print` | `IPrint` | Calls `print()`; enabled by `getPrintEnabled()` |
-| `New` | `INew` | Calls `newDocument()`; enabled by `getNewEnabled()` |
-| `Open` | `IOpen` | Calls `open()`; enabled by `getOpenEnabled()` |
-| `Undo` | `IUndo` | Calls `undo()`; enabled by `getUndoEnabled()` |
-| `Redo` | `IRedo` | Calls `redo()`; enabled by `getRedoEnabled()` |
-| `AppClose` | _(static)_ | Fires `TryCloseEvent` to close the application |
-| `OpenAdministration` | `UserInfo` | Opens `AdministrationPanel`; enabled by `PermissionOpenAdministration` |
-| `OpenLocalConfiguration` | `IConfigurable` | Calls `configure()`; enabled by `isConfigurable()` |
+| `Save` | `ISave` | Calls `save()`; enabled by `getSaveEnabled()`; catalog default `keys="Ctrl+S"` |
+| `SaveAs` | `ISaveAs` | Calls `saveAs()`; enabled by `getSaveAsEnabled()`; catalog default `keys="F12"`; blue variant of the `Save` icon |
+| `SaveAll` | `ISaveAll` | Calls `saveAll()`; enabled by `getSaveAllEnabled()`; catalog default `keys="Ctrl+Shift+S"` |
+| `Close` | `IClose` | Calls `close()`; enabled by `getCloseEnabled()`; catalog default `keys="Ctrl+W"` |
+| `CloseAll` | `ICloseAll` | Calls `closeAll()`; catalog default `keys="Ctrl+Shift+W"` |
+| `Delete` | `IDelete` | Calls `delete()`; enabled by `getDeleteEnabled()`; no default key binding |
+| `Remove` | `IRemove` | Calls `remove()`; enabled by `getRemoveEnabled()`; no default key binding |
+| `Add` | `IAdd` | Calls `add()`; enabled by `getAddEnabled()`; no default key binding |
+| `AddSelect` | `IAddOptions` | Calls `addOptions()`; no default key binding |
+| `Refresh` | `IRefresh` | Calls `refresh()`; no default key binding |
+| `Reload` | `IReload` | Calls `reload()`; catalog default `keys="F5"` |
+| `Preview` | `IPreview` | Calls `preview()`; enabled by `getPreviewEnabled()`; catalog default `keys="F3"` |
+| `Print` | `IPrint` | Calls `print()`; enabled by `getPrintEnabled()`; catalog default `keys="Ctrl+P"` |
+| `New` | `INew` | Calls `newDocument()`; enabled by `getNewEnabled()`; catalog default `keys="Ctrl+N"` |
+| `Open` | `IOpen` | Calls `open()`; enabled by `getOpenEnabled()`; catalog default `keys="Ctrl+O"` |
+| `Undo` | `IUndo` | Calls `undo()`; enabled by `getUndoEnabled()`; catalog default `keys="Ctrl+Z"` |
+| `Redo` | `IRedo` | Calls `redo()`; enabled by `getRedoEnabled()`; catalog default `keys="Ctrl+Y"` |
+| `AppClose` | _(static)_ | Fires `TryCloseEvent` to close the application; no default key binding |
+| `OpenAdministration` | `UserInfo` | Opens `AdministrationPanel`; enabled by `PermissionOpenAdministration`; catalog default `keys="F10"` |
+| `OpenLocalConfiguration` | `IConfigurable` | Calls `configure()`; enabled by `isConfigurable()`; no default key binding |
 | `ShowAbout` | _(static)_ | Opens the About dialog (module versions + credits); catalog default `keys="Alt+F1"` |
 | `ShowHelp` | _(static)_ | Opens the help URL in the browser; hidden when no URL is configured; catalog default `keys="F1"` |
-| `ContextHelp` | `IContextHelp` | Calls `openHelp()` on the current context object |
+| `ContextHelp` | `IContextHelp` | Calls `openHelp()` on the current context object; catalog default `keys="Shift+F1"` |
 | `Minimize` | _(static)_ | Iconifies the primary stage; no default key binding |
 | `MaximizeRestore` | _(static)_ | Toggles the primary stage between maximized and its previous bounds; text/icon reflect current state; no default key binding |
 | `FullscreenToggle` | _(static)_ | Toggles fullscreen mode on the primary stage; catalog default `keys="F11"`; disables OpenJFX's default Esc-to-exit shortcut (replaced by its own hint) as soon as the action is instantiated |

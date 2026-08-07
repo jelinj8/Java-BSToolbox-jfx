@@ -221,6 +221,12 @@
 					<attribute name="menu-iconspec">svg/save.svg|${menu-icon-size}||||red
 					</attribute>
 				</file>
+				<file name="save-as">
+					<attribute name="iconspec">svg/save.svg|${toolbar-size}||||blue
+					</attribute>
+					<attribute name="menu-iconspec">svg/save.svg|${menu-icon-size}||||blue
+					</attribute>
+				</file>
 				<file name="save-all">
 					<attribute name="iconspec">*EMPTY|24#svg/save.svg|16||||00ff00#*ANCHOR|TL#*+#svg/save.svg|16||||ff0000#*ANCHOR|BR#*+
 					</attribute>
@@ -381,9 +387,17 @@
 			<file id="action.AppClose"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.AppCloseAction" />
 			<file id="action.Save"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAction">
+				<attribute name="keys" value="Ctrl+S" />
+			</file>
+			<file id="action.SaveAs"
+				name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAsAction">
+				<attribute name="keys" value="F12" />
+			</file>
 			<file id="action.SaveAll"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAllAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.SaveAllAction">
+				<attribute name="keys" value="Ctrl+Shift+S" />
+			</file>
 			<file id="action.Delete"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.DeleteAction" />
 			<file id="action.Add"
@@ -393,25 +407,43 @@
 			<file id="action.Remove"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.RemoveAction" />
 			<file id="action.Close"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAction">
+				<attribute name="keys" value="Ctrl+W" />
+			</file>
 			<file id="action.CloseAll"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAllAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.CloseAllAction">
+				<attribute name="keys" value="Ctrl+Shift+W" />
+			</file>
 			<file id="action.Preview"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.PreviewAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.PreviewAction">
+				<attribute name="keys" value="F3" />
+			</file>
 			<file id="action.Print"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.PrintAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.PrintAction">
+				<attribute name="keys" value="Ctrl+P" />
+			</file>
 			<file id="action.Refresh"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.RefreshAction" />
 			<file id="action.Reload"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.ReloadAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.ReloadAction">
+				<attribute name="keys" value="F5" />
+			</file>
 			<file id="action.New"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.NewAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.NewAction">
+				<attribute name="keys" value="Ctrl+N" />
+			</file>
 			<file id="action.Open"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenAction">
+				<attribute name="keys" value="Ctrl+O" />
+			</file>
 			<file id="action.Undo"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.UndoAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.UndoAction">
+				<attribute name="keys" value="Ctrl+Z" />
+			</file>
 			<file id="action.Redo"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.RedoAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.RedoAction">
+				<attribute name="keys" value="Ctrl+Y" />
+			</file>
 			<file id="action.OpenAdministration"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.OpenAdministrationAction">
 				<attribute name="keys" value="F10" />
@@ -427,7 +459,9 @@
 				<attribute name="keys" value="F1" />
 			</file>
 			<file id="action.ContextHelp"
-				name="cz.bliksoft.javautils.app.ui.actions.basic.ContextHelpAction" />
+				name="cz.bliksoft.javautils.app.ui.actions.basic.ContextHelpAction">
+				<attribute name="keys" value="Shift+F1" />
+			</file>
 			<file id="action.Minimize"
 				name="cz.bliksoft.javautils.app.ui.actions.basic.MinimizeAction" />
 			<file id="action.MaximizeRestore"
