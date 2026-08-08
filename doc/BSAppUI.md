@@ -141,8 +141,14 @@ variables in **ImageUtils.md**. Unlike the live font-size cascade, this only
 takes effect at startup: a runtime `ui.scale` change does not retroactively
 re-rasterize already-bound icons.
 
+Leaving `ui.scale` at its default `1.0` (or setting it to `1` explicitly in
+settings) is harmless — it's a no-op, since a scale of `1.0` is identity for
+both the font-size cascade and the `ui-scale` iconspec variable. (Given that,
+loading could reasonably skip applying it at all when the value is `1`.)
+
 This is independent of the OS DPI override documented in **BSApp.md**, which
-corrects how JavaFX reads the display's physical scale.
+corrects how JavaFX reads the display's physical scale — unlike `ui.scale=1`,
+setting `ui.dpiScale=1` is *not* a no-op.
 
 ### Stage icons (`iconBase`)
 

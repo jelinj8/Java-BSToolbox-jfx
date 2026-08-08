@@ -135,6 +135,11 @@ usual place right before `BSAppUI.init()`. `setAppName()` itself has no other
 dependencies, so moving it is safe either way. The setting only takes effect
 after a restart, since Glass never re-reads it later.
 
+Unlike `ui.scale` (see below), `ui.dpiScale=1` is **not** a no-op — it
+overrides the OS-detected scale with a hardcoded `1.0`, which is wrong on any
+HiDPI display. Leave `ui.dpiScale` out of settings entirely unless you
+specifically need to force a scale; don't set it to `1` "just to be explicit."
+
 This is a different knob from the live, restart-free `ui.scale` UI-zoom setting
 and the static `ui-scale` iconspec variable — see **BSAppUI.md** and
 **ImageUtils.md**.
