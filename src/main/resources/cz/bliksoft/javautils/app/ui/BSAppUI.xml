@@ -133,7 +133,7 @@
 			<attribute name="edit-button-size" value="12*${icon-scale}*${ui-scale}" />
 			<attribute name="button-size" value="16*${icon-scale}*${ui-scale}" />
 
-			<attribute name="overlay-size" value="${button-size}/2" />
+			<attribute name="overlay-size" value="${button-size}/3*2" />
 			<attribute name="toolbar-overlay-size"
 				value="${toolbar-size}/5*3" />
 
