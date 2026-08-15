@@ -70,8 +70,12 @@ public class TreeEditor<N> extends VBox {
 	private IUIAction itemAction = null;
 
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
+	private final KeyCombination kcAddMenu = loadEditorKey("multivalue-editors/add-menu", KeyCode.INSERT,
+			KeyCombination.SHIFT_DOWN);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
 	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
+	private final KeyCombination kcDialog = loadEditorKey("multivalue-editors/dialog", KeyCode.ENTER,
+			KeyCombination.ALT_DOWN);
 
 	private HBox toolbar;
 	private Node leadingToolbarNode;
@@ -103,27 +107,28 @@ public class TreeEditor<N> extends VBox {
 		addSimpleBtn.setVisible(false);
 		addSimpleBtn.setManaged(false);
 		addSimpleBtn.setFocusTraversable(false);
-		addSimpleBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.add")));
+		addSimpleBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.add"), kcAdd)));
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 		addSplitBtn.setFocusTraversable(false);
 		addSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
-		addSplitBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.add")));
+		addSplitBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.add"), kcAdd) + " · "
+				+ withShortcut(BSAppJFXMessages.getString("editor.button.addMenu"), kcAddMenu)));
 
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.remove")));
+		delBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.remove"), kcRemove)));
 		delBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 
 		dialogBtn.setVisible(false);
 		dialogBtn.setManaged(false);
 		dialogBtn.setFocusTraversable(false);
-		dialogBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.edit")));
+		dialogBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)));
 		dialogBtn.setOnAction(e -> openDialogForSelected());
 
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.preview")));
+		previewBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 
@@ -161,29 +166,38 @@ public class TreeEditor<N> extends VBox {
 		});
 
 		treeView.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-			if (e.getCode() == KeyCode.ENTER) {
+			if (treeView.getEditingItem() == null && kcDialog.match(e)) {
+				// Checked before the plain-ENTER branch below: Alt+Enter's KeyCode is
+				// also ENTER, so this must win the race to force the dialog even when
+				// an inline editor exists.
+				e.consume();
+				openDialogForSelected();
+			} else if (e.getCode() == KeyCode.ENTER) {
 				if (treeView.getEditingItem() != null)
 					return; // cell is already editing; its own filter handles ENTER
 				e.consume();
 				TreeItem<N> sel = treeView.getSelectionModel().getSelectedItem();
 				if (sel != null && sel.getValue() != null) {
 					ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
-					if (type != null && type.inlineEditor() != null)
-						treeView.edit(sel);
-					else if (type != null && type.supportsDialog())
-						openDialogForSelected();
+					if (type != null) {
+						IValueEditorProvider<N> ed = type.inlineEditor();
+						if (ed != null && !ed.dialogOnly())
+							treeView.edit(sel);
+						else if (type.supportsDialog())
+							openDialogForSelected();
+					}
 				}
 			} else if (treeView.getEditingItem() == null) {
 				if (kcAdd.match(e)) {
-					TreeItem<N> sel = treeView.getSelectionModel().getSelectedItem();
-					if (sel != null && sel.getValue() != null) {
-						ITreeNodeType<N> type = typeResolver.apply(sel.getValue());
-						List<? extends ITreeNodeType<N>> childTypes = type != null ? type.childTypes(sel.getValue())
-								: List.of();
-						if (childTypes.size() == 1) {
-							e.consume();
-							addChild(sel, childTypes.get(0));
-						}
+					e.consume();
+					if (addSplitBtn.isManaged())
+						addSplitBtn.fire();
+					else if (addSimpleBtn.isManaged())
+						addSimpleBtn.fire();
+				} else if (kcAddMenu.match(e)) {
+					if (addSplitBtn.isManaged()) {
+						e.consume();
+						addSplitBtn.show();
 					}
 				} else if (kcRemove.match(e) && !delBtn.isDisabled()) {
 					e.consume();
@@ -277,6 +291,16 @@ public class TreeEditor<N> extends VBox {
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {
 		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
 		return kc != null ? kc : new KeyCodeCombination(fallback);
+	}
+
+	private static KeyCombination loadEditorKey(String key, KeyCode fallback, KeyCombination.Modifier... modifiers) {
+		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
+		return kc != null ? kc : new KeyCodeCombination(fallback, modifiers);
+	}
+
+	private static String withShortcut(String text, KeyCombination kc) {
+		String keys = kc.getDisplayText();
+		return keys == null || keys.isBlank() ? text : text + " (" + keys + ")";
 	}
 
 	public void setLeadingToolbarNode(Node node) {

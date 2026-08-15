@@ -50,6 +50,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
 
 /**
  * Reusable single-column list editor.
@@ -92,11 +93,15 @@ public class ListEditor<V> extends VBox {
 	private static final double DEFAULT_CELL_HEIGHT = 26.0;
 
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
+	private final KeyCombination kcAddMenu = loadEditorKey("multivalue-editors/add-menu", KeyCode.INSERT,
+			KeyCombination.SHIFT_DOWN);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
 	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
 	private final KeyCombination kcMoveUp = loadEditorKey("multivalue-editors/move-up", KeyCode.UP,
 			KeyCombination.ALT_DOWN);
 	private final KeyCombination kcMoveDown = loadEditorKey("multivalue-editors/move-down", KeyCode.DOWN,
+			KeyCombination.ALT_DOWN);
+	private final KeyCombination kcDialog = loadEditorKey("multivalue-editors/dialog", KeyCode.ENTER,
 			KeyCombination.ALT_DOWN);
 	private final Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 	private final SplitMenuButton addSplitBtn = new SplitMenuButton();
@@ -151,36 +156,44 @@ public class ListEditor<V> extends VBox {
 		valCol.setCellFactory(col -> new ListValueCell<>(valueProvider.get()));
 		table.getColumns().add(valCol);
 
-		valueProvider.addListener((obs, o, n) -> table.refresh());
+		valueProvider.addListener((obs, o, n) -> {
+			table.refresh();
+			updateEditButton();
+		});
 
-		table.getSelectionModel().selectedItemProperty()
-				.addListener((obs, o, n) -> selectedItem.set(n != null ? n.value.get() : null));
+		table.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+			selectedItem.set(n != null ? n.value.get() : null);
+			updateEditButton();
+		});
 
 		addBtn.setFocusTraversable(false);
-		addBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.add")));
+		addBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.add"), kcAdd)));
 
 		addSplitBtn.setGraphic(ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 		addSplitBtn.setFocusTraversable(false);
-		addSplitBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.add")));
+		addSplitBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.add"), kcAdd) + " · "
+				+ withShortcut(BSAppJFXMessages.getString("editor.button.addMenu"), kcAddMenu)));
 		addSplitBtn.setVisible(false);
 		addSplitBtn.setManaged(false);
 
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.remove")));
+		delBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.remove"), kcRemove)));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		editBtn.setFocusTraversable(false);
-		editBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.edit")));
+		updateEditButtonTooltip();
 		editBtn.setVisible(false);
 		editBtn.setManaged(false);
 		editBtn.setOnAction(e -> {
 			if (editAction != null)
 				editAction.run();
+			else
+				openDialogForSelected();
 		});
 		editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.preview")));
+		previewBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());
@@ -191,7 +204,7 @@ public class ListEditor<V> extends VBox {
 		itemActionBtn.setManaged(false);
 
 		moveUpBtn.setFocusTraversable(false);
-		moveUpBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.moveUp")));
+		moveUpBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveUp"), kcMoveUp)));
 		moveUpBtn.setVisible(false);
 		moveUpBtn.setManaged(false);
 		moveUpBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),
@@ -199,7 +212,7 @@ public class ListEditor<V> extends VBox {
 		moveUpBtn.disableProperty().bind(table.getSelectionModel().selectedIndexProperty().lessThanOrEqualTo(0));
 
 		moveDownBtn.setFocusTraversable(false);
-		moveDownBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.moveDown")));
+		moveDownBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveDown"), kcMoveDown)));
 		moveDownBtn.setVisible(false);
 		moveDownBtn.setManaged(false);
 		moveDownBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),
@@ -216,7 +229,13 @@ public class ListEditor<V> extends VBox {
 		});
 
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-			if (e.getCode() == KeyCode.ENTER) {
+			if (table.getEditingCell() == null && kcDialog.match(e)) {
+				// Checked before the plain-ENTER branch below: Alt+Enter's KeyCode is
+				// also ENTER, so this must win the race to force the dialog even when
+				// the value provider also supports inline editing.
+				e.consume();
+				openDialogForSelected();
+			} else if (e.getCode() == KeyCode.ENTER) {
 				if (table.getEditingCell() == null) {
 					// Not editing — consume and start edit on selected row
 					e.consume();
@@ -232,6 +251,11 @@ public class ListEditor<V> extends VBox {
 						addSplitBtn.fire();
 					else
 						addBtn.fire();
+				} else if (kcAddMenu.match(e)) {
+					if (addSplitBtn.isManaged()) {
+						e.consume();
+						addSplitBtn.show();
+					}
 				} else if (kcRemove.match(e)) {
 					e.consume();
 					delBtn.fire();
@@ -432,10 +456,22 @@ public class ListEditor<V> extends VBox {
 		delBtn.setManaged(action != null);
 	}
 
+	/**
+	 * Sets the action run by the Edit button, replacing the default (open the
+	 * value provider's dialog for the selected item). Pass {@code null} to revert
+	 * to the default: the button then auto-shows/hides based on whether the
+	 * selected item's provider {@link IValueEditorProvider#supportsDialog()
+	 * supports a dialog}, matching {@link #setItemAction} discoverability.
+	 */
 	public void setEditAction(Runnable action) {
 		editAction = action;
-		editBtn.setVisible(action != null);
-		editBtn.setManaged(action != null);
+		updateEditButtonTooltip();
+		if (action != null) {
+			editBtn.setVisible(true);
+			editBtn.setManaged(true);
+		} else {
+			updateEditButton();
+		}
 	}
 
 	public void setPreviewAction(Runnable action) {
@@ -494,6 +530,44 @@ public class ListEditor<V> extends VBox {
 			previewAction.run();
 	}
 
+	/**
+	 * Opens the value provider's dialog for the selected item directly, skipping
+	 * inline editing. No-op when nothing is selected or the provider doesn't
+	 * {@link IValueEditorProvider#supportsDialog() support a dialog}.
+	 */
+	private void openDialogForSelected() {
+		IValueEditorProvider<V> provider = valueProvider.get();
+		if (provider == null || !provider.supportsDialog())
+			return;
+		ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
+		if (sel == null)
+			return;
+		Window owner = getScene() != null ? getScene().getWindow() : null;
+		ObjectProperty<V> prop = new SimpleObjectProperty<>(sel.value.get());
+		provider.showDialog(owner, prop);
+		sel.value.set(prop.get());
+	}
+
+	/**
+	 * Recomputes the Edit button's auto visibility (no-op when a custom
+	 * {@link #setEditAction} is set).
+	 */
+	private void updateEditButton() {
+		if (editAction != null)
+			return;
+		ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
+		IValueEditorProvider<V> provider = valueProvider.get();
+		boolean show = sel != null && provider != null && provider.supportsDialog();
+		editBtn.setVisible(show);
+		editBtn.setManaged(show);
+	}
+
+	private void updateEditButtonTooltip() {
+		editBtn.setTooltip(new Tooltip(editAction == null
+				? withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)
+				: BSAppJFXMessages.getString("editor.button.edit")));
+	}
+
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {
 		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
 		return kc != null ? kc : new KeyCodeCombination(fallback);
@@ -502,6 +576,11 @@ public class ListEditor<V> extends VBox {
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback, KeyCombination.Modifier... modifiers) {
 		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
 		return kc != null ? kc : new KeyCodeCombination(fallback, modifiers);
+	}
+
+	private static String withShortcut(String text, KeyCombination kc) {
+		String keys = kc.getDisplayText();
+		return keys == null || keys.isBlank() ? text : text + " (" + keys + ")";
 	}
 
 	public void setOrderingEnabled(boolean enabled) {

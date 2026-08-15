@@ -60,7 +60,8 @@ final class TreeValueCell<N> extends TreeCell<N> {
 				ITreeNodeType<N> type = typeResolver.apply(getItem());
 				if (type == null)
 					return;
-				if (type.inlineEditor() != null)
+				IValueEditorProvider<N> ed = type.inlineEditor();
+				if (ed != null && !ed.dialogOnly())
 					startEdit();
 				else if (type.supportsDialog())
 					dialogOpener.run();
@@ -75,7 +76,7 @@ final class TreeValueCell<N> extends TreeCell<N> {
 			return;
 		ITreeNodeType<N> type = typeResolver.apply(item);
 		IValueEditorProvider<N> provider = type != null ? type.inlineEditor() : null;
-		if (provider == null)
+		if (provider == null || provider.dialogOnly())
 			return;
 
 		super.startEdit();

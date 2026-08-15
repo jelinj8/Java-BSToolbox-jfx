@@ -92,15 +92,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 			Button displayDialogBtn = new Button(null,
 					ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			displayDialogBtn.setFocusTraversable(false);
-			displayDialogBtn.setOnAction(e -> {
-				Window owner = getScene() != null ? getScene().getWindow() : null;
-				provider.showDialog(owner, editorProxy);
-				// Display-mode dialog: apply result immediately (dialog is its own confirm).
-				if (currentEntry != null) {
-					currentEntry.value.set(editorProxy.get());
-					showDisplayState(editorProxy.get());
-				}
-			});
+			displayDialogBtn.setOnAction(e -> openDialog());
 			HBox displayBox = new HBox(4, displayLabel, displayDialogBtn);
 			HBox.setHgrow(displayLabel, Priority.ALWAYS);
 			displayCellGraphic = displayBox;
@@ -120,12 +112,29 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 	public void startEdit() {
 		if (isEmpty())
 			return;
+		if (provider.dialogOnly()) {
+			openDialog();
+			return;
+		}
 		originalValue = getItem();
 		super.startEdit();
 		setText(null);
 		setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 		setGraphic(editCellGraphic);
 		Platform.runLater(innerEditorNode::requestFocus);
+	}
+
+	/**
+	 * Opens the provider's dialog for the current item and applies the result
+	 * immediately (the dialog is its own confirm/cancel).
+	 */
+	private void openDialog() {
+		Window owner = getScene() != null ? getScene().getWindow() : null;
+		provider.showDialog(owner, editorProxy);
+		if (currentEntry != null) {
+			currentEntry.value.set(editorProxy.get());
+			showDisplayState(editorProxy.get());
+		}
 	}
 
 	@Override

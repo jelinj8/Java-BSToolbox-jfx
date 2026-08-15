@@ -109,6 +109,12 @@
 				<file name="move-down">
 					<attribute name="keys" value="Alt+Down" />
 				</file>
+				<file name="add-menu">
+					<attribute name="keys" value="Shift+Insert" />
+				</file>
+				<file name="dialog">
+					<attribute name="keys" value="Alt+Enter" />
+				</file>
 			</file>
 		</file>
 		<file name="actions" id="registered-actions" />

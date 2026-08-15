@@ -26,6 +26,9 @@ The table has two columns (key and value) with the header row hidden. Toolbar bu
 | Item Action | (bound from action) | No | `setItemAction(IUIAction)` shows it |
 | Preview | `editor/preview` | No | `setPreviewAction(Runnable)` shows it |
 
+Every button with a keyboard shortcut (Add, Remove, Edit, Preview) shows it in its
+tooltip, e.g. "Add (Insert)" — see Keyboard Shortcuts below.
+
 
 ## Constructors
 
@@ -259,6 +262,7 @@ Forces all visible cells to re-render.
 | Add row | `multivalue-editors/add` | `Insert` |
 | Remove row | `multivalue-editors/remove` | `Delete` |
 | Preview | `multivalue-editors/preview` | `F3` |
+| Open dialog directly | `multivalue-editors/dialog` | `Alt+Enter` |
 | Start edit | (hardcoded) | `Enter` |
 | Commit edit | (hardcoded) | `Enter` |
 | Cancel edit | (hardcoded) | `Escape` |
@@ -278,6 +282,9 @@ Shortcuts are configurable via XmlFilesystem key bindings at `core/key-bindings/
 2. The editor widget is resolved from the key's type via the property registry
 3. If the provider is `dialogOnly()`, double-click/Enter opens the dialog instead
 4. A dialog button ("...") appears in the cell when the provider supports dialog editing
+5. **Alt+Enter** (configurable, see Keyboard Shortcuts) always opens the selected row's
+   dialog directly, bypassing inline editing entirely — independent of `inlineEditing` and
+   `dialogOnly()`, and a no-op if the row's provider doesn't support a dialog
 
 ### Non-Inline Mode
 When `inlineEditing` is `false`:

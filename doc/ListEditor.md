@@ -25,9 +25,14 @@ The toolbar buttons appear/hide depending on configuration:
 | Remove | `editor/remove` | Yes | `setRemoveAction(null)` hides it |
 | Move Up | `editor/move-up` | No | `setOrderingEnabled(true)` shows it |
 | Move Down | `editor/move-down` | No | `setOrderingEnabled(true)` shows it |
-| Edit | `editor/edit` | No | `setEditAction(Runnable)` shows it |
+| Edit | `editor/edit` | Auto | Auto-shown when selected item's provider supports dialog; `setEditAction(Runnable)` overrides |
 | Item Action | (bound from action) | No | `setItemAction(IUIAction)` shows it |
 | Preview | `editor/preview` | No | `setPreviewAction(Runnable)` shows it |
+
+Every button with a keyboard shortcut (Add, Remove, Move Up, Move Down, Edit, Preview)
+shows it in its tooltip, e.g. "Add (Insert)" — see Keyboard Shortcuts below. When Add is
+showing as a split button (see Add Item Choices below), its tooltip shows both shortcuts,
+e.g. "Add (Insert) · More options (Shift+Insert)".
 
 
 ## Constructors
@@ -107,6 +112,10 @@ public record AddChoice<T>(ITitleProvider title, Supplier<T> factory) {}
 
 `ITitleProvider` supplies the display text (and optionally a graphic via `graphicProperty()`).
 
+With a `SplitMenuButton` showing, Insert adds the primary (first) choice directly — same
+as clicking the button itself — and Shift+Insert opens the dropdown instead, where
+Up/Down/Enter/Escape select or cancel normally, exactly as if opened with the mouse.
+
 ### Ordering (Drag-and-Drop)
 
 ```java
@@ -155,7 +164,8 @@ editor.setRemoveAction(null);
 
 ### setEditAction
 
-Shows the Edit button and sets its handler:
+Replaces the Edit button's default handler (open the value provider's dialog for the
+selected item) with a custom action:
 
 ```java
 editor.setEditAction(() -> {
@@ -163,6 +173,10 @@ editor.setEditAction(() -> {
     if (selected != null) showEditDialog(selected);
 });
 ```
+
+When no custom action is set (the default), the Edit button auto-shows/hides based on
+whether the selected item's provider `supportsDialog()`, and clicking it (or pressing
+`Alt+Enter`) opens that dialog directly. Pass `null` to revert to this default.
 
 ### setPreviewAction
 
@@ -255,10 +269,12 @@ All shortcuts are configurable via the XmlFilesystem key bindings at `core/key-b
 | Action | Key binding path | Default key |
 |---|---|---|
 | Add item | `multivalue-editors/add` | `Insert` |
+| Open add menu | `multivalue-editors/add-menu` | `Shift+Insert` |
 | Remove item | `multivalue-editors/remove` | `Delete` |
 | Preview | `multivalue-editors/preview` | `F3` |
 | Move up | `multivalue-editors/move-up` | `Alt+Up` |
 | Move down | `multivalue-editors/move-down` | `Alt+Down` |
+| Open dialog directly | `multivalue-editors/dialog` | `Alt+Enter` |
 | Start inline edit | (hardcoded) | `Enter` |
 | Commit edit | (hardcoded) | `Enter` |
 | Cancel edit | (hardcoded) | `Escape` |
@@ -271,6 +287,7 @@ All shortcuts are configurable via the XmlFilesystem key bindings at `core/key-b
 3. **Enter** while editing commits the change
 4. **Escape** while editing cancels and reverts the value
 5. When the editor provider's `dialogOnly()` returns `true`, double-click/Enter opens the dialog instead of inline editing
+6. **Alt+Enter** (configurable, see Keyboard Shortcuts) always opens the provider's dialog for the selected item directly, skipping inline editing — a no-op if the provider doesn't support a dialog
 
 
 ## CSS Classes

@@ -29,6 +29,10 @@ Toolbar buttons adapt dynamically based on the selected node's type:
 | Item Action | (bound from action) | Shown when `setItemAction(IUIAction)` is called |
 | Preview | `editor/preview` | Shown when `setPreviewAction(Runnable)` is called |
 
+Every button with a keyboard shortcut (Add, Remove, Dialog, Preview) shows it in its
+tooltip, e.g. "Add (Insert)" — see Keyboard Shortcuts below. The split Add button's
+tooltip shows both shortcuts, e.g. "Add (Insert) · More options (Shift+Insert)".
+
 
 ## Constructor
 
@@ -244,15 +248,21 @@ The `selectedPath` is an unmodifiable list built by walking `TreeItem.getParent(
 | Action | Key binding path | Default key |
 |---|---|---|
 | Add child | `multivalue-editors/add` | `Insert` |
+| Open add menu | `multivalue-editors/add-menu` | `Shift+Insert` |
 | Remove node | `multivalue-editors/remove` | `Delete` |
 | Preview | `multivalue-editors/preview` | `F3` |
+| Open dialog directly | `multivalue-editors/dialog` | `Alt+Enter` |
 | Activate node (edit/dialog) | (hardcoded) | `Enter` |
 | Commit inline edit | (hardcoded) | `Enter` |
 | Cancel inline edit | (hardcoded) | `Escape` |
 
 Shortcuts are configurable via XmlFilesystem key bindings at `core/key-bindings/multivalue-editors/`.
 
-**Note:** The Insert shortcut for adding a child only fires when the selected node's type allows exactly one child type. When multiple child types are available, use the SplitMenuButton in the toolbar.
+**Note:** When the selected node's type allows exactly one child type, Insert adds it
+directly. When multiple child types are available (the `SplitMenuButton` case), Insert
+adds the first (primary) type — the same one a plain click on the split button adds —
+and Shift+Insert opens the dropdown instead, where Up/Down/Enter/Escape select or cancel
+normally, exactly as if the dropdown had been opened with the mouse.
 
 
 ## Dynamic Add Button
@@ -270,7 +280,8 @@ The add button adapts automatically when the selection changes:
 
 ### Double-Click / Enter on a Node
 
-1. If the node's type has an `inlineEditor()` → starts inline edit in the tree cell
+1. If the node's type has an `inlineEditor()` that is not `dialogOnly()` → starts inline
+   edit in the tree cell
 2. Else if the node's type `supportsDialog()` → opens the dialog
 3. Else if `itemAction` is set → fires the item action
 
@@ -280,9 +291,17 @@ The add button adapts automatically when the selection changes:
 - Enter commits the edit (calls `IValueEditorProvider.applyEdit()` then `ITreeNodeType.onEditCommitted()`)
 - Escape cancels the edit and reverts
 
+### Alt+Enter (Open Dialog Directly)
+
+Configurable (see Keyboard Shortcuts). Always opens the selected node's dialog directly,
+skipping inline editing entirely — independent of whether the node's type has an
+`inlineEditor()`. A no-op if the node's type doesn't `supportsDialog()`.
+
 ### Dialog Button ("...")
 
-Appears in the toolbar when the selected node's type supports dialog editing. Clicking it calls `ITreeNodeType.showDialog(owner, node)` and refreshes the tree.
+Appears in the toolbar when the selected node's type supports dialog editing. Clicking it
+(or pressing Alt+Enter) calls `ITreeNodeType.showDialog(owner, node)` and refreshes the
+tree. Its tooltip shows the configured shortcut.
 
 
 ## CSS Classes

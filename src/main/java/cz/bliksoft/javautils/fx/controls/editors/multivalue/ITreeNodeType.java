@@ -72,8 +72,9 @@ public interface ITreeNodeType<N> extends ITitleProvider {
 
 	/**
 	 * Inline editor for this node type (double-click / ENTER to activate). Return
-	 * {@code null} for dialog-only types — the tree will call {@link #showDialog}
-	 * instead when the node is activated.
+	 * {@code null}, or a provider whose {@link IValueEditorProvider#dialogOnly()}
+	 * is {@code true}, for dialog-only types — the tree will call
+	 * {@link #showDialog} instead when the node is activated.
 	 *
 	 * <p>
 	 * The provider type is {@code N}: {@link IValueEditorProvider#createEditor}

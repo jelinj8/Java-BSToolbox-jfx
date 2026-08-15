@@ -86,6 +86,8 @@ public class KeyValueEditor<V> extends VBox {
 	private final KeyCombination kcAdd = loadEditorKey("multivalue-editors/add", KeyCode.INSERT);
 	private final KeyCombination kcRemove = loadEditorKey("multivalue-editors/remove", KeyCode.DELETE);
 	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
+	private final KeyCombination kcDialog = loadEditorKey("multivalue-editors/dialog", KeyCode.ENTER,
+			KeyCombination.ALT_DOWN);
 
 	private final Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 	private final Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
@@ -147,9 +149,9 @@ public class KeyValueEditor<V> extends VBox {
 		});
 
 		addBtn.setFocusTraversable(false);
-		addBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.add")));
+		addBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.add"), kcAdd)));
 		delBtn.setFocusTraversable(false);
-		delBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.remove")));
+		delBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.remove"), kcRemove)));
 		delBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		editBtn.setFocusTraversable(false);
@@ -160,7 +162,7 @@ public class KeyValueEditor<V> extends VBox {
 		editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(BSAppJFXMessages.getString("editor.button.preview")));
+		previewBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());
@@ -201,7 +203,18 @@ public class KeyValueEditor<V> extends VBox {
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (table.getEditingCell() != null)
 				return;
-			if (e.getCode() == KeyCode.ENTER) {
+			if (kcDialog.match(e)) {
+				// Checked before the plain-ENTER branch below: Alt+Enter's KeyCode is
+				// also ENTER, so this must win the race to force the dialog even when
+				// inline editing is available for the selected row.
+				e.consume();
+				KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
+				if (sel != null) {
+					IValueEditorProvider<V> provider = resolveProvider(sel.key.get());
+					if (provider != null && provider.supportsDialog())
+						openDialogForSelected(provider);
+				}
+			} else if (e.getCode() == KeyCode.ENTER) {
 				e.consume();
 				KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
 				if (sel == null)
@@ -488,6 +501,7 @@ public class KeyValueEditor<V> extends VBox {
 		}
 		editBtn.setVisible(show);
 		editBtn.setManaged(show);
+		editBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)));
 	}
 
 	private void firePreview() {
@@ -498,6 +512,16 @@ public class KeyValueEditor<V> extends VBox {
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {
 		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
 		return kc != null ? kc : new KeyCodeCombination(fallback);
+	}
+
+	private static KeyCombination loadEditorKey(String key, KeyCode fallback, KeyCombination.Modifier... modifiers) {
+		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings(key);
+		return kc != null ? kc : new KeyCodeCombination(fallback, modifiers);
+	}
+
+	private static String withShortcut(String text, KeyCombination kc) {
+		String keys = kc.getDisplayText();
+		return keys == null || keys.isBlank() ? text : text + " (" + keys + ")";
 	}
 
 	private void openDialogForSelected(IValueEditorProvider<V> provider) {
