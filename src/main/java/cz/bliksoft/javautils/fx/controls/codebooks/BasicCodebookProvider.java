@@ -246,6 +246,24 @@ public abstract class BasicCodebookProvider<T> implements ICodebookProvider<T> {
 		this.additionalFilter = additionalFilter;
 	}
 
+	/**
+	 * Optional hook to fetch supplemental candidates (e.g. from a network call)
+	 * when a selector opens with filter text that didn't resolve directly via
+	 * {@link #identify}. {@code null} by default — no behavior change for consumers
+	 * that don't set it. See {@link SupplementalCandidatesFetcher} and
+	 * {@code providers.TreeCodebookDialogProvider}, the only current caller.
+	 */
+	public SupplementalCandidatesFetcher<T> supplementalCandidatesAsync;
+
+	/**
+	 * Sets the supplemental-candidates hook.
+	 *
+	 * @param supplementalCandidatesAsync the hook, or {@code null} to disable
+	 */
+	public void setSupplementalCandidatesAsync(SupplementalCandidatesFetcher<T> supplementalCandidatesAsync) {
+		this.supplementalCandidatesAsync = supplementalCandidatesAsync;
+	}
+
 	@Override
 	public T identify(String selectorText, boolean refineIfNotUnique) {
 		if (selectorText == null)

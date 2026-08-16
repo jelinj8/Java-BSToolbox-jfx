@@ -2,6 +2,9 @@ package cz.bliksoft.javautils.app.ui.administration;
 
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import cz.bliksoft.javautils.app.BSAppJFX;
 import cz.bliksoft.javautils.app.permissions.Permission;
 import cz.bliksoft.javautils.app.permissions.Permissions;
@@ -16,6 +19,7 @@ import cz.bliksoft.javautils.app.ui.utils.state.FxStateMeta;
 import cz.bliksoft.javautils.context.Context;
 import cz.bliksoft.javautils.context.IContextProvider;
 import cz.bliksoft.javautils.context.holders.SingleContextHolder;
+import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
@@ -36,6 +40,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 
 public class AdministrationPanel extends SplitPane implements IContextProvider, IClose, IStackedComponent {
+
+	private static final Logger log = LogManager.getLogger();
 
 	public static final String ADMINISTRATION_FOLDER_NAME = "administration";
 
@@ -150,6 +156,8 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	}
 
 	private void deactivateProvider() {
+		stateManager.persistState(this);
+		saveLocalProperties();
 		detachSaveListener();
 		activeProvider = null;
 		contentArea.setTop(null);
@@ -159,6 +167,10 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	}
 
 	private void activateProvider(IAdministrationProvider provider) {
+		if (activeProvider != null) {
+			stateManager.persistState(this);
+			saveLocalProperties();
+		}
 		detachSaveListener();
 		activeProvider = provider;
 
@@ -209,6 +221,14 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		if (activeProvider instanceof ISaveAll savable)
 			savable.getSaveAllEnabled().removeListener(saveStateListener);
 		saveStateListener = null;
+	}
+
+	private void saveLocalProperties() {
+		try {
+			BSAppJFX.saveLocalProperties();
+		} catch (ViewableException e) {
+			log.error("Failed to save administration panel UI state to local properties.", e);
+		}
 	}
 
 	// --- Save guard ---
@@ -271,6 +291,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 	@Override
 	public void beforePop() {
 		stateManager.persistState(this);
+		saveLocalProperties();
 		isOpen = false;
 	}
 

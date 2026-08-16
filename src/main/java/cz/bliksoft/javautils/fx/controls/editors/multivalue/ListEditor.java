@@ -193,7 +193,8 @@ public class ListEditor<V> extends VBox {
 		editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
+		previewBtn
+				.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());
@@ -212,7 +213,8 @@ public class ListEditor<V> extends VBox {
 		moveUpBtn.disableProperty().bind(table.getSelectionModel().selectedIndexProperty().lessThanOrEqualTo(0));
 
 		moveDownBtn.setFocusTraversable(false);
-		moveDownBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveDown"), kcMoveDown)));
+		moveDownBtn.setTooltip(
+				new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveDown"), kcMoveDown)));
 		moveDownBtn.setVisible(false);
 		moveDownBtn.setManaged(false);
 		moveDownBtn.setOnAction(e -> moveItem(table.getSelectionModel().getSelectedIndex(),
@@ -457,11 +459,11 @@ public class ListEditor<V> extends VBox {
 	}
 
 	/**
-	 * Sets the action run by the Edit button, replacing the default (open the
-	 * value provider's dialog for the selected item). Pass {@code null} to revert
-	 * to the default: the button then auto-shows/hides based on whether the
-	 * selected item's provider {@link IValueEditorProvider#supportsDialog()
-	 * supports a dialog}, matching {@link #setItemAction} discoverability.
+	 * Sets the action run by the Edit button, replacing the default (open the value
+	 * provider's dialog for the selected item). Pass {@code null} to revert to the
+	 * default: the button then auto-shows/hides based on whether the selected
+	 * item's provider {@link IValueEditorProvider#supportsDialog() supports a
+	 * dialog}, matching {@link #setItemAction} discoverability.
 	 */
 	public void setEditAction(Runnable action) {
 		editAction = action;
@@ -563,9 +565,9 @@ public class ListEditor<V> extends VBox {
 	}
 
 	private void updateEditButtonTooltip() {
-		editBtn.setTooltip(new Tooltip(editAction == null
-				? withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)
-				: BSAppJFXMessages.getString("editor.button.edit")));
+		editBtn.setTooltip(new Tooltip(
+				editAction == null ? withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)
+						: BSAppJFXMessages.getString("editor.button.edit")));
 	}
 
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {

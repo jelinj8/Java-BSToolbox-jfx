@@ -162,7 +162,8 @@ public class KeyValueEditor<V> extends VBox {
 		editBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
 
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
+		previewBtn
+				.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());

@@ -60,7 +60,8 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 	public T identify(String selectorText, boolean refineIfNotUnique) {
 		if (selectorText == null || selectorText.isBlank())
 			return null;
-		List<T> matches = dataSource.get().stream().filter(item -> filter.test(item, selectorText))
+		List<T> matches = dataSource.get().stream().filter(
+				item -> filter.test(item, selectorText) && (additionalFilter == null || additionalFilter.test(item)))
 				.collect(Collectors.toList());
 		return matches.size() == 1 ? matches.get(0) : null;
 	}
@@ -171,6 +172,17 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.textProperty().addListener((obs, o, n) -> applyFilter.run());
 		applyFilter.run();
 
+		// Fired at most once per dialog open, with exactly the text that failed to
+		// resolve
+		// directly via identify() (that's why this dialog is opening at all) - never
+		// per keystroke.
+		if (supplementalCandidatesAsync != null && initialFilterText != null && !initialFilterText.isBlank()) {
+			supplementalCandidatesAsync.fetch(this, initialFilterText, results -> {
+				for (T item : results)
+					tree.getRoot().getChildren().add(new TreeItem<>(item));
+			});
+		}
+
 		HBox buttons = new HBox(10, ok, cancel);
 		buttons.setAlignment(Pos.CENTER_RIGHT);
 
@@ -203,7 +215,8 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 			return null;
 
 		boolean filtering = filterLower != null && !filterLower.isEmpty();
-		boolean selfMatches = !filtering || filter.test(node, filterLower);
+		boolean selfMatches = !filtering
+				|| (filter.test(node, filterLower) && (additionalFilter == null || additionalFilter.test(node)));
 
 		TreeItem<T> out = new TreeItem<>(node);
 

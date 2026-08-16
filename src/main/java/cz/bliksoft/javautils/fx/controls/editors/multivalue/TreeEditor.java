@@ -128,7 +128,8 @@ public class TreeEditor<N> extends VBox {
 		previewBtn.setVisible(false);
 		previewBtn.setManaged(false);
 		previewBtn.setFocusTraversable(false);
-		previewBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
+		previewBtn
+				.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.preview"), kcPreview)));
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(treeView.getSelectionModel().selectedItemProperty().isNull());
 

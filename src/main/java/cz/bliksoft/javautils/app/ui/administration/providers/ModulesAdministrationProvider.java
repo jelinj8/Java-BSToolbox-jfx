@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import cz.bliksoft.javautils.app.BSApp;
 import cz.bliksoft.javautils.app.ui.administration.BSAppAdministrationMessages;
 import cz.bliksoft.javautils.app.ui.interfaces.IAdministrationProvider;
+import cz.bliksoft.javautils.app.ui.utils.state.FxStateMeta;
 import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.modules.IModule;
 import cz.bliksoft.javautils.modules.Modules;
@@ -74,16 +75,19 @@ public class ModulesAdministrationProvider implements IAdministrationProvider {
 
 		TableView<ModuleRow> table = new TableView<>();
 		table.setEditable(false);
+		FxStateMeta.key(table, "modules-table");
 
 		TableColumn<ModuleRow, String> nameCol = new TableColumn<>(
 				BSAppAdministrationMessages.getString("ModulesAdministrationProvider.column.name"));
 		nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().module.getModuleName()));
 		nameCol.setPrefWidth(200);
+		nameCol.setId("name");
 
 		TableColumn<ModuleRow, String> versionCol = new TableColumn<>(
 				BSAppAdministrationMessages.getString("ModulesAdministrationProvider.column.version"));
 		versionCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().module.getVersionInfo()));
 		versionCol.setPrefWidth(200);
+		versionCol.setId("version");
 
 		TableColumn<ModuleRow, Boolean> enabledCol = new TableColumn<>(
 				BSAppAdministrationMessages.getString("ModulesAdministrationProvider.column.enabled"));
@@ -112,12 +116,14 @@ public class ModulesAdministrationProvider implements IAdministrationProvider {
 			}
 		});
 		enabledCol.setPrefWidth(80);
+		enabledCol.setId("enabled");
 
 		TableColumn<ModuleRow, Integer> loadOrderCol = new TableColumn<>(
 				BSAppAdministrationMessages.getString("ModulesAdministrationProvider.column.loadOrder"));
 		loadOrderCol.setCellValueFactory(
 				d -> new SimpleIntegerProperty(d.getValue().module.getModuleLoadingOrder()).asObject());
 		loadOrderCol.setPrefWidth(80);
+		loadOrderCol.setId("loadOrder");
 
 		table.getColumns().addAll(nameCol, versionCol, enabledCol, loadOrderCol);
 		table.setItems(FXCollections.observableArrayList(rows));
