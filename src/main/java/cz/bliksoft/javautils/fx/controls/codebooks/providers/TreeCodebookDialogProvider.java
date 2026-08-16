@@ -172,12 +172,14 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		filterField.textProperty().addListener((obs, o, n) -> applyFilter.run());
 		applyFilter.run();
 
-		// Fired at most once per dialog open, with exactly the text that failed to
-		// resolve
-		// directly via identify() (that's why this dialog is opening at all) - never
-		// per keystroke.
-		if (supplementalCandidatesAsync != null && initialFilterText != null && !initialFilterText.isBlank()) {
-			supplementalCandidatesAsync.fetch(this, initialFilterText, results -> {
+		// Fired at most once per dialog open (never per keystroke) - this dialog only
+		// ever opens when identify() didn't already resolve a unique value, including
+		// the pure-browse case (blank text). Whether blank text (or any text) is
+		// actually worth an async lookup is the fetcher's call, not this class's -
+		// e.g. a fetcher may still have useful context (from outside this field)
+		// even when filterText itself is empty.
+		if (supplementalCandidatesAsync != null) {
+			supplementalCandidatesAsync.fetch(this, initialFilterText == null ? "" : initialFilterText, results -> {
 				for (T item : results)
 					tree.getRoot().getChildren().add(new TreeItem<>(item));
 			});
