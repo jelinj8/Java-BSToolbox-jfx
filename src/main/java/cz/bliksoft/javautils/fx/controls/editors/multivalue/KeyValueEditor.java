@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
@@ -88,12 +89,20 @@ public class KeyValueEditor<V> extends VBox {
 	private final KeyCombination kcPreview = loadEditorKey("multivalue-editors/preview", KeyCode.F3);
 	private final KeyCombination kcDialog = loadEditorKey("multivalue-editors/dialog", KeyCode.ENTER,
 			KeyCombination.ALT_DOWN);
+	private final KeyCombination kcMoveUp = loadEditorKey("multivalue-editors/move-up", KeyCode.UP,
+			KeyCombination.ALT_DOWN);
+	private final KeyCombination kcMoveDown = loadEditorKey("multivalue-editors/move-down", KeyCode.DOWN,
+			KeyCombination.ALT_DOWN);
 
 	private final Button addBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/add"))); //$NON-NLS-1$
 	private final Button delBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/remove"))); //$NON-NLS-1$
 	private final Button editBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit"))); //$NON-NLS-1$
 	private final Button previewBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/preview"))); //$NON-NLS-1$
+	private final Button moveUpBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-up"))); //$NON-NLS-1$
+	private final Button moveDownBtn = new Button(null,
+			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-down"))); //$NON-NLS-1$
 	private final Button itemActionBtn = new Button();
 
 	private TableView<KVEntry<V>> table;
@@ -101,6 +110,8 @@ public class KeyValueEditor<V> extends VBox {
 	private Node leadingToolbarNode;
 	private Runnable addAction;
 	private Runnable removeAction;
+	private boolean orderingEnabled = false;
+	private boolean suppressEntrySync = false;
 	private final SimpleBooleanProperty keysEditable = new SimpleBooleanProperty(true);
 
 	public KeyValueEditor() {
@@ -168,6 +179,26 @@ public class KeyValueEditor<V> extends VBox {
 		previewBtn.setManaged(false);
 		previewBtn.setOnAction(e -> firePreview());
 		previewBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+
+		moveUpBtn.setFocusTraversable(false);
+		moveUpBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveUp"), kcMoveUp)));
+		moveUpBtn.setVisible(false);
+		moveUpBtn.setManaged(false);
+		moveUpBtn.setOnAction(e -> moveEntry(table.getSelectionModel().getSelectedIndex(),
+				table.getSelectionModel().getSelectedIndex() - 1));
+		moveUpBtn.disableProperty().bind(table.getSelectionModel().selectedIndexProperty().lessThanOrEqualTo(0));
+
+		moveDownBtn.setFocusTraversable(false);
+		moveDownBtn
+				.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveDown"), kcMoveDown)));
+		moveDownBtn.setVisible(false);
+		moveDownBtn.setManaged(false);
+		moveDownBtn.setOnAction(e -> moveEntry(table.getSelectionModel().getSelectedIndex(),
+				table.getSelectionModel().getSelectedIndex() + 1));
+		moveDownBtn.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+			int idx = table.getSelectionModel().getSelectedIndex();
+			return idx < 0 || idx >= entries.size() - 1;
+		}, table.getSelectionModel().selectedIndexProperty(), entries));
 
 		itemActionBtn.setFocusTraversable(false);
 		itemActionBtn.setVisible(false);
@@ -245,6 +276,12 @@ public class KeyValueEditor<V> extends VBox {
 					&& table.getSelectionModel().getSelectedItem() != null) {
 				e.consume();
 				firePreview();
+			} else if (orderingEnabled && kcMoveUp.match(e) && table.getSelectionModel().getSelectedItem() != null) {
+				e.consume();
+				moveUpBtn.fire();
+			} else if (orderingEnabled && kcMoveDown.match(e) && table.getSelectionModel().getSelectedItem() != null) {
+				e.consume();
+				moveDownBtn.fire();
 			}
 		});
 		removeAction = () -> {
@@ -260,12 +297,15 @@ public class KeyValueEditor<V> extends VBox {
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, editBtn, itemActionBtn, previewBtn);
+		toolbar = new HBox(4, titleLabel, spacer, addBtn, delBtn, moveUpBtn, moveDownBtn, editBtn, itemActionBtn,
+				previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, table);
 
 		entries.addListener((ListChangeListener<KVEntry<V>>) change -> {
+			if (suppressEntrySync)
+				return;
 			while (change.next()) {
 				if (change.wasPermutated() || change.wasUpdated())
 					continue;
@@ -286,6 +326,22 @@ public class KeyValueEditor<V> extends VBox {
 
 	public ObservableMap<String, V> getValues() {
 		return values;
+	}
+
+	/**
+	 * Returns the current key→value map in the table's row/display order — unlike
+	 * {@link #getValues()}, whose backing map does not guarantee iteration order.
+	 * Use this when insertion order is meaningful (e.g. the first entry acts as a
+	 * default elsewhere).
+	 */
+	public Map<String, V> getOrderedValues() {
+		Map<String, V> ordered = new LinkedHashMap<>();
+		for (KVEntry<V> entry : entries) {
+			String key = entry.key.get();
+			if (key != null && !key.isBlank())
+				ordered.put(key, entry.value.get());
+		}
+		return ordered;
 	}
 
 	public StringProperty titleProperty() {
@@ -477,7 +533,32 @@ public class KeyValueEditor<V> extends VBox {
 		return keyProviders;
 	}
 
+	/**
+	 * Shows/hides the move-up/move-down toolbar buttons (and their Alt+Up/Alt+Down
+	 * shortcuts) for reordering rows. Off by default — turn on when row order is
+	 * meaningful to the caller (e.g. the first entry acts as a default elsewhere,
+	 * see {@link #getOrderedValues()}).
+	 */
+	public void setOrderingEnabled(boolean enabled) {
+		orderingEnabled = enabled;
+		moveUpBtn.setVisible(enabled);
+		moveUpBtn.setManaged(enabled);
+		moveDownBtn.setVisible(enabled);
+		moveDownBtn.setManaged(enabled);
+	}
+
 	// ---- Internal helpers ----
+
+	private void moveEntry(int from, int to) {
+		if (from == to || from < 0 || to < 0 || to >= entries.size())
+			return;
+		suppressEntrySync = true;
+		KVEntry<V> entry = entries.remove(from);
+		entries.add(to, entry);
+		suppressEntrySync = false;
+		table.getSelectionModel().select(to);
+		table.scrollTo(to);
+	}
 
 	private void fireEditAction() {
 		if (editAction != null) {

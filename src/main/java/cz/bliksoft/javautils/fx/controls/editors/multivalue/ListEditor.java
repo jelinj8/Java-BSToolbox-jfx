@@ -233,10 +233,15 @@ public class ListEditor<V> extends VBox {
 		table.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (table.getEditingCell() == null && kcDialog.match(e)) {
 				// Checked before the plain-ENTER branch below: Alt+Enter's KeyCode is
-				// also ENTER, so this must win the race to force the dialog even when
-				// the value provider also supports inline editing.
+				// also ENTER, so this must win the race to force the dialog/edit action
+				// even when the value provider also supports inline editing.
 				e.consume();
-				openDialogForSelected();
+				if (table.getSelectionModel().getSelectedItem() != null) {
+					if (editAction != null)
+						editAction.run();
+					else
+						openDialogForSelected();
+				}
 			} else if (e.getCode() == KeyCode.ENTER) {
 				if (table.getEditingCell() == null) {
 					// Not editing — consume and start edit on selected row
@@ -565,9 +570,9 @@ public class ListEditor<V> extends VBox {
 	}
 
 	private void updateEditButtonTooltip() {
-		editBtn.setTooltip(new Tooltip(
-				editAction == null ? withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)
-						: BSAppJFXMessages.getString("editor.button.edit")));
+		// Alt+Enter now triggers editAction too (see the kcDialog handler above), so
+		// the shortcut hint applies regardless of whether a custom editAction is set.
+		editBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.edit"), kcDialog)));
 	}
 
 	private static KeyCombination loadEditorKey(String key, KeyCode fallback) {

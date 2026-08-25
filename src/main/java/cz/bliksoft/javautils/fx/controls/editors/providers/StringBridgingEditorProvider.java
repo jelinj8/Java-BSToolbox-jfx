@@ -51,6 +51,11 @@ public class StringBridgingEditorProvider<T> implements IValueEditorProvider<Str
 	}
 
 	@Override
+	public boolean dialogOnly() {
+		return inner.dialogOnly();
+	}
+
+	@Override
 	public void showDialog(Window owner, ObjectProperty<String> valueProperty) {
 		ObjectProperty<T> typed = new SimpleObjectProperty<>(inner.fromString(valueProperty.get()));
 		inner.showDialog(owner, typed);

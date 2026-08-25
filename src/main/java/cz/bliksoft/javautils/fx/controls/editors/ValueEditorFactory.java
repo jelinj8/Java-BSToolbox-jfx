@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.editors;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import cz.bliksoft.javautils.fx.controls.editors.providers.BooleanEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.DoubleEditorProvider;
@@ -10,6 +11,7 @@ import cz.bliksoft.javautils.fx.controls.editors.providers.EnumEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.IntegerEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.LocalDateEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.LocalDateTimeEditorProvider;
+import cz.bliksoft.javautils.fx.controls.editors.providers.MapEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.StringBridgingEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.StringEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.providers.TimestampEditorProvider;
@@ -41,6 +43,8 @@ public final class ValueEditorFactory {
 			return (IValueEditorProvider<V>) new TimestampEditorProvider();
 		if (type.isEnum())
 			return (IValueEditorProvider<V>) new EnumEditorProvider(type);
+		if (type == Map.class)
+			return (IValueEditorProvider<V>) new MapEditorProvider();
 		return (IValueEditorProvider<V>) new StringEditorProvider();
 	}
 
