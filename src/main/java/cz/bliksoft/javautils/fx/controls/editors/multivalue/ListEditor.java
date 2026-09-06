@@ -122,7 +122,7 @@ public class ListEditor<V> extends VBox {
 	/**
 	 * One add-item choice shown in the SplitMenuButton add variant. {@code title}
 	 * provides the display text (and optionally a graphic if it also implements
-	 * {@link IGraphicsProvider}).
+	 * {@link cz.bliksoft.javautils.app.ui.interfaces.IGraphicsProvider}).
 	 */
 	public record AddChoice<T>(ITitleProvider title, Supplier<T> factory) {
 	}
