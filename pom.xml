@@ -115,14 +115,14 @@
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>dependency-management</artifactId>
-				<version>1.21.1</version>
+				<version>1.21.2</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>common-java-utils</artifactId>
-				<version>0.7-SNAPSHOT</version>
+				<version>0.7</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
