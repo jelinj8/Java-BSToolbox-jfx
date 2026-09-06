@@ -129,7 +129,8 @@ public enum IconspecCommand {
 	/**
 	 * Applies a pixel-level filter to the top-of-stack image and replaces it with
 	 * the result. The second token is the filter name; subsequent tokens are
-	 * filter-specific parameters. See {@link ImageFilter} for the full list.
+	 * filter-specific parameters. See
+	 * {@link cz.bliksoft.javautils.images.iconspec.ImageFilter} for the full list.
 	 * Example: {@code *FILTER|shadow|000000|6}
 	 */
 	FILTER("FILTER", "filter", "p1", "p2", "p3"),
