@@ -189,8 +189,8 @@ public class KeyValueEditor<V> extends VBox {
 		moveUpBtn.disableProperty().bind(table.getSelectionModel().selectedIndexProperty().lessThanOrEqualTo(0));
 
 		moveDownBtn.setFocusTraversable(false);
-		moveDownBtn
-				.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveDown"), kcMoveDown)));
+		moveDownBtn.setTooltip(
+				new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.moveDown"), kcMoveDown)));
 		moveDownBtn.setVisible(false);
 		moveDownBtn.setManaged(false);
 		moveDownBtn.setOnAction(e -> moveEntry(table.getSelectionModel().getSelectedIndex(),

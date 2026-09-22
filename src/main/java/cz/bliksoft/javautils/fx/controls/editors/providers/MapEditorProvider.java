@@ -13,10 +13,11 @@ import javafx.scene.control.Label;
 import javafx.stage.Window;
 
 /**
- * Edits a {@code Map<String,String>} value as {@code name1=value1;name2=value2;...}
- * via a dialog hosting a nested {@link KeyValueEditor}, rather than a flat inline
- * text field. Row order is preserved (see {@link KeyValueEditor#getOrderedValues()})
- * since callers may treat the first entry as a default.
+ * Edits a {@code Map<String,String>} value as
+ * {@code name1=value1;name2=value2;...} via a dialog hosting a nested
+ * {@link KeyValueEditor}, rather than a flat inline text field. Row order is
+ * preserved (see {@link KeyValueEditor#getOrderedValues()}) since callers may
+ * treat the first entry as a default.
  */
 public class MapEditorProvider implements IValueEditorProvider<Map<String, String>> {
 
