@@ -134,8 +134,11 @@
 	-fx-border-radius: 4;
 	-fx-border-color: -theme-border;
 	-fx-border-width: 1;
-	-fx-highlight-fill: -fx-highlight-fill;
-	-fx-highlight-text-fill: -fx-highlight-text-fill;
+	/* -fx-highlight-fill/-fx-highlight-text-fill are already set on .root (above) -
+	   a self-referencing override here ("-fx-highlight-fill: -fx-highlight-fill")
+	   is a JavaFX CSS lookup cycle ("Loop detected in *.text-input{...}"), not a
+	   real inheritance mechanism. Omitted; the .root-level value cascades down
+	   through the normal ancestor lookup with no override needed. */
 }
 
 .text-input:focused {
