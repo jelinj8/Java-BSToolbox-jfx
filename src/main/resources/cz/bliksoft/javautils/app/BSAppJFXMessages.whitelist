@@ -1,2 +1,6 @@
 Boolean.false
 Boolean.true
+
+# Provided for consuming apps' own confirm-exit dialogs (e.g. a TryCloseEvent
+# handler); no caller inside this module itself.
+app.confirmExit

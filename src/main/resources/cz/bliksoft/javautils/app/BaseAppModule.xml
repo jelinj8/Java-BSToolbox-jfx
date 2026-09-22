@@ -45,6 +45,32 @@
 			<attribute name="default">Framework</attribute>
 			<attribute name="cs">Framework</attribute>
 		</file>
+		<file name="menu">
+			<file name="file">
+				<attribute name="default">File</attribute>
+				<attribute name="cs">Soubor</attribute>
+			</file>
+			<file name="edit">
+				<attribute name="default">Edit</attribute>
+				<attribute name="cs">Úpravy</attribute>
+			</file>
+			<file name="view">
+				<attribute name="default">View</attribute>
+				<attribute name="cs">Zobrazit</attribute>
+			</file>
+			<file name="tools">
+				<attribute name="default">Tools</attribute>
+				<attribute name="cs">Nástroje</attribute>
+			</file>
+			<file name="window">
+				<attribute name="default">Window</attribute>
+				<attribute name="cs">Okno</attribute>
+			</file>
+			<file name="help">
+				<attribute name="default">Help</attribute>
+				<attribute name="cs">Nápověda</attribute>
+			</file>
+		</file>
 	</file>
 	<file name="licences">
 		<file name="LGPL3">
