@@ -122,7 +122,9 @@
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>common-java-utils</artifactId>
-				<version>0.8</version>
+				<!-- 0.9: needed for AdvancedPropertyDefinition/TemplateValueCoercion/
+				     MapPropertyCodec and FreemarkerGenerator.setVariableCoerced. -->
+				<version>0.9</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

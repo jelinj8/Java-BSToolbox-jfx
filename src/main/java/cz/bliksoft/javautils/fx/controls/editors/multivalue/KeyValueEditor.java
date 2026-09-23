@@ -53,7 +53,10 @@ import cz.bliksoft.javautils.fx.tools.ImageUtils;
  * When a {@link #propertyRegistryProperty() propertyRegistry} is set, the key
  * column restricts selection to the defined property names using a codebook
  * popup. The value column editor is resolved per key type via
- * {@link cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory}.
+ * {@link cz.bliksoft.javautils.fx.controls.editors.ValueEditorFactory} - as a
+ * String-bridged editor by default, or as a genuinely typed one when
+ * constructed with {@code typedValueMode = true} (see
+ * {@link #KeyValueEditor(boolean)}).
  *
  * <p>
  * The {@link #getValues() values} map is a live {@link ObservableMap} that
@@ -113,13 +116,31 @@ public class KeyValueEditor<V> extends VBox {
 	private boolean orderingEnabled = false;
 	private boolean suppressEntrySync = false;
 	private final SimpleBooleanProperty keysEditable = new SimpleBooleanProperty(true);
+	private final boolean typedValueMode;
 
 	public KeyValueEditor() {
-		this(null);
+		this(null, false);
+	}
+
+	/**
+	 * @param typedValueMode when {@code true}, a registry-declared type resolves
+	 *                        to a real typed editor ({@link ValueEditorFactory#forType})
+	 *                        instead of a String-bridged one
+	 *                        ({@link ValueEditorFactory#forStringType}) - use this
+	 *                        when {@code V} is not {@link String} and the map's
+	 *                        values are genuinely typed (e.g. {@code Map<String,Object>}).
+	 */
+	public KeyValueEditor(boolean typedValueMode) {
+		this(null, typedValueMode);
+	}
+
+	public KeyValueEditor(IValueEditorProvider<V> defaultProvider) {
+		this(defaultProvider, false);
 	}
 
 	@SuppressWarnings("unchecked")
-	public KeyValueEditor(IValueEditorProvider<V> defaultProvider) {
+	public KeyValueEditor(IValueEditorProvider<V> defaultProvider, boolean typedValueMode) {
+		this.typedValueMode = typedValueMode;
 		if (defaultProvider != null)
 			defaultValueProvider.set(defaultProvider);
 
@@ -630,7 +651,8 @@ public class KeyValueEditor<V> extends VBox {
 				IValueEditorProvider<V> override = typeProviders.get(type);
 				if (override != null)
 					return override;
-				return (IValueEditorProvider<V>) ValueEditorFactory.forStringType(type);
+				return (IValueEditorProvider<V>) (typedValueMode ? ValueEditorFactory.forType(type)
+						: ValueEditorFactory.forStringType(type));
 			}
 		}
 		IValueEditorProvider<V> def = defaultValueProvider.get();
