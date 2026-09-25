@@ -115,6 +115,12 @@
 				<file name="dialog">
 					<attribute name="keys" value="Alt+Enter" />
 				</file>
+				<file name="copy">
+					<attribute name="keys" value="Ctrl+C" />
+				</file>
+				<file name="paste">
+					<attribute name="keys" value="Ctrl+V" />
+				</file>
 			</file>
 		</file>
 		<file name="actions" id="registered-actions" />
@@ -346,6 +352,14 @@
 				</file>
 				<file name="move-down">
 					<attribute name="iconspec">svg/arrows/arrow-down.svg|${edit-button-size}|||${stroke-button}
+					</attribute>
+				</file>
+				<file name="copy">
+					<attribute name="iconspec">svg/copy.svg|${edit-button-size}|||${stroke-button}
+					</attribute>
+				</file>
+				<file name="paste">
+					<attribute name="iconspec">svg/clipboard.svg|${edit-button-size}|||${stroke-button}
 					</attribute>
 				</file>
 			</file>

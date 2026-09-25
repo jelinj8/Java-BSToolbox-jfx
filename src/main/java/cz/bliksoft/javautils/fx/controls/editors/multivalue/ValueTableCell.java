@@ -48,6 +48,10 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 	private final SimpleBooleanProperty inlineEditing;
 
 	private final ObjectProperty<V> editorProxy = new SimpleObjectProperty<>();
+	private final EditFocusWatcher focusWatcher = new EditFocusWatcher();
+	// Set while committing because focus moved elsewhere - the commit must not
+	// then pull focus back to this table (see commitEdit).
+	private boolean committingOnFocusLoss = false;
 
 	private KVEntry<V> currentEntry = null;
 	private IValueEditorProvider<V> currentProvider = null;
@@ -111,18 +115,14 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		editorNode.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.ENTER) {
 				e.consume();
-				flushTextFormatter(editorNodeFinal);
-				currentProvider.applyEdit(editorProxy);
-				commitEdit(editorProxy.get());
+				commitPending(editorNodeFinal);
 			} else if (e.getCode() == KeyCode.ESCAPE) {
 				e.consume();
 				cancelEdit();
 			} else if (e.getCode() == KeyCode.TAB && e.isShiftDown()) {
 				e.consume();
 				int row = getTableRow() != null ? getTableRow().getIndex() : -1;
-				flushTextFormatter(editorNodeFinal);
-				currentProvider.applyEdit(editorProxy);
-				commitEdit(editorProxy.get());
+				commitPending(editorNodeFinal);
 				Platform.runLater(() -> {
 					if (getTableView() != null && row >= 0 && !getTableView().getColumns().isEmpty())
 						getTableView().edit(row, getTableView().getColumns().get(0));
@@ -130,6 +130,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			}
 		});
 
+		Node editorGraphic;
 		if (currentProvider.supportsDialog()) {
 			Button btn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			btn.setFocusTraversable(false);
@@ -139,29 +140,49 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			});
 			HBox box = new HBox(4, editorNode, btn);
 			HBox.setHgrow(editorNode, Priority.ALWAYS);
-			setGraphic(box);
+			editorGraphic = box;
 		} else {
-			setGraphic(editorNode);
+			editorGraphic = editorNode;
 		}
+		setGraphic(editorGraphic);
 		setText(null);
 		setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+		focusWatcher.watch(getScene(), editorGraphic, () -> {
+			if (!isEditing())
+				return;
+			committingOnFocusLoss = true;
+			try {
+				commitPending(editorNodeFinal);
+			} finally {
+				committingOnFocusLoss = false;
+			}
+		});
 		Platform.runLater(editorNode::requestFocus);
+	}
+
+	/** Applies the editor's current state and commits it (ENTER, TAB, focus loss). */
+	private void commitPending(Node editorNode) {
+		flushTextFormatter(editorNode);
+		currentProvider.applyEdit(editorProxy);
+		commitEdit(editorProxy.get());
 	}
 
 	@Override
 	public void commitEdit(V newValue) {
+		focusWatcher.stop();
 		// End edit state before updating model so the extractor-triggered UPDATE
 		// event does not cause TableViewSkin to cancel the already-finished edit.
 		super.commitEdit(newValue);
 		if (currentEntry != null)
 			currentEntry.value.set(newValue);
 		showDisplayState(newValue);
-		if (getTableView() != null)
+		if (getTableView() != null && !committingOnFocusLoss)
 			getTableView().requestFocus();
 	}
 
 	@Override
 	public void cancelEdit() {
+		focusWatcher.stop();
 		super.cancelEdit();
 		showDisplayState(getItem());
 		if (getTableView() != null)

@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSAppJFX;
+import cz.bliksoft.javautils.images.iconspec.IconSpecEngine;
 import cz.bliksoft.javautils.math.polynomial.PolynomialEvaluator;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
@@ -254,10 +255,16 @@ public final class IconspecUtils {
 	}
 
 	/**
-	 * {@link #vars()} with {@link #pushedVars} layered on top, taking precedence.
+	 * {@link #vars()} with {@link IconSpecEngine#getVariables()} (the toolkit
+	 * -agnostic base registry - e.g. a host app's {@code dpi}/label-size
+	 * fallbacks) and then {@link #pushedVars} layered on top, each taking
+	 * precedence over the last. Pushing to {@link IconSpecEngine#setVariable}
+	 * once therefore reaches both this JavaFX composer path and any non-JavaFX
+	 * caller of {@link IconSpecEngine#createImage} directly.
 	 */
 	private static Map<String, String> mergedVars() {
 		Map<String, String> merged = new LinkedHashMap<>(vars());
+		merged.putAll(IconSpecEngine.getVariables());
 		merged.putAll(pushedVars);
 		return merged;
 	}

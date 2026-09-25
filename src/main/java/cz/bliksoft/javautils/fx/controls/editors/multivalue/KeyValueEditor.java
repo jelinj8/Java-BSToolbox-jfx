@@ -2,7 +2,9 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
@@ -114,6 +116,7 @@ public class KeyValueEditor<V> extends VBox {
 	private Runnable addAction;
 	private Runnable removeAction;
 	private boolean orderingEnabled = false;
+	private boolean toolbarDialogButton = true;
 	private boolean suppressEntrySync = false;
 	private final SimpleBooleanProperty keysEditable = new SimpleBooleanProperty(true);
 	private final boolean typedValueMode;
@@ -338,11 +341,38 @@ public class KeyValueEditor<V> extends VBox {
 
 	// ---- Public API ----
 
+	/**
+	 * Replaces all rows with {@code source}'s entries, in its iteration order.
+	 *
+	 * <p>
+	 * The rows are swapped in a single list change, and {@link #getValues()} is
+	 * only brought in sync <em>after</em> that change has been fully delivered to
+	 * every list listener (the table skin included). A {@link #getValues()}
+	 * listener therefore never runs in the middle of a list notification - one
+	 * that reacts by calling {@code loadFrom} again (directly or through some
+	 * update cycle of its owner) used to modify {@code entries} while the table
+	 * skin was still to receive the previous, now stale, change, which showed up
+	 * as duplicated rows.
+	 */
 	public void loadFrom(Map<String, V> source) {
-		entries.clear();
-		values.clear();
+		List<KVEntry<V>> fresh = new ArrayList<>();
 		if (source != null)
-			source.forEach((k, v) -> entries.add(new KVEntry<>(k, v)));
+			source.forEach((k, v) -> fresh.add(new KVEntry<>(k, v)));
+		List<KVEntry<V>> old = new ArrayList<>(entries);
+		suppressEntrySync = true;
+		try {
+			entries.setAll(fresh);
+		} finally {
+			suppressEntrySync = false;
+		}
+		old.forEach(this::detachEntryListeners);
+		values.clear();
+		for (KVEntry<V> entry : fresh) {
+			// A values listener may have reloaded again meanwhile - rows that are no
+			// longer present must not be (re)attached.
+			if (entries.stream().anyMatch(e -> e == entry))
+				attachEntryListeners(entry);
+		}
 	}
 
 	public ObservableMap<String, V> getValues() {
@@ -450,6 +480,19 @@ public class KeyValueEditor<V> extends VBox {
 		keysEditable.set(editable);
 	}
 
+	/**
+	 * Controls whether the toolbar edit button appears for a selected row whose
+	 * value editor supports a dialog (default {@code true}). Turn it off when the
+	 * toolbar is otherwise empty: it then only exists while such a row is
+	 * selected, so moving the selection between row kinds shows/hides the whole
+	 * toolbar and shifts the table under the pointer. The dialog stays reachable
+	 * via the inline editor's own button and Alt+Enter.
+	 */
+	public void setToolbarDialogButtonEnabled(boolean enabled) {
+		toolbarDialogButton = enabled;
+		updateEditButton(table.getSelectionModel().getSelectedItem());
+	}
+
 	public void setPreviewAction(Runnable action) {
 		previewAction = action;
 		previewBtn.setVisible(action != null);
@@ -489,12 +532,17 @@ public class KeyValueEditor<V> extends VBox {
 
 	/**
 	 * Updates the value of the currently selected entry without changing the
-	 * selection.
+	 * selection. Also refreshes {@link #selectedValue} directly - see
+	 * {@code ListEditor.updateSelectedItem}'s identical fix/rationale: it's a
+	 * cached snapshot that only updates on an actual selection change, not on the
+	 * selected row's own value changing in place.
 	 */
 	public void updateSelectedValue(V newValue) {
 		KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
-		if (sel != null)
+		if (sel != null) {
 			sel.value.set(newValue);
+			selectedValue.set(newValue);
+		}
 	}
 
 	/** Forces all visible cells to re-render with their current values. */
@@ -598,7 +646,7 @@ public class KeyValueEditor<V> extends VBox {
 		if (editAction != null)
 			return;
 		boolean show = false;
-		if (sel != null) {
+		if (sel != null && toolbarDialogButton) {
 			IValueEditorProvider<V> provider = resolveProvider(sel.key.get());
 			show = provider != null && provider.supportsDialog();
 		}
@@ -663,6 +711,7 @@ public class KeyValueEditor<V> extends VBox {
 
 	// ---- ObservableMap sync ----
 
+	@SuppressWarnings("unchecked")
 	private void attachEntryListeners(KVEntry<V> entry) {
 		ChangeListener<String> keyListener = (obs, oldKey, newKey) -> {
 			if (oldKey != null && !oldKey.isBlank())
@@ -677,7 +726,12 @@ public class KeyValueEditor<V> extends VBox {
 		};
 		entry.key.addListener(keyListener);
 		entry.value.addListener(valueListener);
-		entryListeners.put(entry, new ChangeListener<?>[] { keyListener, valueListener });
+		ChangeListener<?>[] previous = entryListeners.put(entry, new ChangeListener<?>[] { keyListener, valueListener });
+		if (previous != null) {
+			// Already attached (see loadFrom) - keep exactly one pair of listeners.
+			entry.key.removeListener((ChangeListener<String>) previous[0]);
+			entry.value.removeListener((ChangeListener<V>) previous[1]);
+		}
 
 		String key = entry.key.get();
 		if (key != null && !key.isBlank())

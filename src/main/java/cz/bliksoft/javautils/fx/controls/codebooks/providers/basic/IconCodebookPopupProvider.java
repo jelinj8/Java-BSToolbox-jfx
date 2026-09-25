@@ -48,7 +48,16 @@ public class IconCodebookPopupProvider implements ICodebookProvider<String> {
 			File f = new File(path);
 			return (f.exists() && f.isFile() && isIconFile(f)) ? selectorText : null;
 		}
-		return ImageUtils.getImageIfPossible(selectorText, false) != null ? selectorText : null;
+		if (ImageUtils.getImageIfPossible(selectorText, false) != null)
+			return selectorText;
+		// Last resort: not a registered/composed spec, but the typed text itself
+		// names an existing file on disk (e.g. pasted from Explorer) - resolve it to
+		// IconSpecEngine's literal-filesystem-path form (IconSpecEngine.PREFIX_FILE)
+		// instead of leaving the user stuck with the popup selector.
+		File f = new File(selectorText);
+		if (f.exists() && f.isFile() && isIconFile(f))
+			return FILE_PREFIX + selectorText;
+		return null;
 	}
 
 	@Override

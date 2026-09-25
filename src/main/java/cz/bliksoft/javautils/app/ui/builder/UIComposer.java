@@ -872,6 +872,12 @@ public final class UIComposer {
 	}
 
 	private static void bindMenuVisibility(javafx.scene.control.Menu menu) {
+		// A menu with no children at build time populates itself (e.g. a
+		// type="Class" Menu subclass filling in a "recent files" list later) - the
+		// binding below only observes the items present right now, so it'd pin such
+		// a menu to invisible forever.
+		if (menu.getItems().isEmpty())
+			return;
 		// visible if ANY child MenuItem is visible
 		javafx.beans.binding.BooleanBinding anyChildVisible = javafx.beans.binding.Bindings.createBooleanBinding(
 				() -> menu.getItems().stream().anyMatch(javafx.scene.control.MenuItem::isVisible),

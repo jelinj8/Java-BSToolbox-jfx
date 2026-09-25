@@ -3,12 +3,14 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.fx.controls.codebooks.CodebookField;
 import cz.bliksoft.javautils.fx.controls.codebooks.providers.ListCodebookPopupProvider;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableBooleanValue;
+import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TableCell;
@@ -21,7 +23,15 @@ import javafx.scene.input.KeyEvent;
 /**
  * Display/edit-mode table cell for the key column. Shows the key as text in
  * display mode. Double-click or ENTER starts inline edit. On commit, focus
- * moves to the value column of the same row.
+ * moves to the value column of the same row - except when the commit was
+ * triggered by focus moving elsewhere (see {@link EditFocusWatcher}), which is
+ * respected instead.
+ *
+ * <p>
+ * Keys are unique - it's a map editor: a registry-restricted key popup only
+ * offers keys no other row uses yet, and committing a key another row already
+ * has is rejected (the edit is cancelled and that other row gets selected
+ * instead).
  */
 final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
@@ -32,6 +42,8 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
 	private KVEntry<V> currentEntry = null;
 	private String originalKey;
+	private final EditFocusWatcher focusWatcher = new EditFocusWatcher();
+	private boolean committingOnFocusLoss = false;
 
 	KeyTableCell(ObjectProperty<Map<String, Class<?>>> registryProperty,
 			ObservableBooleanValue keysRestrictedToRegistry, TableColumn<KVEntry<V>, ?> valueColumn,
@@ -56,8 +68,9 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
 		Map<String, Class<?>> registry = registryProperty.get();
 		if (registry != null && keysRestrictedToRegistry.get()) {
-			CodebookField<String> field = new CodebookField<>(
-					new ListCodebookPopupProvider<>(List.copyOf(registry.keySet())));
+			List<String> available = registry.keySet().stream()
+					.filter(k -> k.equals(originalKey) || findOtherEntryWithKey(k) == null).toList();
+			CodebookField<String> field = new CodebookField<>(new ListCodebookPopupProvider<>(available));
 			field.setMaxWidth(Double.MAX_VALUE);
 			if (!originalKey.isBlank())
 				field.setValue(originalKey);
@@ -77,6 +90,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setText(null);
 			setGraphic(field);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+			watchFocus(field, field::getValue);
 			Platform.runLater(field::requestFocus);
 		} else if (registry != null) {
 			ComboBox<String> combo = new ComboBox<>(
@@ -97,6 +111,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setText(null);
 			setGraphic(combo);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+			watchFocus(combo, () -> combo.getEditor().getText());
 			Platform.runLater(combo::requestFocus);
 		} else {
 			TextField tf = new TextField(originalKey);
@@ -113,16 +128,53 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setText(null);
 			setGraphic(tf);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+			watchFocus(tf, tf::getText);
 			Platform.runLater(tf::requestFocus);
 		}
 	}
 
+	private void watchFocus(Node editor, Supplier<String> pendingValue) {
+		focusWatcher.watch(getScene(), editor, () -> {
+			if (!isEditing())
+				return;
+			committingOnFocusLoss = true;
+			try {
+				doCommit(pendingValue.get());
+			} finally {
+				committingOnFocusLoss = false;
+			}
+		});
+	}
+
 	private void doCommit(String value) {
-		commitEdit(value != null ? value : "");
+		String k = value != null ? value : "";
+		KVEntry<V> clash = k.isBlank() ? null : findOtherEntryWithKey(k);
+		if (clash != null) {
+			cancelEdit();
+			TableView<KVEntry<V>> tv = getTableView();
+			if (tv != null && !committingOnFocusLoss) {
+				tv.getSelectionModel().select(clash);
+				tv.scrollTo(clash);
+			}
+			return;
+		}
+		commitEdit(k);
+	}
+
+	/** Another row (not this cell's own) already using {@code key}, or {@code null}. */
+	private KVEntry<V> findOtherEntryWithKey(String key) {
+		TableView<KVEntry<V>> tv = getTableView();
+		if (tv == null)
+			return null;
+		for (KVEntry<V> e : tv.getItems())
+			if (e != currentEntry && Objects.equals(e.key.get(), key))
+				return e;
+		return null;
 	}
 
 	@Override
 	public void commitEdit(String newKey) {
+		focusWatcher.stop();
 		// End edit state before updating model so the extractor-triggered UPDATE
 		// event does not cause TableViewSkin to cancel the already-finished edit.
 		super.commitEdit(newKey);
@@ -130,6 +182,8 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 		if (currentEntry != null && !Objects.equals(currentEntry.key.get(), k))
 			currentEntry.key.set(k);
 		showDisplayState(newKey);
+		if (committingOnFocusLoss)
+			return;
 		// Move focus to the value cell of the same row.
 		int row = getTableRow() != null ? getTableRow().getIndex() : -1;
 		Platform.runLater(() -> {
@@ -141,6 +195,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 
 	@Override
 	public void cancelEdit() {
+		focusWatcher.stop();
 		super.cancelEdit();
 		showDisplayState(getItem());
 	}

@@ -52,6 +52,10 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 	private final Label displayLabel; // null when !supportsDialog
 
 	private V originalValue;
+	private final EditFocusWatcher focusWatcher = new EditFocusWatcher();
+	// Set while committing because focus moved elsewhere - the commit must not
+	// then pull focus back to this table (see commitEdit).
+	private boolean committingOnFocusLoss = false;
 	private ListEntry<V> currentEntry = null;
 
 	// ---- item-listener tracking ----
@@ -121,6 +125,17 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 		setText(null);
 		setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 		setGraphic(editCellGraphic);
+		focusWatcher.watch(getScene(), editCellGraphic, () -> {
+			if (!isEditing())
+				return;
+			committingOnFocusLoss = true;
+			try {
+				provider.applyEdit(editorProxy);
+				commitEdit(editorProxy.get());
+			} finally {
+				committingOnFocusLoss = false;
+			}
+		});
 		Platform.runLater(innerEditorNode::requestFocus);
 	}
 
@@ -139,6 +154,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 
 	@Override
 	public void cancelEdit() {
+		focusWatcher.stop();
 		editorProxy.set(originalValue);
 		super.cancelEdit();
 		showDisplayState(originalValue);
@@ -148,9 +164,10 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 
 	@Override
 	public void commitEdit(V v) {
+		focusWatcher.stop();
 		super.commitEdit(v);
 		showDisplayState(v);
-		if (getTableView() != null)
+		if (getTableView() != null && !committingOnFocusLoss)
 			getTableView().requestFocus();
 	}
 

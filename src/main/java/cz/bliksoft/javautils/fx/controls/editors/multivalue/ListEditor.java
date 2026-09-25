@@ -5,6 +5,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
@@ -39,6 +40,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
@@ -114,6 +116,14 @@ public class ListEditor<V> extends VBox {
 	private final Button moveDownBtn = new Button(null,
 			ImageUtils.getIconView(IconspecUtils.getIconspec("editor/move-down"))); //$NON-NLS-1$
 	private final Button itemActionBtn = new Button();
+	private final KeyCombination kcCopy = loadEditorKey("multivalue-editors/copy", KeyCode.C,
+			KeyCombination.SHORTCUT_DOWN);
+	private final KeyCombination kcPaste = loadEditorKey("multivalue-editors/paste", KeyCode.V,
+			KeyCombination.SHORTCUT_DOWN);
+	private final Button copyBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/copy"))); //$NON-NLS-1$
+	private final Button pasteBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/paste"))); //$NON-NLS-1$
+	private Function<List<V>, String> copyCodec;
+	private Function<String, List<V>> pasteCodec;
 
 	private HBox toolbar;
 	private Node leadingToolbarNode;
@@ -266,6 +276,12 @@ public class ListEditor<V> extends VBox {
 				} else if (kcRemove.match(e)) {
 					e.consume();
 					delBtn.fire();
+				} else if (copyCodec != null && kcCopy.match(e)) {
+					e.consume();
+					copySelected();
+				} else if (copyCodec != null && kcPaste.match(e)) {
+					e.consume();
+					paste();
 				} else if (kcPreview.match(e) && previewAction != null
 						&& table.getSelectionModel().getSelectedItem() != null) {
 					e.consume();
@@ -311,8 +327,17 @@ public class ListEditor<V> extends VBox {
 
 		Region spacer = new Region();
 		HBox.setHgrow(spacer, Priority.ALWAYS);
-		toolbar = new HBox(4, titleLabel, spacer, addBtn, addSplitBtn, delBtn, moveUpBtn, moveDownBtn, editBtn,
-				itemActionBtn, previewBtn);
+		copyBtn.setFocusTraversable(false);
+		copyBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.copy"), kcCopy)));
+		copyBtn.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
+		copyBtn.setOnAction(e -> copySelected());
+		pasteBtn.setFocusTraversable(false);
+		pasteBtn.setTooltip(new Tooltip(withShortcut(BSAppJFXMessages.getString("editor.button.paste"), kcPaste)));
+		pasteBtn.setOnAction(e -> paste());
+		setCopyPaste(null, null);
+
+		toolbar = new HBox(4, titleLabel, spacer, addBtn, addSplitBtn, delBtn, moveUpBtn, moveDownBtn, copyBtn,
+				pasteBtn, editBtn, itemActionBtn, previewBtn);
 		toolbar.setAlignment(Pos.CENTER_LEFT);
 
 		getChildren().addAll(toolbar, table);
@@ -353,10 +378,14 @@ public class ListEditor<V> extends VBox {
 	// ---- Internal helpers ----
 
 	private void insertNewItem(V item) {
+		insertNewItem(entries.size(), item);
+	}
+
+	private void insertNewItem(int index, V item) {
 		if (item == null)
 			return;
 		ListEntry<V> entry = new ListEntry<>(item);
-		entries.add(entry);
+		entries.add(Math.max(0, Math.min(index, entries.size())), entry);
 		table.getSelectionModel().select(entry);
 		table.scrollTo(entry);
 		table.requestFocus();
@@ -693,13 +722,75 @@ public class ListEditor<V> extends VBox {
 	}
 
 	/**
+	 * Enables copy/paste of items through the system clipboard - toolbar buttons
+	 * plus the {@code multivalue-editors/copy}/{@code paste} key bindings (Ctrl+C/
+	 * Ctrl+V by default) - e.g. for cloning an item to then modify it slightly.
+	 * Paste inserts right after the selected item. {@code toText} turns the copied
+	 * items (currently the single selected one) into clipboard text;
+	 * {@code fromText} parses clipboard text back into items, returning
+	 * {@code null} or an empty list for text it doesn't recognize (paste is then a
+	 * no-op). A text format rather than an in-memory copy, so a copy survives e.g.
+	 * switching documents, or even applications. Pass {@code null}s to disable
+	 * (the default).
+	 */
+	public void setCopyPaste(Function<List<V>, String> toText, Function<String, List<V>> fromText) {
+		copyCodec = toText;
+		pasteCodec = fromText;
+		boolean enabled = toText != null && fromText != null;
+		copyBtn.setVisible(enabled);
+		copyBtn.setManaged(enabled);
+		pasteBtn.setVisible(enabled);
+		pasteBtn.setManaged(enabled);
+	}
+
+	private void copySelected() {
+		V item = getSelectedItem();
+		if (item == null || copyCodec == null)
+			return;
+		String text = copyCodec.apply(List.of(item));
+		if (text == null)
+			return;
+		ClipboardContent content = new ClipboardContent();
+		content.putString(text);
+		Clipboard.getSystemClipboard().setContent(content);
+	}
+
+	private void paste() {
+		if (pasteCodec == null)
+			return;
+		List<V> items = pasteCodec.apply(Clipboard.getSystemClipboard().getString());
+		if (items == null)
+			return;
+		int index = getSelectedIndex() + 1;
+		for (V item : items)
+			insertNewItem(index++, item);
+	}
+
+	/**
+	 * Inserts {@code item} at {@code index} (clamped to the list bounds - e.g.
+	 * {@code getSelectedIndex() + 1} for "right after the selection", which is
+	 * {@code 0} with nothing selected) and selects it, like {@link #addItem}.
+	 */
+	public void insertItem(int index, V item) {
+		insertNewItem(index, item);
+	}
+
+	/**
 	 * Updates the value of the currently selected entry without changing the
-	 * selection.
+	 * selection. Also refreshes {@link #selectedItem} directly - it's a cached
+	 * snapshot taken when {@code table}'s own selection changes (see the
+	 * {@code selectedItemProperty()} listener in the constructor), which does
+	 * <em>not</em> fire just because the selected row's own value property
+	 * changed in place, so without this a caller reading {@link #getSelectedItem}
+	 * shortly after calling this would still see the value from <em>before</em>
+	 * this call - stale by exactly the edit it just made.
 	 */
 	public void updateSelectedItem(V newValue) {
 		ListEntry<V> sel = table.getSelectionModel().getSelectedItem();
-		if (sel != null)
+		if (sel != null) {
 			sel.value.set(newValue);
+			selectedItem.set(newValue);
+		}
 	}
 
 	/**
