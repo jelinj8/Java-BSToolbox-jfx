@@ -121,6 +121,10 @@
 				<file name="paste">
 					<attribute name="keys" value="Ctrl+V" />
 				</file>
+				<!-- confirms a multi-line text dialog (plain Enter is a line break there) -->
+				<file name="dialog-confirm">
+					<attribute name="keys" value="Ctrl+Enter" />
+				</file>
 			</file>
 		</file>
 		<file name="actions" id="registered-actions" />

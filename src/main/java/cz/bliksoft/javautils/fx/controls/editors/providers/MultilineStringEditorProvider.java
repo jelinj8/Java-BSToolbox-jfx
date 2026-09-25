@@ -1,14 +1,22 @@
 package cz.bliksoft.javautils.fx.controls.editors.providers;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
+import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Node;
-import javafx.scene.control.ButtonType;
+import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
 
@@ -71,11 +79,33 @@ public class MultilineStringEditorProvider implements IValueEditorProvider<Strin
 		dialog.initOwner(owner);
 		dialog.setResizable(true);
 		dialog.getDialogPane().setContent(area);
-		dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-		dialog.setResultConverter(bt -> bt == ButtonType.OK ? area.getText() : null);
-		dialog.setOnShown(e -> area.requestFocus());
+		dialog.getDialogPane().getButtonTypes().addAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);
+		dialog.setResultConverter(bt -> bt == BSButtonTypes.OK ? area.getText() : null);
+
+		// Plain ENTER is a line break here, so confirming is Ctrl+ENTER (the
+		// multivalue-editors/dialog-confirm key binding); ESC cancels as in any dialog.
+		Button okButton = (Button) dialog.getDialogPane().lookupButton(BSButtonTypes.OK);
+		KeyCombination confirm = confirmKey();
+		okButton.setTooltip(new Tooltip(confirm.getDisplayText()));
+		area.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+			if (confirm.match(e)) {
+				e.consume();
+				okButton.fire();
+			}
+		});
+		// Deferred: the dialog puts focus on its default button once shown, which
+		// would override a focus request made directly in onShown.
+		dialog.setOnShown(e -> Platform.runLater(() -> {
+			area.requestFocus();
+			area.end();
+		}));
 
 		dialog.showAndWait().ifPresent(valueProperty::set);
+	}
+
+	private static KeyCombination confirmKey() {
+		KeyCombination kc = ShortcutFileLoader.loadFromKeyBindings("multivalue-editors/dialog-confirm");
+		return kc != null ? kc : new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN);
 	}
 
 	/** Line breaks/tabs/backslashes to their two-character escapes. */
