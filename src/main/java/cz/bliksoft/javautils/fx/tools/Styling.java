@@ -257,11 +257,16 @@ public final class Styling {
 		// that window's own internal show()/sizeToScene() sequence has finished, so
 		// resizing synchronously here can be overwritten right after by JavaFX's own
 		// logic. Platform.runLater lets that finish first.
+		//
+		// The window may be gone by then (e.g. a ContextMenu hidden right away —
+		// its disposed ContextMenuContent throws an NPE on layout), so skip it.
 		Platform.runLater(() -> {
+			Window window = scene.getWindow();
+			if (window == null || !window.isShowing() || scene.getRoot() != root)
+				return;
 			root.applyCss();
 			scaleButtonBars(root);
 			root.layout();
-			Window window = scene.getWindow();
 			// Only for non-resizable windows (e.g. a plain Alert/Dialog, which has no
 			// user-set or persisted size to protect and normally auto-fits its content
 			// anyway). A resizable window — the main window, or a dialog that installs
