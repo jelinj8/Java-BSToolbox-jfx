@@ -8,6 +8,12 @@
 			<file name="LGPL3_NAME">
 				<attribute name="default">GNU Lesser General Public License</attribute>
 			</file>
+			<file name="LGPL21_NAME">
+				<attribute name="default">GNU Lesser General Public License 2.1</attribute>
+			</file>
+			<file name="LGPL21_URL">
+				<attribute name="default">https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html</attribute>
+			</file>
 			<file name="LGPL3_URL">
 				<attribute name="default">http://www.gnu.org/copyleft/lesser.html</attribute>
 			</file>
@@ -106,6 +112,10 @@
 		<file name="LGPL3">
 			<attribute name="name" translation="licences/LGPL3_NAME">licences/LGPL3_NAME</attribute>
 			<attribute name="url" translation="licences/LGPL3_URL">licences/LGPL3_URL</attribute>
+		</file>
+		<file name="LGPL21">
+			<attribute name="name" translation="licences/LGPL21_NAME">licences/LGPL21_NAME</attribute>
+			<attribute name="url" translation="licences/LGPL21_URL">licences/LGPL21_URL</attribute>
 		</file>
 		<file name="commercial">
 			<attribute name="name" translation="licences/commercial_NAME">licences/commercial_NAME</attribute>
@@ -233,6 +243,18 @@
 			<attribute name="url">https://www.slf4j.org/</attribute>
 			<attribute name="comment">logging facade</attribute>
 			<attribute name="licence">MIT</attribute>
+		</file>
+		<file name="bstoolbox">
+			<attribute name="name">BSToolbox (common-java-utils)</attribute>
+			<attribute name="url">https://github.com/jelinj8/Java-BSToolbox</attribute>
+			<attribute name="comment">application framework core: modules, XmlFilesystem, utilities</attribute>
+			<attribute name="licence">LGPL21</attribute>
+		</file>
+		<file name="bstoolbox-jfx">
+			<attribute name="name">BSToolbox-jfx</attribute>
+			<attribute name="url">https://github.com/jelinj8/Java-BSToolbox-jfx</attribute>
+			<attribute name="comment">JavaFX application framework and controls</attribute>
+			<attribute name="licence">LGPL21</attribute>
 		</file>
 	</file>
 
