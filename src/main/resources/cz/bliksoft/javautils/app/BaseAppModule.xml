@@ -40,6 +40,36 @@
 				<attribute name="cs">komerční licence</attribute>
 				<attribute name="sk">komerčná licencia</attribute>
 			</file>
+			<file name="GPL2_CPE_NAME">
+				<attribute name="default">GNU General Public License, version 2, with the Classpath Exception</attribute>
+			</file>
+			<file name="GPL2_CPE_URL">
+				<attribute name="default">https://openjdk.org/legal/gplv2+ce.html</attribute>
+			</file>
+			<file name="BSD3_NAME">
+				<attribute name="default">The 3-Clause BSD License</attribute>
+			</file>
+			<file name="BSD3_URL">
+				<attribute name="default">https://opensource.org/licenses/BSD-3-Clause</attribute>
+			</file>
+			<file name="EDL1_NAME">
+				<attribute name="default">Eclipse Distribution License 1.0</attribute>
+			</file>
+			<file name="EDL1_URL">
+				<attribute name="default">https://www.eclipse.org/org/documents/edl-v10.php</attribute>
+			</file>
+			<file name="EPL2_NAME">
+				<attribute name="default">Eclipse Public License 2.0</attribute>
+			</file>
+			<file name="EPL2_URL">
+				<attribute name="default">https://www.eclipse.org/legal/epl-2.0/</attribute>
+			</file>
+			<file name="OFL11_NAME">
+				<attribute name="default">SIL Open Font License 1.1</attribute>
+			</file>
+			<file name="OFL11_URL">
+				<attribute name="default">https://openfontlicense.org/</attribute>
+			</file>
 		</file>
 		<file name="Administration.group.framework">
 			<attribute name="default">Framework</attribute>
@@ -96,6 +126,26 @@
 			<attribute name="name" translation="licences/MIT_NAME">licences/MIT_NAME</attribute>
 			<attribute name="url" translation="licences/MIT_URL">licences/MIT_URL</attribute>
 		</file>
+		<file name="GPL2_CPE">
+			<attribute name="name" translation="licences/GPL2_CPE_NAME">licences/GPL2_CPE_NAME</attribute>
+			<attribute name="url" translation="licences/GPL2_CPE_URL">licences/GPL2_CPE_URL</attribute>
+		</file>
+		<file name="BSD3">
+			<attribute name="name" translation="licences/BSD3_NAME">licences/BSD3_NAME</attribute>
+			<attribute name="url" translation="licences/BSD3_URL">licences/BSD3_URL</attribute>
+		</file>
+		<file name="EDL1">
+			<attribute name="name" translation="licences/EDL1_NAME">licences/EDL1_NAME</attribute>
+			<attribute name="url" translation="licences/EDL1_URL">licences/EDL1_URL</attribute>
+		</file>
+		<file name="EPL2">
+			<attribute name="name" translation="licences/EPL2_NAME">licences/EPL2_NAME</attribute>
+			<attribute name="url" translation="licences/EPL2_URL">licences/EPL2_URL</attribute>
+		</file>
+		<file name="OFL11">
+			<attribute name="name" translation="licences/OFL11_NAME">licences/OFL11_NAME</attribute>
+			<attribute name="url" translation="licences/OFL11_URL">licences/OFL11_URL</attribute>
+		</file>
 	</file>
 
 	<file name="core">
@@ -111,35 +161,77 @@
 		<file name="widgets"/>
 	</file>
 
-	<file name="lib_credits">
-		<file name="Freemarker">
+	<file name="lib_credits" sorted="true">
+		<file name="freemarker">
 			<attribute name="name">FreeMarker</attribute>
-			<attribute name="url">http://freemarker.org/index.html</attribute>
+			<attribute name="url">https://freemarker.apache.org/</attribute>
 			<attribute name="comment">template processing tool</attribute>
 			<attribute name="licence">APACHE2</attribute>
 		</file>
-		<file name="Oxygen Icons">
+		<file name="oxygen icons">
 			<attribute name="url">http://www.kde.org/</attribute>
 			<attribute name="name">Oxygen Icons</attribute>
 			<attribute name="comment">balík ikon původně určený pro KDE prostředí</attribute>
 			<attribute name="licence">LGPL3</attribute>
 		</file>
-		<file name="Flagcdn.com">
+		<file name="flagcdn.com">
 			<attribute name="url">https://flagpedia.net</attribute>
 			<attribute name="name">Flagcdn.com</attribute>
 			<attribute name="comment">Vlajky z WikiMediaCommons</attribute>
 			<attribute name="licence">CreativeCommons</attribute>
 		</file>
-		<file name="JSVG">
+		<file name="jsvg">
 			<attribute name="url">https://github.com/weisJ/jsvg</attribute>
 			<attribute name="name">JSVG</attribute>
 			<attribute name="comment">SVG rendering library</attribute>
 			<attribute name="licence">MIT</attribute>
 		</file>
-		<file name="Tabler Icons">
+		<file name="tabler icons">
 			<attribute name="url">https://tabler.io/icons</attribute>
 			<attribute name="name">Tabler Icons</attribute>
 			<attribute name="comment">SVG icon set</attribute>
+			<attribute name="licence">MIT</attribute>
+		</file>
+		<file name="openjfx">
+			<attribute name="name">OpenJFX</attribute>
+			<attribute name="url">https://openjfx.io/</attribute>
+			<attribute name="comment">JavaFX UI toolkit</attribute>
+			<attribute name="licence">GPL2_CPE</attribute>
+		</file>
+		<file name="controlsfx">
+			<attribute name="name">ControlsFX</attribute>
+			<attribute name="url">https://github.com/controlsfx/controlsfx</attribute>
+			<attribute name="comment">JavaFX UI controls</attribute>
+			<attribute name="licence">BSD3</attribute>
+		</file>
+		<file name="zxing">
+			<attribute name="name">ZXing</attribute>
+			<attribute name="url">https://github.com/zxing/zxing</attribute>
+			<attribute name="comment">QR code and barcode processing</attribute>
+			<attribute name="licence">APACHE2</attribute>
+		</file>
+		<file name="apache commons io">
+			<attribute name="name">Apache Commons IO</attribute>
+			<attribute name="url">https://commons.apache.org/proper/commons-io/</attribute>
+			<attribute name="comment">I/O utilities</attribute>
+			<attribute name="licence">APACHE2</attribute>
+		</file>
+		<file name="freemarker-java8">
+			<attribute name="name">freemarker-java8</attribute>
+			<attribute name="url">https://github.com/lazee/freemarker-java-8</attribute>
+			<attribute name="comment">Java 8 date/time support for FreeMarker</attribute>
+			<attribute name="licence">APACHE2</attribute>
+		</file>
+		<file name="apache log4j">
+			<attribute name="name">Apache Log4j 2</attribute>
+			<attribute name="url">https://logging.apache.org/log4j/2.x/</attribute>
+			<attribute name="comment">logging</attribute>
+			<attribute name="licence">APACHE2</attribute>
+		</file>
+		<file name="slf4j">
+			<attribute name="name">SLF4J</attribute>
+			<attribute name="url">https://www.slf4j.org/</attribute>
+			<attribute name="comment">logging facade</attribute>
 			<attribute name="licence">MIT</attribute>
 		</file>
 	</file>

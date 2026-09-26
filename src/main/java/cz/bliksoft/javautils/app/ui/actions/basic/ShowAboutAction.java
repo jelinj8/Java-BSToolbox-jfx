@@ -7,6 +7,7 @@ import cz.bliksoft.javautils.app.ui.help.HelpAboutPane;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.scene.Node;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 
@@ -36,16 +37,11 @@ public class ShowAboutAction extends UIActionBase {
 	}
 
 	/**
-	 * Creates the pane shown inside the About dialog. Override in a subclass to
-	 * supply a {@link java.util.ResourceBundle} for template translations:
-	 *
-	 * <pre>
-	 * protected HelpAboutPane createAboutPane() {
-	 * 	return new HelpAboutPane(ResourceBundle.getBundle("com.myapp.HelpMessages"));
-	 * }
-	 * </pre>
+	 * Creates the pane shown inside the About dialog - its content comes from the
+	 * XmlFilesystem ({@code core/ui/about}, {@code lib_credits}, {@code licences},
+	 * see {@link HelpAboutPane}); override in a subclass to show something else.
 	 */
-	protected HelpAboutPane createAboutPane() {
+	protected Node createAboutPane() {
 		return new HelpAboutPane();
 	}
 
