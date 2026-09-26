@@ -115,9 +115,11 @@ an application module adds the rest of its distribution's `lib/`:
 
 The list is deduplicated and sorted by the XmlFilesystem itself: use the library's
 **lowercase name as the id** - a library credited by several modules (e.g. jSerialComm by
-an application and a plugin) merges into one entry - and declare `lib_credits` with
-`sorted="true"` in **every** module (a merge doesn't copy the flag onto the node another
-module created first), which orders the entries by id, i.e. alphabetically.
+an application and a plugin) merges into one entry. `BaseAppModule.xml` declares
+`lib_credits` with `sorted="true"`, which orders the entries by id, i.e. alphabetically;
+from common-java-utils 0.11 an explicit `sorted` applies on merge too, so other modules
+don't need to repeat it (with 0.10 and older it only takes effect in the module that
+created the node first, so there every module declared it).
 
 `licence` holds one or more comma-separated ids (a dual-licensed library lists each
 option) of `licences/*` entries, which have a localized `name` and `url`.

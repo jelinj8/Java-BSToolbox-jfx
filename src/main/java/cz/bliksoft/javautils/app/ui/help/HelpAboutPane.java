@@ -39,9 +39,10 @@ import javafx.scene.text.TextFlow;
  * <p>
  * <b>Credits</b> tab: every {@code lib_credits/*} entry, which modules merge in
  * for the libraries and resources they bring, in XmlFilesystem order - the ids
- * are lowercase names and each module declares its {@code lib_credits} with
- * {@code sorted="true"}, so a library credited by several modules is one entry
- * and the list is alphabetical. An entry has localized {@code name},
+ * are lowercase names, so a library credited by several modules is one entry,
+ * and {@code BaseAppModule.xml} declares {@code lib_credits} with
+ * {@code sorted="true"}, so the list is alphabetical (with common-java-utils
+ * 0.10 and older every module has to declare it, see {@code doc/Help.md}). An entry has localized {@code name},
  * {@code url}, {@code comment} and {@code licence}: one or more
  * comma-separated ids of {@code licences/*} entries (localized {@code name},
  * {@code url}), e.g. {@code APACHE2,LGPL3} for a dual-licensed library.
