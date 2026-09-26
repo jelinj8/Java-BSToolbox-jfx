@@ -122,10 +122,8 @@
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>common-java-utils</artifactId>
-				<!-- 0.10-SNAPSHOT: needs IconSpecEngine.setVariable/getVariables (used by
-				     IconspecUtils.mergedVars) - not in the released 0.9 jar. Move back to a
-				     released version once 0.10 is cut. -->
-				<version>0.10-SNAPSHOT</version>
+				<!-- 0.10: IconSpecEngine.setVariable/getVariables (used by IconspecUtils.mergedVars) -->
+				<version>0.10</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
