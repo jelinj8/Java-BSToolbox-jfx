@@ -22,6 +22,16 @@ class ParametricFormPaneTest {
 	}
 
 	@Test
+	void hintsAndKeyedCommentsFromTemplate() {
+		List<FormField> fields = FormField.fromTemplate("<#--\n{var|comment|-|test/formPane/missing|Fallback}\n"
+				+ "{var|csvfile|list|List||:.csv}\n{var|hint|-|-|first}\n{var|hint|-|-|second}\n-->\n");
+		assertEquals(2, fields.size());
+		assertEquals("Fallback", fields.get(0).title());
+		assertEquals("first\nsecond", fields.get(1).hint());
+		assertEquals("h", new FormField("STRING", "x", "X", null, null).withHint("h").hint());
+	}
+
+	@Test
 	void previousValueKeptWhenUsable() {
 		assertEquals("a", ParametricFormPane.effectiveDefault("STRING", "d", "a", List.of()));
 		assertEquals("d", ParametricFormPane.effectiveDefault("STRING", "d", null, List.of()));

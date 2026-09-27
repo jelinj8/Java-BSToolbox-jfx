@@ -105,8 +105,11 @@ Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definit
 - **Editors**: basic object editors, collection editors, properties editors (under `fx.controls.editors`)
 - **Forms**: `fx.controls.forms.ParametricFormPane` - a form built from `FormField`s (STRING, INT,
   DECIMAL - dot or comma, `Double` -, BOOLEAN, MULTILINE, COMBO, FONT, CSVFILE, INFO, COMMENT,
-  HIDDEN); `FormField.fromTemplate` reads a template's `{var|...}` definitions. Keeps values of
-  same-named fields across `setFields`. Used by StorageManager's print dialog and BSLabelDesigner.
+  HIDDEN); `FormField.fromTemplate` reads a template's `{var|...}` definitions
+  (`TemplateParameterUtils.parseFormParameters`: translated comments, `hint` lines attached to the
+  preceding field). A field's `hint` (also `FormField.withHint` for fields built in code) is a
+  tooltip of its title. Keeps values of
+  same-named fields across `setFields`/`addField`. Used by StorageManager's print dialog and BSLabelDesigner.
 - **Images**: SVG-aware image loading (JSVG), QR code support (ZXing)
 - **Validation**: form validation support integrated with controls
 

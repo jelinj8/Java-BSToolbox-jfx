@@ -20,8 +20,21 @@ import cz.bliksoft.javautils.freemarker.utils.TemplateParameterUtils.TemplatePar
  *                     the value)
  * @param parameters   type-specific: COMBO/FONT options separated by {@code ;}
  *                     or {@code ,}; INT {@code min:max:step}
+ * @param hint         help text shown as a tooltip of the title, {@code null}
+ *                     for none
  */
-public record FormField(String type, String name, String title, String defaultValue, String parameters) {
+public record FormField(String type, String name, String title, String defaultValue, String parameters,
+		String hint) {
+
+	/** A field without a hint. */
+	public FormField(String type, String name, String title, String defaultValue, String parameters) {
+		this(type, name, title, defaultValue, parameters, null);
+	}
+
+	/** A copy of this field with the given hint. */
+	public FormField withHint(String hint) {
+		return new FormField(type, name, title, defaultValue, parameters, hint);
+	}
 
 	/** The type upper-cased, {@code STRING} when absent. */
 	public String normalizedType() {
@@ -36,12 +49,14 @@ public record FormField(String type, String name, String title, String defaultVa
 
 	/**
 	 * The fields declared in a template's {@code {var|type|name|title|default|parameters}}
-	 * comment lines ({@link TemplateParameterUtils}).
+	 * comment lines ({@link TemplateParameterUtils#parseFormParameters}: COMMENT
+	 * texts translated, HINT lines attached to the preceding field as its hint).
 	 */
 	public static List<FormField> fromTemplate(String templateSource) {
 		List<FormField> fields = new ArrayList<>();
-		for (TemplateParameter p : TemplateParameterUtils.parseParameters(templateSource))
-			fields.add(new FormField(p.getType(), p.getName(), p.getTitle(), p.getDefaultValue(), p.getParameters()));
+		for (TemplateParameter p : TemplateParameterUtils.parseFormParameters(templateSource))
+			fields.add(new FormField(p.getType(), p.getName(), p.getTitle(), p.getDefaultValue(), p.getParameters(),
+					p.getHint()));
 		return fields;
 	}
 }

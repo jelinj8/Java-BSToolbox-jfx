@@ -30,11 +30,13 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.stage.FileChooser;
+import javafx.util.Duration;
 
 /**
  * A form generated from a list of {@link FormField}s - e.g. the
@@ -56,6 +58,7 @@ import javafx.stage.FileChooser;
  * columns; neither has a value</li>
  * <li>HIDDEN - no row, value = the default</li>
  * </ul>
+ * A field's {@link FormField#hint() hint} is shown as a tooltip of its title.
  * {@link #setFields} keeps the values already entered for fields of the same
  * name (COMBO/FONT only when still an option), so e.g. switching a template
  * doesn't lose them.
@@ -106,15 +109,15 @@ public class ParametricFormPane extends GridPane {
 				continue;
 			}
 			case "INFO" -> {
-				Label infoTitle = new Label(title + ":");
-				GridPane.setHalignment(infoTitle, HPos.RIGHT);
-				addRow(row++, infoTitle, new Label(nvl(field.defaultValue())));
+				Label info = new Label(nvl(field.defaultValue()));
+				addRow(row++, titleLabel(title, field.hint()), info);
 				continue;
 			}
 			case "COMMENT" -> {
 				Label comment = new Label(title);
 				comment.setWrapText(true);
 				comment.setMaxWidth(Double.MAX_VALUE);
+				installHint(field.hint(), comment);
 				GridPane.setColumnSpan(comment, 2);
 				addRow(row++, comment);
 				continue;
@@ -129,10 +132,35 @@ public class ParametricFormPane extends GridPane {
 			controls.put(field.name(), control);
 			if (control instanceof Control c)
 				c.setMaxWidth(Double.MAX_VALUE);
-			Label fieldTitle = new Label(title + ":");
-			GridPane.setHalignment(fieldTitle, HPos.RIGHT);
-			addRow(row++, fieldTitle, control);
+			addRow(row++, titleLabel(title, field.hint()), control);
 		}
+	}
+
+	/** Appends a field, rebuilding the form like {@link #setFields}. */
+	public void addField(FormField field) {
+		List<FormField> newFields = new ArrayList<>(fields);
+		newFields.add(field);
+		setFields(newFields);
+	}
+
+	/** The right-aligned title label, with the field's hint as its tooltip. */
+	private static Label titleLabel(String title, String hint) {
+		Label label = new Label(title + ":");
+		GridPane.setHalignment(label, HPos.RIGHT);
+		installHint(hint, label);
+		return label;
+	}
+
+	private static void installHint(String hint, Node... nodes) {
+		if (hint == null || hint.isBlank())
+			return;
+		Tooltip tooltip = new Tooltip(hint);
+		tooltip.setWrapText(true);
+		tooltip.setMaxWidth(500);
+		tooltip.setShowDelay(Duration.millis(200));
+		tooltip.setShowDuration(Duration.INDEFINITE);
+		for (Node node : nodes)
+			Tooltip.install(node, tooltip);
 	}
 
 	public List<FormField> getFields() {
