@@ -122,8 +122,9 @@
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>common-java-utils</artifactId>
-				<!-- 0.10: IconSpecEngine.setVariable/getVariables (used by IconspecUtils.mergedVars) -->
-				<version>0.10</version>
+				<!-- 0.10: IconSpecEngine.setVariable/getVariables (used by IconspecUtils.mergedVars);
+				     0.11: TemplateValueCoercion.parseDecimal (ParametricFormPane DECIMAL) -->
+				<version>0.11-SNAPSHOT</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
