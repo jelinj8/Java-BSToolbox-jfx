@@ -90,6 +90,8 @@ public class ListEditor<V> extends VBox {
 	private Runnable previewAction = null;
 	private IUIAction itemAction = null;
 	private boolean orderingEnabled = false;
+	/** See {@link #setInsertAfterSelection}. */
+	private boolean insertAfterSelection = false;
 	private boolean suppressEntrySync = false;
 
 	private static final double DEFAULT_CELL_HEIGHT = 26.0;
@@ -303,7 +305,7 @@ public class ListEditor<V> extends VBox {
 				insertNewItem(addItemSupplier.get());
 			} else {
 				ListEntry<V> entry = new ListEntry<>(null);
-				entries.add(entry);
+				entries.add(newItemIndex(), entry);
 				table.getSelectionModel().select(entry);
 				table.scrollTo(entry);
 				table.requestFocus();
@@ -378,7 +380,16 @@ public class ListEditor<V> extends VBox {
 	// ---- Internal helpers ----
 
 	private void insertNewItem(V item) {
-		insertNewItem(entries.size(), item);
+		insertNewItem(newItemIndex(), item);
+	}
+
+	/**
+	 * Where the add button puts a new item: right after the selected one with
+	 * {@link #setInsertAfterSelection}, else (or with nothing selected) at the end.
+	 */
+	private int newItemIndex() {
+		int selected = insertAfterSelection ? getSelectedIndex() : -1;
+		return selected >= 0 ? selected + 1 : entries.size();
 	}
 
 	private void insertNewItem(int index, V item) {
@@ -619,6 +630,15 @@ public class ListEditor<V> extends VBox {
 		return keys == null || keys.isBlank() ? text : text + " (" + keys + ")";
 	}
 
+	/**
+	 * {@code true}: the add button (and its choices) inserts the new item right
+	 * after the selected one - at the end when nothing is selected; {@code false}
+	 * (default): always at the end.
+	 */
+	public void setInsertAfterSelection(boolean insertAfterSelection) {
+		this.insertAfterSelection = insertAfterSelection;
+	}
+
 	public void setOrderingEnabled(boolean enabled) {
 		orderingEnabled = enabled;
 		moveUpBtn.setVisible(enabled);
@@ -717,8 +737,9 @@ public class ListEditor<V> extends VBox {
 		title.set(t);
 	}
 
+	/** Appends {@code item} (always at the end) and selects it. */
 	public void addItem(V item) {
-		insertNewItem(item);
+		insertNewItem(entries.size(), item);
 	}
 
 	/**
