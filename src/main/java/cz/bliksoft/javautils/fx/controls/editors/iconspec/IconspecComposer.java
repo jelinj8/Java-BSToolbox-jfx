@@ -359,22 +359,7 @@ public class IconspecComposer extends VBox {
 				for (int i = 0; i < 5; i++)
 					imgParamFields[i].setText((i + 1 < parts.length) ? parts[i + 1] : "");
 
-				boolean svg = file.toLowerCase().endsWith(".svg");
-				boolean empty = "EMPTY".equalsIgnoreCase(file);
-
-				if (svg) {
-					setParamConfig(new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_SCALE, LBL_COLOR, LBL_FILL },
-							new boolean[] { true, true, true, true, true },
-							new boolean[] { true, true, true, true, true });
-				} else if (empty) {
-					setParamConfig(new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_COLOR, null, null },
-							new boolean[] { true, true, true, false, false },
-							new boolean[] { true, true, true, false, false });
-				} else {
-					setParamConfig(new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_SCALE, LBL_COLOR, LBL_FILL },
-							new boolean[] { true, true, true, true, true },
-							new boolean[] { false, false, false, false, false });
-				}
+				configureParams(file);
 			}
 		} finally {
 			suppressSync = false;
@@ -674,15 +659,27 @@ public class IconspecComposer extends VBox {
 		String file = fileField.getValue();
 		if (file == null || file.isBlank())
 			return "";
-		if (!isSvgOrEmpty(file))
-			return file;
+		return joinSpec(file, currentParams(file));
+	}
 
-		int maxParams = "EMPTY".equalsIgnoreCase(file) ? 3 : 5;
-		String[] params = new String[maxParams];
-		for (int i = 0; i < maxParams && i < imgParamFields.length; i++)
+	/** The parameter fields' values that {@code file}'s kind takes (see {@link #paramCount}). */
+	private String[] currentParams(String file) {
+		int count = paramCount(file);
+		String[] params = new String[count];
+		for (int i = 0; i < count && i < imgParamFields.length; i++)
 			params[i] = imgParamFields[i].getText();
+		return params;
+	}
 
-		return joinSpec(file, params);
+	/** Shows/enables the parameter rows {@code file}'s kind takes. */
+	private void configureParams(String file) {
+		int count = paramCount(file);
+		boolean[] rows = new boolean[5];
+		for (int i = 0; i < count; i++)
+			rows[i] = true;
+		String[] labels = "EMPTY".equalsIgnoreCase(file) ? new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_COLOR, null, null }
+				: new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_SCALE, LBL_COLOR, LBL_FILL };
+		setParamConfig(labels, rows, rows);
 	}
 
 	private void onFileFieldChanged(String newFile) {
@@ -696,42 +693,12 @@ public class IconspecComposer extends VBox {
 			return;
 		}
 
-		boolean svg = newFile.toLowerCase().endsWith(".svg");
-		boolean empty = "EMPTY".equalsIgnoreCase(newFile);
-		boolean editable = svg || empty;
-
-		String rebuilt;
-		if (editable) {
-			int maxParams = empty ? 3 : 5;
-			String[] params = new String[maxParams];
-			for (int i = 0; i < maxParams && i < imgParamFields.length; i++)
-				params[i] = imgParamFields[i].getText();
-			rebuilt = joinSpec(newFile, params);
-
-			suppressSync = true;
-			try {
-				if (empty) {
-					setParamConfig(new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_COLOR, null, null },
-							new boolean[] { true, true, true, false, false },
-							new boolean[] { true, true, true, false, false });
-				} else {
-					setParamConfig(new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_SCALE, LBL_COLOR, LBL_FILL },
-							new boolean[] { true, true, true, true, true },
-							new boolean[] { true, true, true, true, true });
-				}
-			} finally {
-				suppressSync = false;
-			}
-		} else {
-			rebuilt = newFile;
-			suppressSync = true;
-			try {
-				setParamConfig(new String[] { LBL_WIDTH, LBL_HEIGHT, LBL_SCALE, LBL_COLOR, LBL_FILL },
-						new boolean[] { true, true, true, true, true },
-						new boolean[] { false, false, false, false, false });
-			} finally {
-				suppressSync = false;
-			}
+		String rebuilt = joinSpec(newFile, currentParams(newFile));
+		suppressSync = true;
+		try {
+			configureParams(newFile);
+		} finally {
+			suppressSync = false;
 		}
 
 		updateSelectedListItem(rebuilt);
@@ -823,8 +790,26 @@ public class IconspecComposer extends VBox {
 		return spec != null && (spec.startsWith("[P]:") || spec.startsWith("[PI]:") || spec.startsWith("[PS]:"));
 	}
 
-	private static boolean isSvgOrEmpty(String file) {
-		return file != null && (file.toLowerCase().endsWith(".svg") || "EMPTY".equalsIgnoreCase(file));
+	/**
+	 * How many parameters (of width, height, scale, color, fill) a spec image
+	 * takes: SVG all 5, EMPTY 3 (width, height, color), a raster image 3 (width,
+	 * height, scale - IconSpecEngine resizes it), ICO 2 (the entry's size),
+	 * anything else none.
+	 */
+	static int paramCount(String file) {
+		if (file == null)
+			return 0;
+		String lower = file.toLowerCase();
+		if (lower.endsWith(".svg"))
+			return 5;
+		if ("empty".equals(lower))
+			return 3;
+		if (lower.endsWith(".ico"))
+			return 2;
+		for (String ext : new String[] { ".png", ".jpg", ".jpeg", ".gif", ".bmp" })
+			if (lower.endsWith(ext))
+				return 3;
+		return 0;
 	}
 
 	/** Joins {@code base|p0|p1...} trimming trailing empty slots. */

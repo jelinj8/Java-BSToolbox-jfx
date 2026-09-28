@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import cz.bliksoft.javautils.fx.controls.codebooks.ICodebookProvider;
@@ -75,9 +76,13 @@ public class IconCodebookPopupProvider implements ICodebookProvider<String> {
 		return new PopupIconSelector(onConfirm, new ArrayList<>(rootFolders));
 	}
 
-	private static boolean isIconFile(File f) {
+	/** The image files an icon spec can load (IconSpecEngine: SVG, ICO, ImageIO rasters). */
+	private static final Set<String> ICON_EXTENSIONS = Set.of("png", "svg", "jpg", "jpeg", "gif", "bmp", "ico");
+
+	static boolean isIconFile(File f) {
 		String name = f.getName().toLowerCase();
-		return name.endsWith(".png") || name.endsWith(".svg");
+		int dot = name.lastIndexOf('.');
+		return dot >= 0 && ICON_EXTENSIONS.contains(name.substring(dot + 1));
 	}
 
 	private static final class PopupIconSelector extends VBox
