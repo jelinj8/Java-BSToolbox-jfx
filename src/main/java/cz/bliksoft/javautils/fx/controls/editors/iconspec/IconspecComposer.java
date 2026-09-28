@@ -161,6 +161,12 @@ public class IconspecComposer extends VBox {
 		}
 		listEditor.setAddItemChoices(choices);
 		listEditor.setOrderingEnabled(true);
+		// a new step goes right after the selected one (at the end with none)
+		listEditor.setInsertAfterSelection(true);
+		// copy = the step's spec text; paste splits on '#', so a whole pasted
+		// iconspec becomes its steps
+		listEditor.setCopyPaste(steps -> String.join("#", steps),
+				text -> splitSteps(text != null ? text.strip() : null));
 
 		HBox previewBox = new HBox(listPreview);
 		previewBox.setAlignment(Pos.CENTER);
@@ -299,9 +305,7 @@ public class IconspecComposer extends VBox {
 	private void loadIconspecIntoList(String spec) {
 		suppressSync = true;
 		try {
-			List<String> parts = (spec == null || spec.isBlank()) ? List.of()
-					: Arrays.stream(spec.split("#", -1)).filter(s -> !s.isBlank()).collect(Collectors.toList());
-			listEditor.loadFrom(parts);
+			listEditor.loadFrom(splitSteps(spec));
 		} finally {
 			suppressSync = false;
 		}
@@ -810,6 +814,12 @@ public class IconspecComposer extends VBox {
 			if (lower.endsWith(ext))
 				return 3;
 		return 0;
+	}
+
+	/** The steps of an iconspec (split on {@code #}, blank ones dropped). */
+	static List<String> splitSteps(String spec) {
+		return (spec == null || spec.isBlank()) ? List.of()
+				: Arrays.stream(spec.split("#", -1)).filter(s -> !s.isBlank()).collect(Collectors.toList());
 	}
 
 	/** Joins {@code base|p0|p1...} trimming trailing empty slots. */

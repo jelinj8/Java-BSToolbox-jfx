@@ -32,4 +32,12 @@ class IconspecComposerParamsTest {
 		assertTrue(IconCodebookPopupProviderAccess.isIconFile(new File("PHOTO.JPG")));
 		assertFalse(IconCodebookPopupProviderAccess.isIconFile(new File("notes.txt")));
 	}
+
+	/** Paste: a whole iconspec becomes its steps. */
+	@Test
+	void splitSteps() {
+		assertEquals(java.util.List.of("base.svg|24", "badge.svg|12", "*+"),
+				IconspecComposer.splitSteps("base.svg|24#badge.svg|12##*+"));
+		assertEquals(java.util.List.of(), IconspecComposer.splitSteps(" "));
+	}
 }
