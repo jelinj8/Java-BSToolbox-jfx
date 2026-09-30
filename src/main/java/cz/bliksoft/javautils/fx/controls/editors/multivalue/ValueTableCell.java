@@ -157,7 +157,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 				committingOnFocusLoss = false;
 			}
 		});
-		Platform.runLater(editorNode::requestFocus);
+		EditorFocus.requestLater(editorNode);
 	}
 
 	/** Applies the editor's current state and commits it (ENTER, TAB, focus loss). */

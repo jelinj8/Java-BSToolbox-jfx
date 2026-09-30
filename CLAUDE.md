@@ -56,6 +56,15 @@ Any code can look up an optional shortcut from `core/key-bindings/{subpath}` by 
 
 - `UIActionBase.of(key, text, iconSpec, shortcutFolder, runnable)` — looks up `shortcutFolder + "/" + key`
 - Multivalue editors (`ListEditor`, `KeyValueEditor`, `TreeEditor`) — look up paths under `multivalue-editors/` with hardcoded fallback key codes
+- Inline cell editors of the multivalue editors get their focus through `multivalue.EditorFocus`
+  (`requestLater` / `request`), never a bare `Platform.runLater(editor::requestFocus)`: a cell's
+  editor has no skin yet at that point, and an editable `ComboBox` focused before its skin exists
+  takes typing but draws no text caret (it only switches the caret on when its focus changes with
+  the skin present). `EditorFocus` waits for the skin. Applies to `ValueTableCell`, `ListValueCell`,
+  `KeyTableCell` and `TreeValueCell`; checked by screenshots of a `KeyValueEditor` (value column
+  with an editable-combo provider, and the key column's own combo): no caret before, blinking caret
+  after. A provider's editor that is a container *around* a combo is not covered - only the node
+  the provider returns is handled.
 
 Built-in defaults (defined in `BSAppUI.xml`):
 

@@ -98,7 +98,7 @@ final class TreeValueCell<N> extends TreeCell<N> {
 
 		setText(null);
 		setGraphic(editNode);
-		editNode.requestFocus();
+		EditorFocus.request(editNode);
 	}
 
 	@Override

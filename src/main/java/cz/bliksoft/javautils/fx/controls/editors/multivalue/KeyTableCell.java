@@ -91,7 +91,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setGraphic(field);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 			watchFocus(field, field::getValue);
-			Platform.runLater(field::requestFocus);
+			EditorFocus.requestLater(field);
 		} else if (registry != null) {
 			ComboBox<String> combo = new ComboBox<>(
 					javafx.collections.FXCollections.observableArrayList(registry.keySet()));
@@ -112,7 +112,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setGraphic(combo);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 			watchFocus(combo, () -> combo.getEditor().getText());
-			Platform.runLater(combo::requestFocus);
+			EditorFocus.requestLater(combo);
 		} else {
 			TextField tf = new TextField(originalKey);
 			tf.setMaxWidth(Double.MAX_VALUE);
@@ -129,7 +129,7 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 			setGraphic(tf);
 			setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 			watchFocus(tf, tf::getText);
-			Platform.runLater(tf::requestFocus);
+			EditorFocus.requestLater(tf);
 		}
 	}
 

@@ -6,7 +6,6 @@ import cz.bliksoft.javautils.fx.binding.ObjectStatus;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -136,7 +135,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 				committingOnFocusLoss = false;
 			}
 		});
-		Platform.runLater(innerEditorNode::requestFocus);
+		EditorFocus.requestLater(innerEditorNode);
 	}
 
 	/**
