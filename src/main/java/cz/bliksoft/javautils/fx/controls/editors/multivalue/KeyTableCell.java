@@ -161,7 +161,9 @@ final class KeyTableCell<V> extends TableCell<KVEntry<V>, String> {
 		commitEdit(k);
 	}
 
-	/** Another row (not this cell's own) already using {@code key}, or {@code null}. */
+	/**
+	 * Another row (not this cell's own) already using {@code key}, or {@code null}.
+	 */
 	private KVEntry<V> findOtherEntryWithKey(String key) {
 		TableView<KVEntry<V>> tv = getTableView();
 		if (tv == null)

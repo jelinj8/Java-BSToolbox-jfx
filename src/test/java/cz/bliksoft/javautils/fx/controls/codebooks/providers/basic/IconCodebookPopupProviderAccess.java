@@ -2,7 +2,9 @@ package cz.bliksoft.javautils.fx.controls.codebooks.providers.basic;
 
 import java.io.File;
 
-/** Test access to {@link IconCodebookPopupProvider}'s package-private helpers. */
+/**
+ * Test access to {@link IconCodebookPopupProvider}'s package-private helpers.
+ */
 public final class IconCodebookPopupProviderAccess {
 
 	private IconCodebookPopupProviderAccess() {

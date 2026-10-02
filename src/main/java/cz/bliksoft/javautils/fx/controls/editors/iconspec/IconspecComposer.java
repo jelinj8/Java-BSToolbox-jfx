@@ -666,7 +666,10 @@ public class IconspecComposer extends VBox {
 		return joinSpec(file, currentParams(file));
 	}
 
-	/** The parameter fields' values that {@code file}'s kind takes (see {@link #paramCount}). */
+	/**
+	 * The parameter fields' values that {@code file}'s kind takes (see
+	 * {@link #paramCount}).
+	 */
 	private String[] currentParams(String file) {
 		int count = paramCount(file);
 		String[] params = new String[count];
@@ -867,12 +870,12 @@ public class IconspecComposer extends VBox {
 	 * A large source image (e.g. a big raster file, or an SVG rendered at a large
 	 * declared size) must never grow the preview past this box - an unconstrained
 	 * {@link ImageView} reports the raw image's pixel size as its own layout size,
-	 * which then balloons every containing row/pane up through the composer and
-	 * the dialog it's hosted in (see {@code IconspecComposerDialog}), with no way
-	 * to shrink it back. Fixed {@code fitWidth}/{@code fitHeight} plus
+	 * which then balloons every containing row/pane up through the composer and the
+	 * dialog it's hosted in (see {@code IconspecComposerDialog}), with no way to
+	 * shrink it back. Fixed {@code fitWidth}/{@code fitHeight} plus
 	 * {@code preserveRatio} scales any image down to fit within this box instead
-	 * (never up - {@link ImageView} doesn't upscale past the fit size only when
-	 * the source is already smaller, which is fine for a thumbnail preview).
+	 * (never up - {@link ImageView} doesn't upscale past the fit size only when the
+	 * source is already smaller, which is fine for a thumbnail preview).
 	 */
 	private static final double PREVIEW_WIDTH = 120;
 	private static final double PREVIEW_HEIGHT = 80;

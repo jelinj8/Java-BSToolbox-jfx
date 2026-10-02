@@ -24,8 +24,8 @@ import javafx.util.StringConverter;
  * {@link String} editor for values that may contain line breaks.
  *
  * <p>
- * The inline editor is a single-line {@link TextField}, which can't hold a
- * line break at all (JavaFX strips them from its text) - so there, and in the
+ * The inline editor is a single-line {@link TextField}, which can't hold a line
+ * break at all (JavaFX strips them from its text) - so there, and in the
  * display string, a line break is shown and typed as the two-character escape
  * {@code \n} (a tab as {@code \t}, a literal backslash as {@code \\}; any other
  * backslash sequence is kept as-is). The dialog ({@link #supportsDialog()}) is

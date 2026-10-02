@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import cz.bliksoft.javautils.fx.controls.codebooks.providers.basic.IconCodebookPopupProviderAccess;
 
 /**
- * Which parameters the composer offers per image kind - a raster image
- * (JPG too) takes width/height/scale, not just SVG.
+ * Which parameters the composer offers per image kind - a raster image (JPG
+ * too) takes width/height/scale, not just SVG.
  */
 class IconspecComposerParamsTest {
 

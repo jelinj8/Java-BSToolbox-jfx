@@ -14,10 +14,10 @@ import javafx.scene.control.Skin;
  * <p>
  * A cell's editor gets its skin only in the next pulse, after a plain
  * {@code Platform.runLater(editor::requestFocus)} has already run. Most
- * controls don't mind, but an editable {@code ComboBox} tells its text field
- * to draw the caret only when its own focus <em>changes</em> while the skin is
- * there: focused that early it takes typing and never shows where. So a
- * control without a skin is focused when the skin arrives.
+ * controls don't mind, but an editable {@code ComboBox} tells its text field to
+ * draw the caret only when its own focus <em>changes</em> while the skin is
+ * there: focused that early it takes typing and never shows where. So a control
+ * without a skin is focused when the skin arrives.
  */
 final class EditorFocus {
 

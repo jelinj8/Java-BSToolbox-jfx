@@ -751,8 +751,8 @@ public class ListEditor<V> extends VBox {
 	 * {@code fromText} parses clipboard text back into items, returning
 	 * {@code null} or an empty list for text it doesn't recognize (paste is then a
 	 * no-op). A text format rather than an in-memory copy, so a copy survives e.g.
-	 * switching documents, or even applications. Pass {@code null}s to disable
-	 * (the default).
+	 * switching documents, or even applications. Pass {@code null}s to disable (the
+	 * default).
 	 */
 	public void setCopyPaste(Function<List<V>, String> toText, Function<String, List<V>> fromText) {
 		copyCodec = toText;
@@ -801,10 +801,10 @@ public class ListEditor<V> extends VBox {
 	 * selection. Also refreshes {@link #selectedItem} directly - it's a cached
 	 * snapshot taken when {@code table}'s own selection changes (see the
 	 * {@code selectedItemProperty()} listener in the constructor), which does
-	 * <em>not</em> fire just because the selected row's own value property
-	 * changed in place, so without this a caller reading {@link #getSelectedItem}
-	 * shortly after calling this would still see the value from <em>before</em>
-	 * this call - stale by exactly the edit it just made.
+	 * <em>not</em> fire just because the selected row's own value property changed
+	 * in place, so without this a caller reading {@link #getSelectedItem} shortly
+	 * after calling this would still see the value from <em>before</em> this call -
+	 * stale by exactly the edit it just made.
 	 */
 	public void updateSelectedItem(V newValue) {
 		ListEntry<V> sel = table.getSelectionModel().getSelectedItem();

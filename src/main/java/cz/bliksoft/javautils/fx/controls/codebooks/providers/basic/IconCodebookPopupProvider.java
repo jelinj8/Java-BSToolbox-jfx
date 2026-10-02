@@ -76,7 +76,10 @@ public class IconCodebookPopupProvider implements ICodebookProvider<String> {
 		return new PopupIconSelector(onConfirm, new ArrayList<>(rootFolders));
 	}
 
-	/** The image files an icon spec can load (IconSpecEngine: SVG, ICO, ImageIO rasters). */
+	/**
+	 * The image files an icon spec can load (IconSpecEngine: SVG, ICO, ImageIO
+	 * rasters).
+	 */
 	private static final Set<String> ICON_EXTENSIONS = Set.of("png", "svg", "jpg", "jpeg", "gif", "bmp", "ico");
 
 	static boolean isIconFile(File f) {

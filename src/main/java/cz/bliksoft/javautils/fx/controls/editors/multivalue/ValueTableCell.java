@@ -160,7 +160,9 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 		EditorFocus.requestLater(editorNode);
 	}
 
-	/** Applies the editor's current state and commits it (ENTER, TAB, focus loss). */
+	/**
+	 * Applies the editor's current state and commits it (ENTER, TAB, focus loss).
+	 */
 	private void commitPending(Node editorNode) {
 		flushTextFormatter(editorNode);
 		currentProvider.applyEdit(editorProxy);
