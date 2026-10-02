@@ -1,10 +1,11 @@
 package cz.bliksoft.javautils.fx.controls.forms;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+import cz.bliksoft.javautils.freemarker.utils.TemplateFormSupport;
+import cz.bliksoft.javautils.freemarker.utils.TemplateFormSupport.Option;
 import cz.bliksoft.javautils.freemarker.utils.TemplateParameterUtils;
 import cz.bliksoft.javautils.freemarker.utils.TemplateParameterUtils.TemplateParameter;
 
@@ -12,19 +13,20 @@ import cz.bliksoft.javautils.freemarker.utils.TemplateParameterUtils.TemplatePar
  * One field of a {@link ParametricFormPane}.
  *
  * @param type         STRING, INT, DECIMAL, BOOLEAN, MULTILINE, COMBO, FONT,
- *                     CSVFILE, INFO, COMMENT or HIDDEN (case-insensitive; an
- *                     unknown type is a text field)
+ *                     DATE, DATETIME, CSVFILE, INFO, COMMENT or HIDDEN
+ *                     (case-insensitive; an unknown type is a text field)
  * @param name         the key of the value
  * @param title        the label (COMMENT: the text shown)
  * @param defaultValue the initial value as text (INFO: the text shown, HIDDEN:
- *                     the value)
+ *                     the value; DATE/DATETIME: ISO or a date expression like
+ *                     {@code today+7})
  * @param parameters   type-specific: COMBO/FONT options separated by {@code ;}
- *                     or {@code ,}; INT {@code min:max:step}
+ *                     (or {@code ,} when there is no {@code ;}); INT
+ *                     {@code min:max:step}; DATE/DATETIME {@code min..max}
  * @param hint         help text shown as a tooltip of the title, {@code null}
  *                     for none
  */
-public record FormField(String type, String name, String title, String defaultValue, String parameters,
-		String hint) {
+public record FormField(String type, String name, String title, String defaultValue, String parameters, String hint) {
 
 	/** A field without a hint. */
 	public FormField(String type, String name, String title, String defaultValue, String parameters) {
@@ -41,16 +43,19 @@ public record FormField(String type, String name, String title, String defaultVa
 		return type == null || type.isBlank() ? "STRING" : type.strip().toUpperCase(Locale.ROOT);
 	}
 
-	/** COMBO/FONT options from {@link #parameters()}; empty when none. */
+	/**
+	 * COMBO/FONT options from {@link #parameters()}
+	 * ({@link TemplateFormSupport#declaredOptions}); empty when none.
+	 */
 	public List<String> options() {
-		return parameters == null || parameters.isBlank() ? List.of()
-				: new ArrayList<>(Arrays.asList(parameters.split("[;,]")));
+		return Option.values(TemplateFormSupport.declaredOptions(parameters));
 	}
 
 	/**
-	 * The fields declared in a template's {@code {var|type|name|title|default|parameters}}
-	 * comment lines ({@link TemplateParameterUtils#parseFormParameters}: COMMENT
-	 * texts translated, HINT lines attached to the preceding field as its hint).
+	 * The fields declared in a template's
+	 * {@code {var|type|name|title|default|parameters}} comment lines
+	 * ({@link TemplateParameterUtils#parseFormParameters}: COMMENT texts
+	 * translated, HINT lines attached to the preceding field as its hint).
 	 */
 	public static List<FormField> fromTemplate(String templateSource) {
 		List<FormField> fields = new ArrayList<>();

@@ -23,6 +23,12 @@ public class UIActions {
 	private static volatile boolean isLoaded = false;
 
 	public static final String ACTIONS_FOLDER_NAME = "actions";
+	/**
+	 * Attribute of a {@code core/actions} node naming the action's class (else the
+	 * node's name is the class) - for {@link IConfigurableUIAction}s configured by
+	 * their node.
+	 */
+	public static final String CLASS_ATTR = "class";
 
 	private UIActions() {
 	}
@@ -60,7 +66,9 @@ public class UIActions {
 				FileObjectClassLoader<IUIAction> loader = new FileObjectClassLoader<>();
 				for (FileObject f : actionsFile.getChildFiles()) {
 					try {
-						IUIAction action = loader.loadFile(f);
+						IUIAction action = createAction(f, loader);
+						if (action instanceof IConfigurableUIAction configurable)
+							configurable.configure(f);
 						KeyCombination kc = ShortcutFileLoader.load(f);
 						if (kc != null && action instanceof UIActionBase a)
 							a.setAccelerator(kc);
@@ -88,6 +96,18 @@ public class UIActions {
 
 			isLoaded = true;
 		}
+	}
+
+	/**
+	 * The action of a {@code core/actions} node: the class named by its
+	 * {@code class} attribute, else by the node's name; its no-argument
+	 * constructor.
+	 */
+	private static IUIAction createAction(FileObject f, FileObjectClassLoader<IUIAction> loader) throws Exception {
+		String className = f.getAttribute(CLASS_ATTR);
+		if (className == null || className.isBlank())
+			return loader.loadFile(f);
+		return (IUIAction) Class.forName(className.strip()).getDeclaredConstructor().newInstance();
 	}
 
 	public static void bindAll(AcceleratorManager manager) {

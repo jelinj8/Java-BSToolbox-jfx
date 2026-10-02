@@ -19,6 +19,8 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -84,6 +86,7 @@ public class KeyValueEditor<V> extends VBox {
 	private final Map<KVEntry<V>, ChangeListener<?>[]> entryListeners = new IdentityHashMap<>();
 
 	private final ReadOnlyObjectWrapper<V> selectedValue = new ReadOnlyObjectWrapper<>();
+	private final ReadOnlyStringWrapper selectedKey = new ReadOnlyStringWrapper();
 
 	private Runnable editAction = null;
 	private Runnable previewAction = null;
@@ -126,12 +129,14 @@ public class KeyValueEditor<V> extends VBox {
 	}
 
 	/**
-	 * @param typedValueMode when {@code true}, a registry-declared type resolves
-	 *                        to a real typed editor ({@link ValueEditorFactory#forType})
-	 *                        instead of a String-bridged one
-	 *                        ({@link ValueEditorFactory#forStringType}) - use this
-	 *                        when {@code V} is not {@link String} and the map's
-	 *                        values are genuinely typed (e.g. {@code Map<String,Object>}).
+	 * @param typedValueMode when {@code true}, a registry-declared type resolves to
+	 *                       a real typed editor
+	 *                       ({@link ValueEditorFactory#forType}) instead of a
+	 *                       String-bridged one
+	 *                       ({@link ValueEditorFactory#forStringType}) - use this
+	 *                       when {@code V} is not {@link String} and the map's
+	 *                       values are genuinely typed (e.g.
+	 *                       {@code Map<String,Object>}).
 	 */
 	public KeyValueEditor(boolean typedValueMode) {
 		this(null, typedValueMode);
@@ -180,6 +185,7 @@ public class KeyValueEditor<V> extends VBox {
 
 		table.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
 			selectedValue.set(n != null ? n.value.get() : null);
+			selectedKey.set(n != null ? n.key.get() : null);
 			updateEditButton(n);
 		});
 
@@ -348,11 +354,11 @@ public class KeyValueEditor<V> extends VBox {
 	 * The rows are swapped in a single list change, and {@link #getValues()} is
 	 * only brought in sync <em>after</em> that change has been fully delivered to
 	 * every list listener (the table skin included). A {@link #getValues()}
-	 * listener therefore never runs in the middle of a list notification - one
-	 * that reacts by calling {@code loadFrom} again (directly or through some
-	 * update cycle of its owner) used to modify {@code entries} while the table
-	 * skin was still to receive the previous, now stale, change, which showed up
-	 * as duplicated rows.
+	 * listener therefore never runs in the middle of a list notification - one that
+	 * reacts by calling {@code loadFrom} again (directly or through some update
+	 * cycle of its owner) used to modify {@code entries} while the table skin was
+	 * still to receive the previous, now stale, change, which showed up as
+	 * duplicated rows.
 	 */
 	public void loadFrom(Map<String, V> source) {
 		List<KVEntry<V>> fresh = new ArrayList<>();
@@ -483,10 +489,10 @@ public class KeyValueEditor<V> extends VBox {
 	/**
 	 * Controls whether the toolbar edit button appears for a selected row whose
 	 * value editor supports a dialog (default {@code true}). Turn it off when the
-	 * toolbar is otherwise empty: it then only exists while such a row is
-	 * selected, so moving the selection between row kinds shows/hides the whole
-	 * toolbar and shifts the table under the pointer. The dialog stays reachable
-	 * via the inline editor's own button and Alt+Enter.
+	 * toolbar is otherwise empty: it then only exists while such a row is selected,
+	 * so moving the selection between row kinds shows/hides the whole toolbar and
+	 * shifts the table under the pointer. The dialog stays reachable via the inline
+	 * editor's own button and Alt+Enter.
 	 */
 	public void setToolbarDialogButtonEnabled(boolean enabled) {
 		toolbarDialogButton = enabled;
@@ -523,6 +529,14 @@ public class KeyValueEditor<V> extends VBox {
 
 	public V getSelectedValue() {
 		return selectedValue.get();
+	}
+
+	/**
+	 * The key of the selected entry (changes with the selection - also between
+	 * entries of the same value, unlike {@link #selectedValueProperty()}).
+	 */
+	public ReadOnlyStringProperty selectedKeyProperty() {
+		return selectedKey.getReadOnlyProperty();
 	}
 
 	public String getSelectedKey() {
@@ -726,7 +740,8 @@ public class KeyValueEditor<V> extends VBox {
 		};
 		entry.key.addListener(keyListener);
 		entry.value.addListener(valueListener);
-		ChangeListener<?>[] previous = entryListeners.put(entry, new ChangeListener<?>[] { keyListener, valueListener });
+		ChangeListener<?>[] previous = entryListeners.put(entry,
+				new ChangeListener<?>[] { keyListener, valueListener });
 		if (previous != null) {
 			// Already attached (see loadFrom) - keep exactly one pair of listeners.
 			entry.key.removeListener((ChangeListener<String>) previous[0]);

@@ -38,6 +38,12 @@ The permission/session model lives in the base library (`cz.bliksoft.javautils.a
 
 `BasicAbsentContextUIAction` provides a ready-to-use base for actions that disable themselves when context is absent.
 
+`UIActions` creates each `core/actions` node's action from the class named by the node (no-arg
+constructor), or by its `class` attribute - then the node name is free (e.g. the action key) and
+one class can serve several actions: an `IConfigurableUIAction` gets its node (`configure(node)`)
+before its shortcut is applied and it is registered (under the `key` attribute, else its
+`getKey()`). Used e.g. by BSToolbox-jfx-print's `PrintTaskAction` (one action per print task).
+
 ### Key Bindings
 
 Keyboard shortcuts are loaded from the XML filesystem and applied to actions and controls at startup. There are two complementary mechanisms:
@@ -113,12 +119,18 @@ Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definit
 - **CodebookField**: dropdown/search field backed by a provider framework for fetching codebook data
 - **Editors**: basic object editors, collection editors, properties editors (under `fx.controls.editors`)
 - **Forms**: `fx.controls.forms.ParametricFormPane` - a form built from `FormField`s (STRING, INT,
-  DECIMAL - dot or comma, `Double` -, BOOLEAN, MULTILINE, COMBO, FONT, CSVFILE, INFO, COMMENT,
+  DECIMAL - dot or comma, `Double` -, BOOLEAN, MULTILINE, COMBO, FONT, DATE - `DatePicker`,
+  `LocalDate` -, DATETIME - `DatePicker` + `HH:mm` field, `LocalDateTime` -, CSVFILE, INFO, COMMENT,
   HIDDEN); `FormField.fromTemplate` reads a template's `{var|...}` definitions
   (`TemplateParameterUtils.parseFormParameters`: translated comments, `hint` lines attached to the
   preceding field). A field's `hint` (also `FormField.withHint` for fields built in code) is a
-  tooltip of its title. Keeps values of
-  same-named fields across `setFields`/`addField`. Used by StorageManager's print dialog and BSLabelDesigner.
+  tooltip of its title. Date defaults/`min..max` ranges are date expressions (`today+7`,
+  `now-1h` - BSToolbox `TemplateDateValues`). An optional model (`setModel` /
+  `setFields(fields, model)`, application data by field name) prefills the fields; a COMBO's
+  options are replaced by the model's `<name>_options` (list, or map value → label; a FONT's only
+  without printer fonts). Initial value: entered by the user before the rebuild (changed from what
+  the field was built with) > model > default (`TemplateFormSupport.initialValue`, shared with
+  StorageManager's web form). Used by StorageManager's print dialog and BSLabelDesigner.
 - **Images**: SVG-aware image loading (JSVG), QR code support (ZXing)
 - **Validation**: form validation support integrated with controls
 
