@@ -175,7 +175,12 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 		activeProvider = provider;
 
 		contentArea.setTop(buildHeader(provider));
-		contentArea.setCenter(provider.getAdministrationComponent());
+		Node component = provider.getAdministrationComponent();
+		contentArea.setCenter(component);
+		// provider content is not part of the panel at afterPush(), restore its state
+		// (table columns etc.) whenever it is shown
+		if (component != null)
+			stateManager.restoreState(component);
 
 		if (provider instanceof IContextProvider cp) {
 			providerContextHolder.replaceContext(cp.getItemContext());
