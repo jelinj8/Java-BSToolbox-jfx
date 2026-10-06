@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
 import cz.bliksoft.javautils.app.ui.utils.state.binders.StageStateBinder;
 import cz.bliksoft.javautils.fx.controls.images.cam.NetworkCameraSource;
@@ -181,8 +182,7 @@ public class CameraCaptureDialog extends Dialog<WritableImage> {
 	 */
 	public static WritableImage capture(Window owner, WritableImage existing) {
 		CameraCaptureDialog dlg = new CameraCaptureDialog();
-		if (owner != null)
-			dlg.initOwner(owner);
+		dlg.initOwner(BSAppUI.getDialogOwner(owner));
 		if (existing != null)
 			dlg.capturePane.setExistingImage(existing);
 		dlg.showAndWait();

@@ -116,7 +116,14 @@ Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definit
 
 ### Custom Controls
 
-- **CodebookField**: dropdown/search field backed by a provider framework for fetching codebook data
+- **CodebookField**: dropdown/search field backed by a provider framework for fetching codebook data.
+  Selector dialogs are owned by the field's window; a provider that shows a refine dialog from
+  `identify` overrides `identify(text, refine, owner)` and owns the dialog by `owner`.
+- **Dialog owners**: every dialog/alert/stage needs an owner - an ownerless one is a separate
+  top-level window and on close the OS may activate another application instead of this one. Use
+  `BSAppUI.getDialogOwner(node)` (node's window, else the main stage) / `getDialogOwner(window)`
+  (fallback to the main stage), or `BSAppUI.ensureOwner(dialog)` right before showing (main stage
+  when no owner was set). Outside BSAppUI (no main stage) these return/leave `null`.
 - **Editors**: basic object editors, collection editors, properties editors (under `fx.controls.editors`)
 - **Forms**: `fx.controls.forms.ParametricFormPane` - a form built from `FormField`s (STRING, INT,
   DECIMAL - dot or comma, `Double` -, BOOLEAN, MULTILINE, COMBO, FONT, DATE - `DatePicker`,

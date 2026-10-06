@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.fx.controls.codebooks;
 
 import java.util.Objects;
 
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
 import javafx.application.Platform;
@@ -89,7 +90,7 @@ public class CodebookField<T> extends HBox {
 				if (!locked) {
 					String text = textField.getText();
 					if (text != null && !text.isBlank()) {
-						T identified = provider.identify(text, true);
+						T identified = provider.identify(text, true, BSAppUI.getDialogOwner(this));
 						if (identified != null)
 							acceptValue(identified);
 					}
@@ -129,7 +130,7 @@ public class CodebookField<T> extends HBox {
 		} else {
 			String text = textField.getText();
 			if (text != null && !text.isBlank()) {
-				T identified = provider.identify(text, true);
+				T identified = provider.identify(text, true, BSAppUI.getDialogOwner(this));
 				if (identified != null) {
 					acceptValue(identified);
 					return;
@@ -151,7 +152,7 @@ public class CodebookField<T> extends HBox {
 		ICodebookProvider.Selector<T> selector = provider.createSelector(this::acceptValue);
 
 		if (selector instanceof ICodebookProvider.DialogSelector<T> dialogSel) {
-			Window owner = (getScene() != null) ? getScene().getWindow() : null;
+			Window owner = BSAppUI.getDialogOwner(this);
 			dialogSel.show(owner, textField.getText() == null ? "" : textField.getText());
 			return;
 		}

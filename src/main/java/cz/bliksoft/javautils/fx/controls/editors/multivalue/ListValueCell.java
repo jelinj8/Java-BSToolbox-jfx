@@ -1,5 +1,6 @@
 package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IObjectStatusProvider;
 import cz.bliksoft.javautils.fx.binding.ObjectStatus;
@@ -84,7 +85,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 			Button editDialogBtn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			editDialogBtn.setFocusTraversable(false);
 			editDialogBtn.setOnAction(e -> {
-				Window owner = getScene() != null ? getScene().getWindow() : null;
+				Window owner = BSAppUI.getDialogOwner(this);
 				provider.showDialog(owner, editorProxy);
 			});
 			HBox editBox = new HBox(4, innerEditorNode, editDialogBtn);
@@ -143,7 +144,7 @@ final class ListValueCell<V> extends TableCell<ListEntry<V>, V> {
 	 * immediately (the dialog is its own confirm/cancel).
 	 */
 	private void openDialog() {
-		Window owner = getScene() != null ? getScene().getWindow() : null;
+		Window owner = BSAppUI.getDialogOwner(this);
 		provider.showDialog(owner, editorProxy);
 		if (currentEntry != null) {
 			currentEntry.value.set(editorProxy.get());

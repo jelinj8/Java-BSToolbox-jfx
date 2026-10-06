@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import cz.bliksoft.javautils.app.BSAppJFX;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.exceptions.ViewableException;
 import cz.bliksoft.javautils.xmlfilesystem.FileObject;
 import cz.bliksoft.javautils.xmlfilesystem.FileSystem;
@@ -412,8 +413,8 @@ public class WidgetContainer extends StackPane {
 		if (getScene() != null && getScene().getWindow() != null) {
 			DialogPane dp = dialog.getDialogPane();
 			dp.getScene().getWindow().sizeToScene();
-			dialog.initOwner(getScene().getWindow());
 		}
+		dialog.initOwner(BSAppUI.getDialogOwner(this));
 
 		return dialog.showAndWait();
 	}

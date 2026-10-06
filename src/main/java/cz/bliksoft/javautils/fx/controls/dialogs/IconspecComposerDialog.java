@@ -1,6 +1,7 @@
 package cz.bliksoft.javautils.fx.controls.dialogs;
 
 import cz.bliksoft.javautils.app.iconspec.IconspecMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.fx.controls.editors.iconspec.IconspecComposer;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -25,7 +26,7 @@ public class IconspecComposerDialog {
 	public static String showAndWait(Window owner, String existingSpec) {
 		Dialog<String> dialog = new Dialog<>();
 		dialog.setTitle(IconspecMessages.getString("IconspecComposerDialog.title"));
-		dialog.initOwner(owner);
+		dialog.initOwner(BSAppUI.getDialogOwner(owner));
 
 		IconspecComposer composer = new IconspecComposer();
 		if (existingSpec != null && !existingSpec.isBlank())

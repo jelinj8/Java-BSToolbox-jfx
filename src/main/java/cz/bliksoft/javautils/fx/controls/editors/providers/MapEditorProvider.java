@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.editors.providers;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.controls.editors.multivalue.KeyValueEditor;
 import javafx.beans.property.ObjectProperty;
@@ -29,7 +30,7 @@ public class MapEditorProvider implements IValueEditorProvider<Map<String, Strin
 		valueProperty.addListener((obs, o, n) -> display.setText(toDisplayString(n)));
 		display.setOnMouseClicked(e -> {
 			if (e.getClickCount() == 2)
-				showDialog(display.getScene() != null ? display.getScene().getWindow() : null, valueProperty);
+				showDialog(BSAppUI.getDialogOwner(display), valueProperty);
 		});
 		return display;
 	}
@@ -80,7 +81,7 @@ public class MapEditorProvider implements IValueEditorProvider<Map<String, Strin
 
 		Dialog<Map<String, String>> dialog = new Dialog<>();
 		dialog.setTitle("Edit Values");
-		dialog.initOwner(owner);
+		dialog.initOwner(BSAppUI.getDialogOwner(owner));
 		dialog.setResizable(true);
 		dialog.getDialogPane().setContent(inner);
 		dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);

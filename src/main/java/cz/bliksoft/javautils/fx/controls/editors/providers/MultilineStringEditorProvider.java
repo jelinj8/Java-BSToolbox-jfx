@@ -1,6 +1,7 @@
 package cz.bliksoft.javautils.fx.controls.editors.providers;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
 import cz.bliksoft.javautils.fx.controls.editors.IValueEditorProvider;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
@@ -76,7 +77,7 @@ public class MultilineStringEditorProvider implements IValueEditorProvider<Strin
 
 		Dialog<String> dialog = new Dialog<>();
 		dialog.setTitle(BSAppJFXMessages.getString("editor.button.edit"));
-		dialog.initOwner(owner);
+		dialog.initOwner(BSAppUI.getDialogOwner(owner));
 		dialog.setResizable(true);
 		dialog.getDialogPane().setContent(area);
 		dialog.getDialogPane().getButtonTypes().addAll(BSButtonTypes.OK, BSButtonTypes.CANCEL);

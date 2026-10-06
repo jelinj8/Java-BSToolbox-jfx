@@ -19,6 +19,23 @@ public interface ICodebookProvider<T> {
 	T identify(String selectorText, boolean refineIfNotUnique);
 
 	/**
+	 * {@link #identify(String, boolean)} with the owner window for a refine dialog.
+	 * Providers that show a dialog when the match is not unique override this one
+	 * and pass {@code owner} to the dialog's {@code initOwner} (see
+	 * {@code BSAppUI.getDialogOwner}). The default ignores {@code owner}.
+	 *
+	 * @param selectorText      the text typed by the user; may be {@code null}
+	 * @param refineIfNotUnique if {@code true}, the provider may show a dialog when
+	 *                          the match is not unique
+	 * @param owner             owner of a refine dialog; may be {@code null}
+	 *
+	 * @return the matched item, or {@code null} if not found or ambiguous
+	 */
+	default T identify(String selectorText, boolean refineIfNotUnique, Window owner) {
+		return identify(selectorText, refineIfNotUnique);
+	}
+
+	/**
 	 * Converts an item to the string displayed in dropdowns and dialogs.
 	 *
 	 * @param value the item to convert

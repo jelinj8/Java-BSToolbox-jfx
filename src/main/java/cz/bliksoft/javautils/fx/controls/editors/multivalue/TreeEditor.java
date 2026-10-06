@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.IconBinder;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
@@ -428,7 +429,7 @@ public class TreeEditor<N> extends VBox {
 		ITreeNodeType<N> type = typeResolver.apply(node);
 		if (type == null || !type.supportsDialog())
 			return;
-		Window owner = getScene() != null ? getScene().getWindow() : null;
+		Window owner = BSAppUI.getDialogOwner(this);
 		type.showDialog(owner, node);
 		treeView.refresh();
 	}

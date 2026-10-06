@@ -2,6 +2,7 @@ package cz.bliksoft.javautils.fx.controls.editors.multivalue;
 
 import java.util.Map;
 
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IObjectStatusProvider;
 import cz.bliksoft.javautils.fx.binding.ObjectStatus;
@@ -135,7 +136,7 @@ final class ValueTableCell<V> extends TableCell<KVEntry<V>, V> {
 			Button btn = new Button(null, ImageUtils.getIconView(IconspecUtils.getIconspec("editor/edit")));
 			btn.setFocusTraversable(false);
 			btn.setOnAction(e -> {
-				Window owner = getScene() != null ? getScene().getWindow() : null;
+				Window owner = BSAppUI.getDialogOwner(this);
 				currentProvider.showDialog(owner, editorProxy);
 			});
 			HBox box = new HBox(4, editorNode, btn);

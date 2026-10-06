@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.actions.IconBinder;
 import cz.bliksoft.javautils.app.ui.actions.IUIAction;
 import cz.bliksoft.javautils.app.ui.actions.ShortcutFileLoader;
@@ -693,7 +694,7 @@ public class KeyValueEditor<V> extends VBox {
 		KVEntry<V> sel = table.getSelectionModel().getSelectedItem();
 		if (sel == null)
 			return;
-		Window owner = getScene() != null ? getScene().getWindow() : null;
+		Window owner = BSAppUI.getDialogOwner(this);
 		ObjectProperty<V> prop = new SimpleObjectProperty<>(sel.value.get());
 		provider.showDialog(owner, prop);
 		sel.value.set(prop.get());

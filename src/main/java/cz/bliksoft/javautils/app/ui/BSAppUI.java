@@ -47,6 +47,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 public class BSAppUI extends ModuleBase {
 	static Logger log = null;
@@ -108,6 +109,57 @@ public class BSAppUI extends ModuleBase {
 	/** Returns the primary application stage. */
 	public static Stage getStage() {
 		return mainStage;
+	}
+
+	/**
+	 * Owner window for a dialog opened from {@code node}: the window of the node's
+	 * scene, else the main stage. A dialog without an owner is a separate top-level
+	 * window - when it closes, the OS may activate another application instead of
+	 * this one.
+	 *
+	 * @param node the node opening the dialog; {@code null} = main stage
+	 * @return the owner, {@code null} only when there is no main stage either
+	 */
+	public static Window getDialogOwner(Node node) {
+		Window w = (node != null && node.getScene() != null) ? node.getScene().getWindow() : null;
+		return getDialogOwner(w);
+	}
+
+	/**
+	 * @param owner a known owner, may be {@code null}
+	 * @return {@code owner}, or the main stage when it is {@code null}
+	 */
+	public static Window getDialogOwner(Window owner) {
+		return owner != null ? owner : mainStage;
+	}
+
+	/**
+	 * Gives a not-yet-shown dialog without an owner the main stage as its owner; an
+	 * owner set before (by {@code initOwner}) is kept.
+	 */
+	public static void ensureOwner(Dialog<?> dialog) {
+		if (dialog != null && dialog.getOwner() == null && mainStage != null && !dialog.isShowing()) {
+			try {
+				dialog.initOwner(mainStage);
+			} catch (IllegalStateException e) {
+				// already shown before - the owner can no longer be set
+			}
+		}
+	}
+
+	/**
+	 * Gives a not-yet-shown stage without an owner the main stage as its owner; an
+	 * owner set before (by {@code initOwner}) is kept.
+	 */
+	public static void ensureOwner(Stage stage) {
+		if (stage != null && stage != mainStage && stage.getOwner() == null && mainStage != null
+				&& !stage.isShowing()) {
+			try {
+				stage.initOwner(mainStage);
+			} catch (IllegalStateException e) {
+				// already shown before - the owner can no longer be set
+			}
+		}
 	}
 
 	/**

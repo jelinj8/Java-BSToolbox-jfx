@@ -253,8 +253,7 @@ public class AdministrationPanel extends SplitPane implements IContextProvider, 
 			return true;
 
 		Alert alert = new Alert(AlertType.CONFIRMATION);
-		if (getScene() != null)
-			alert.initOwner(getScene().getWindow());
+		alert.initOwner(BSAppUI.getDialogOwner(this));
 		alert.setTitle(BSAppAdministrationMessages.getString("AdministrationPanel.dialog.unsavedChanges.title"));
 		alert.setContentText(
 				BSAppAdministrationMessages.getString("AdministrationPanel.dialog.unsavedChanges.message"));

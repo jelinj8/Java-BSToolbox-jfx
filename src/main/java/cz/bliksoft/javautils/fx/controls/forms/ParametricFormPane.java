@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 
 import cz.bliksoft.javautils.CsvUtils;
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.freemarker.utils.TemplateDateValues;
 import cz.bliksoft.javautils.freemarker.utils.TemplateFormSupport;
 import cz.bliksoft.javautils.freemarker.utils.TemplateFormSupport.Option;
@@ -519,7 +520,7 @@ public class ParametricFormPane extends GridPane {
 						new FileChooser.ExtensionFilter(BSAppJFXMessages.getString("parametricForm.csvfile.filter"),
 								"*.csv", "*.CSV"),
 						new FileChooser.ExtensionFilter(BSAppJFXMessages.getString("parametricForm.allFiles"), "*.*"));
-				File chosen = fc.showOpenDialog(getScene() != null ? getScene().getWindow() : null);
+				File chosen = fc.showOpenDialog(BSAppUI.getDialogOwner(this));
 				if (chosen != null)
 					pathField.setText(chosen.getAbsolutePath());
 			});

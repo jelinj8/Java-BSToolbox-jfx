@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -81,8 +82,7 @@ public class TableCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 	private void showDialog(Window owner, String initialFilterText, Consumer<T> onConfirm) {
 		Stage stage = new Stage();
 		stage.initModality(Modality.WINDOW_MODAL);
-		if (owner != null)
-			stage.initOwner(owner);
+		stage.initOwner(BSAppUI.getDialogOwner(owner));
 		stage.setTitle(dialogTitle);
 
 		TextField filterField = new TextField();

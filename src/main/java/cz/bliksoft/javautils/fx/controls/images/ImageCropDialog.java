@@ -3,6 +3,7 @@ package cz.bliksoft.javautils.fx.controls.images;
 import java.awt.image.BufferedImage;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.app.ui.utils.StageAutoSizer;
 import cz.bliksoft.javautils.app.ui.utils.state.binders.StageStateBinder;
 import cz.bliksoft.javautils.fx.customization.BSButtonTypes;
@@ -179,8 +180,7 @@ public class ImageCropDialog extends Dialog<ImageCropDialog.CropResult> {
 	public static CropResult edit(Window owner, BufferedImage image, java.awt.Rectangle initialCropRect,
 			boolean autocropIfNoInitial) {
 		ImageCropDialog dlg = new ImageCropDialog();
-		if (owner != null)
-			dlg.initOwner(owner);
+		dlg.initOwner(BSAppUI.getDialogOwner(owner));
 		dlg.cropPane.setImage(image);
 		if (initialCropRect != null)
 			dlg.cropPane.setCropRect(initialCropRect);

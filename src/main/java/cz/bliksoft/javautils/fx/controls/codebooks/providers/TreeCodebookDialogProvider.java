@@ -8,6 +8,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import cz.bliksoft.javautils.app.BSAppJFXMessages;
+import cz.bliksoft.javautils.app.ui.BSAppUI;
 import cz.bliksoft.javautils.fx.controls.codebooks.BasicCodebookProvider;
 import cz.bliksoft.javautils.fx.tools.IconspecUtils;
 import cz.bliksoft.javautils.fx.tools.ImageUtils;
@@ -74,8 +75,7 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 	private void showDialog(Window owner, String initialFilterText, Consumer<T> onConfirm) {
 		Stage stage = new Stage();
 		stage.initModality(Modality.WINDOW_MODAL);
-		if (owner != null)
-			stage.initOwner(owner);
+		stage.initOwner(BSAppUI.getDialogOwner(owner));
 		stage.setTitle(dialogTitle);
 		String iconSpec = IconspecUtils.getMenuIconspec("codebook/dialog/tree");
 		if (iconSpec != null) {
