@@ -6,6 +6,7 @@ import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
@@ -19,17 +20,22 @@ import javafx.stage.Window;
 
 /**
  * Hides a {@link MenuBar} while its window is a full-screen {@link Stage} and
- * shows it on demand: Alt (also Alt+mnemonic), F10 (Ctrl+F10 on mac/linux) or
- * the mouse at the top edge of the scene. Enabled by the {@code MenuBar}
- * attribute {@code autoHideInFullScreen}.
+ * shows it on demand: Alt (also Alt+mnemonic), F10 or the mouse at the top edge
+ * of the scene. Enabled by the {@code MenuBar} attribute
+ * {@code autoHideInFullScreen}.
  *
  * <p>
  * In full screen the bar is unmanaged (its siblings take its space) and painted
  * over them when shown. It keeps its size and position while hidden: menu
  * popups are anchored to the laid-out menu buttons and mnemonics only fire for
- * visible nodes, so the bar is shown already when Alt goes down. The key
- * handling mirrors {@code MenuBarSkin} (menu mode on a lone Alt tap, left by
- * Alt, Esc, a click elsewhere or losing focus).
+ * visible nodes, so the bar is shown already when Alt goes down.
+ *
+ * <p>
+ * The bar stays shown while {@code MenuBarSkin} is in its menu mode. That state
+ * is private to the skin, but the skin marks the selected menu by hovering its
+ * button (also when a menu is highlighted without being open, e.g. an empty
+ * one) - so it is read from the buttons' hover, re-checked after every key,
+ * click, focus and menu change once the skin has processed it.
  */
 public final class MenuBarAutoHide {
 
@@ -37,7 +43,6 @@ public final class MenuBarAutoHide {
 	private static final double EDGE = 2;
 
 	private final MenuBar bar;
-	private final boolean ctrlF10;
 
 	private Scene scene;
 	private Window window;
@@ -45,41 +50,27 @@ public final class MenuBarAutoHide {
 
 	private boolean active;
 	private boolean altDown;
-	private boolean altAlone;
-	private boolean menuMode;
 	private boolean hoverReveal;
+	private boolean updateQueued;
 
 	private final ChangeListener<Boolean> fullScreenListener = (obs, o, n) -> update();
 	private final ChangeListener<Boolean> focusListener = (obs, o, n) -> {
 		if (!n) {
 			altDown = false;
-			menuMode = false;
 			hoverReveal = false;
-			update();
 		}
+		updateLater();
 	};
 	private final ChangeListener<Bounds> parentBoundsListener = (obs, o, n) -> relocate();
-	private final ChangeListener<Boolean> menuShowingListener = (obs, o, n) -> {
-		if (n)
-			update();
-		else
-			// moving between menus hides one and shows the next - check afterwards
-			Platform.runLater(() -> {
-				if (!anyMenuShowing()) {
-					menuMode = false;
-					update();
-				}
-			});
-	};
+	private final ChangeListener<Boolean> menuShowingListener = (obs, o, n) -> updateLater();
+	private final ChangeListener<Window> windowListener = (obs, o, n) -> setWindow(n);
 
 	private final EventHandler<KeyEvent> keyFilter = this::onKey;
 	private final EventHandler<MouseEvent> mouseMovedFilter = this::onMouseMoved;
-	private final EventHandler<MouseEvent> mouseClickedFilter = this::onMouseClicked;
+	private final EventHandler<MouseEvent> mouseClickedFilter = e -> updateLater();
 
 	private MenuBarAutoHide(MenuBar bar) {
 		this.bar = bar;
-		// as MenuBarSkin: F10 on Windows, Ctrl+F10 elsewhere
-		this.ctrlF10 = !System.getProperty("os.name", "").toLowerCase().contains("win");
 	}
 
 	/** Installs the full-screen auto-hide on {@code bar}. */
@@ -118,8 +109,6 @@ public final class MenuBarAutoHide {
 		setWindow(scene != null ? scene.getWindow() : null);
 	}
 
-	private final ChangeListener<Window> windowListener = (obs, o, n) -> setWindow(n);
-
 	private void setWindow(Window w) {
 		if (window != null) {
 			window.focusedProperty().removeListener(focusListener);
@@ -145,34 +134,20 @@ public final class MenuBarAutoHide {
 	}
 
 	private void onKey(KeyEvent e) {
-		if (!active || e.isConsumed())
+		if (!active)
 			return;
-		if (e.getEventType() == KeyEvent.KEY_PRESSED) {
-			if (e.getCode() == KeyCode.ALT) {
+		if (e.getCode() == KeyCode.ALT) {
+			if (e.getEventType() == KeyEvent.KEY_PRESSED) {
+				// shown right away - mnemonics (Alt+key) fire only for visible nodes
 				altDown = true;
-				// the skin leaves menu mode (also a menu opened by mouse)
-				if (menuMode || anyMenuShowing()) {
-					menuMode = false;
-					altAlone = false;
-				} else {
-					altAlone = true;
-				}
-			} else {
-				altAlone = false;
-				if (e.getCode() == KeyCode.ESCAPE) {
-					menuMode = false;
-				} else if (e.getCode() == KeyCode.F10 && e.isControlDown() == ctrlF10) {
-					menuMode = !menuMode;
-				}
+				update();
+			} else if (e.getEventType() == KeyEvent.KEY_RELEASED) {
+				altDown = false;
 			}
-			update();
-		} else if (e.getEventType() == KeyEvent.KEY_RELEASED && e.getCode() == KeyCode.ALT) {
-			altDown = false;
-			if (altAlone)
-				menuMode = true;
-			altAlone = false;
-			update();
 		}
+		// the skin's own key handling (menu mode on/off, arrows, Esc, F10) runs
+		// in this same dispatch - check its result afterwards
+		updateLater();
 	}
 
 	private void onMouseMoved(MouseEvent e) {
@@ -183,20 +158,13 @@ public final class MenuBarAutoHide {
 				hoverReveal = true;
 				update();
 			}
-		} else if (hoverReveal && !anyMenuShowing() && e.getSceneY() > barBottom()) {
+		} else if (hoverReveal && e.getSceneY() > barBottom()) {
 			hoverReveal = false;
 			update();
 		}
-	}
-
-	private void onMouseClicked(MouseEvent e) {
-		if (!active || !menuMode)
-			return;
-		Bounds b = bar.localToScene(bar.getLayoutBounds());
-		if (b == null || !b.contains(e.getSceneX(), e.getSceneY())) {
-			menuMode = false;
-			update();
-		}
+		// a menu button's (mouse) hover may clear after this event
+		if (bar.isVisible())
+			updateLater();
 	}
 
 	private double barBottom() {
@@ -211,20 +179,53 @@ public final class MenuBarAutoHide {
 		return false;
 	}
 
+	/**
+	 * Whether the skin is in its menu mode: one of its menu buttons (children of
+	 * its {@code .container}) is hovered.
+	 */
+	private boolean skinMenuMode() {
+		for (Node n : bar.getChildrenUnmodifiable()) {
+			if (n instanceof Parent container && container.getStyleClass().contains("container")) {
+				for (Node b : container.getChildrenUnmodifiable())
+					if (b.isHover())
+						return true;
+			}
+		}
+		return false;
+	}
+
+	private void updateLater() {
+		if (!active || updateQueued)
+			return;
+		updateQueued = true;
+		Platform.runLater(() -> {
+			updateQueued = false;
+			update();
+		});
+	}
+
+	/**
+	 * The menus are in the macOS system menu bar - the in-window bar is empty and
+	 * the system shows its own bar in full screen.
+	 */
+	private boolean systemMenuBar() {
+		return bar.isUseSystemMenuBar() && MAC;
+	}
+
+	private static final boolean MAC = System.getProperty("os.name", "").toLowerCase().startsWith("mac");
+
 	/** Applies the active (full screen) or normal layout and the visibility. */
 	private void update() {
-		boolean fs = window instanceof Stage st && st.isFullScreen();
+		boolean fs = window instanceof Stage st && st.isFullScreen() && !systemMenuBar();
 		if (fs != active) {
 			active = fs;
 			altDown = false;
-			altAlone = false;
-			menuMode = false;
 			hoverReveal = false;
 			bar.setManaged(!active);
 			bar.setViewOrder(active ? -1 : 0);
 		}
 		relocate();
-		bar.setVisible(!active || altDown || menuMode || hoverReveal || anyMenuShowing());
+		bar.setVisible(!active || altDown || hoverReveal || anyMenuShowing() || skinMenuMode());
 	}
 
 	/** Sizes the unmanaged bar over the top of its parent's content area. */

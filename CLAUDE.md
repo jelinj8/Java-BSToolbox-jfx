@@ -106,11 +106,16 @@ Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"C
 
 Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definition syntax.
 
+`MenuBar` attribute `useSystemMenuBar` (boolean): on macOS the menus go to the system menu bar
+(JavaFX ignores it elsewhere, and for menus with a `CustomMenuItem`); auto-hide is then off on macOS.
+
 `MenuBar` attribute `autoHideInFullScreen` (`MenuBarAutoHide`): while the stage is full screen the
 bar is unmanaged (siblings take its space) and hidden; Alt (also Alt+mnemonic), F10 or the mouse at
 the top edge shows it painted over its siblings. It stays sized while hidden - menu popups anchor
-to the laid-out buttons and mnemonics fire only for visible nodes. Key handling mirrors
-`MenuBarSkin`'s (private) menu mode.
+to the laid-out buttons and mnemonics fire only for visible nodes. It stays shown while
+`MenuBarSkin` is in its (private) menu mode, read from the hover of the skin's menu buttons (also
+set for a highlighted empty menu) after each key/click/focus/menu change - never tracked separately,
+which would drift from the skin's state.
 
 ### Observable Beans & Status
 
