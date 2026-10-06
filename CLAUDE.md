@@ -106,6 +106,12 @@ Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"C
 
 Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definition syntax.
 
+`MenuBar` attribute `autoHideInFullScreen` (`MenuBarAutoHide`): while the stage is full screen the
+bar is unmanaged (siblings take its space) and hidden; Alt (also Alt+mnemonic), F10 or the mouse at
+the top edge shows it painted over its siblings. It stays sized while hidden - menu popups anchor
+to the laid-out buttons and mnemonics fire only for visible nodes. Key handling mirrors
+`MenuBarSkin`'s (private) menu mode.
+
 ### Observable Beans & Status
 
 `IStatusBean` tracks object lifecycle state: `INITIAL → NEW → SAVED ↔ MODIFIED`, plus `DETACHED`, `DELETED`, `DELETED_SAVED`. `IParentedStatusBean` propagates changes up to parent beans. `BasicBeanWrapper` wraps plain POJOs as observable beans. `ObjectStatus` renders state as SVG status badges.
