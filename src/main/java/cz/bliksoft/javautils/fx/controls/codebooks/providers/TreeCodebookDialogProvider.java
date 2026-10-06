@@ -138,8 +138,25 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 				confirmAndClose.run();
 		});
 
+		// the first real candidate, not just the first top-level node - with a filter
+		// that is usually a parent kept only for its matching descendants
+		Runnable selectFirstCandidate = () -> {
+			String t = filterField.getText() == null ? "" : filterField.getText().trim().toLowerCase(Locale.ROOT);
+			TreeItem<T> first = firstCandidate(tree.getRoot(), t);
+			if (first != null) {
+				tree.getSelectionModel().select(first);
+				int row = tree.getRow(first);
+				if (row >= 0)
+					tree.scrollTo(row);
+			} else {
+				tree.getSelectionModel().clearSelection();
+			}
+		};
+
 		filterField.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
 			if (e.getCode() == KeyCode.DOWN || e.getCode() == KeyCode.ENTER) {
+				if (tree.getSelectionModel().getSelectedItem() == null)
+					selectFirstCandidate.run();
 				tree.requestFocus();
 				e.consume();
 			}
@@ -161,12 +178,7 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 			if (!t.isEmpty())
 				expandAll(syntheticRoot);
 
-			TreeItem<T> first = firstSelectableChild(syntheticRoot);
-			if (first != null) {
-				tree.getSelectionModel().select(first);
-			} else {
-				tree.getSelectionModel().clearSelection();
-			}
+			selectFirstCandidate.run();
 		};
 
 		filterField.textProperty().addListener((obs, o, n) -> applyFilter.run());
@@ -244,6 +256,37 @@ public class TreeCodebookDialogProvider<T> extends BasicCodebookProvider<T> {
 		item.setExpanded(true);
 		for (TreeItem<?> ch : item.getChildren())
 			expandAll(ch);
+	}
+
+	/**
+	 * First item (depth-first) that is itself a valid choice: matches the filter
+	 * text and {@code additionalFilter}; the first top-level node when there is
+	 * none.
+	 */
+	private TreeItem<T> firstCandidate(TreeItem<T> root, String filterLower) {
+		TreeItem<T> found = findCandidate(root, filterLower);
+		return found != null ? found : firstSelectableChild(root);
+	}
+
+	private TreeItem<T> findCandidate(TreeItem<T> item, String filterLower) {
+		if (item == null)
+			return null;
+		for (TreeItem<T> ch : item.getChildren()) {
+			if (isCandidate(ch.getValue(), filterLower))
+				return ch;
+			TreeItem<T> deeper = findCandidate(ch, filterLower);
+			if (deeper != null)
+				return deeper;
+		}
+		return null;
+	}
+
+	private boolean isCandidate(T value, String filterLower) {
+		if (value == null)
+			return false;
+		boolean filtering = filterLower != null && !filterLower.isEmpty();
+		return (!filtering || filter.test(value, filterLower))
+				&& (additionalFilter == null || additionalFilter.test(value));
 	}
 
 	private static <E> TreeItem<E> firstSelectableChild(TreeItem<E> root) {
