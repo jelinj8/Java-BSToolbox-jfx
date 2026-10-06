@@ -106,6 +106,13 @@ Keys are parsed by JavaFX `KeyCombination.keyCombination(String)`. Examples: `"C
 
 Never write `<HBox spacing="10">` — that is not valid XmlFilesystem UI definition syntax.
 
+`Menu`/`MenuItem`/`CheckMenuItem`/`RadioMenuItem` attribute `mnemonic` (localizable): candidate
+letters, the first one found in the text (case-insensitive) gets the `_` for JavaFX mnemonic
+parsing (`ActionBinder.withMnemonic`). Works for a plain `text` and for a bound `action`
+(`ActionBinder.bind(MenuItem, action, mnemonic)` - the action's text, shared with buttons, stays
+unmarked). Several letters serve texts that change (`"xo"`: Maximalizovat / Obnovit); none found
+→ no mnemonic (logged at DEBUG - common for translated texts).
+
 `MenuBar` attribute `useSystemMenuBar` (boolean): on macOS the menus go to the system menu bar
 (JavaFX ignores it elsewhere, and for menus with a `CustomMenuItem`); auto-hide is then off on macOS.
 

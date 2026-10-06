@@ -868,7 +868,7 @@ public final class UIComposer {
 			return;
 
 		IUIAction a = UIActions.getAction(actionKey.trim());
-		ActionBinder.bind(mi, a);
+		ActionBinder.bind(mi, a, entry.getLocalizedAttribute("mnemonic", null));
 	}
 
 	private static void bindMenuVisibility(javafx.scene.control.Menu menu) {

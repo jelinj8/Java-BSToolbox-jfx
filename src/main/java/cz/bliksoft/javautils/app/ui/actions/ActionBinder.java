@@ -1,5 +1,8 @@
 package cz.bliksoft.javautils.app.ui.actions;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import cz.bliksoft.javautils.app.ui.interfaces.ICSSClassesProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IGraphicsProvider;
 import cz.bliksoft.javautils.app.ui.interfaces.IIconSpecPropertyProvider;
@@ -26,7 +29,34 @@ import javafx.scene.input.KeyCombination;
  * properties for the lifetime of the control.
  */
 public final class ActionBinder {
+	private static final Logger log = LogManager.getLogger();
+
 	private ActionBinder() {
+	}
+
+	/**
+	 * Marks a mnemonic in {@code text} for JavaFX mnemonic parsing ({@code _}
+	 * before the letter): the first of the {@code letters} found in the text
+	 * (case-insensitive) - several candidates serve texts that change, e.g.
+	 * {@code "xo"} for Maximalizovat / Obnovit.
+	 *
+	 * @param text    the text, {@code null} = {@code null}
+	 * @param letters candidate letters in order of preference; {@code null}/blank =
+	 *                text unchanged
+	 * @return the text with the mnemonic marked, unchanged when it contains none of
+	 *         the letters (common for translated texts)
+	 */
+	public static String withMnemonic(String text, String letters) {
+		if (text == null || letters == null || letters.isBlank())
+			return text;
+		String lower = text.toLowerCase();
+		for (char c : letters.trim().toLowerCase().toCharArray()) {
+			int idx = lower.indexOf(c);
+			if (idx >= 0)
+				return text.substring(0, idx) + "_" + text.substring(idx);
+		}
+		log.debug("Mnemonic '{}' not found in text '{}'", letters, text);
+		return text;
 	}
 
 	/**
@@ -74,6 +104,19 @@ public final class ActionBinder {
 	 * @param a  the action to bind
 	 */
 	public static void bind(MenuItem mi, IUIAction a) {
+		bind(mi, a, null);
+	}
+
+	/**
+	 * Binds an {@link IUIAction} to a {@link MenuItem}, marking a mnemonic in the
+	 * action's text - see {@link #withMnemonic(String, String)}. The action's own
+	 * text (also used by buttons) stays without it.
+	 *
+	 * @param mi       the menu item to wire
+	 * @param a        the action to bind
+	 * @param mnemonic candidate mnemonic letters, {@code null} = none
+	 */
+	public static void bind(MenuItem mi, IUIAction a, String mnemonic) {
 		mi.setOnAction(e -> a.execute());
 
 		var enabled = a.enabledProperty();
@@ -94,8 +137,13 @@ public final class ActionBinder {
 			}
 		}
 
-		if (a.textProperty() != null)
-			mi.textProperty().bind(a.textProperty());
+		ReadOnlyStringProperty text = a.textProperty();
+		if (text != null) {
+			if (mnemonic == null || mnemonic.isBlank())
+				mi.textProperty().bind(text);
+			else
+				mi.textProperty().bind(Bindings.createStringBinding(() -> withMnemonic(text.get(), mnemonic), text));
+		}
 
 		if (a instanceof IIconSpecPropertyProvider p) {
 			double menuSize = IconspecUtils.getIconspecSize("menu-icon-size", 16); //$NON-NLS-1$
