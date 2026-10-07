@@ -8,6 +8,8 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
+import cz.bliksoft.javautils.app.ui.BSAppUI;
+
 public final class StageAutoSizer {
 
 	private StageAutoSizer() {
@@ -54,6 +56,14 @@ public final class StageAutoSizer {
 
 			stage.setMinWidth(needW + deltaW);
 			stage.setMinHeight(needH + deltaH);
+
+			// The minWidth/minHeight bump above can force JavaFX to grow the stage
+			// beyond the bounds StageStateBinder.restore() already clamped to the
+			// screen (that clamp ran in an earlier pulse, before this content-driven
+			// min size was known). Re-clamp now so a taller dialog can't end up with
+			// its title bar pushed off the top of the screen.
+			if (!stage.isMaximized() && !stage.isFullScreen())
+				BSAppUI.fitToScreen(stage);
 		};
 
 		Runnable recalcLaterThrottled = () -> {
@@ -113,6 +123,11 @@ public final class StageAutoSizer {
 
 			stage.setMinWidth(needW + deltaW);
 			stage.setMinHeight(needH + deltaH);
+
+			// See comment in install(): re-clamp after a content-driven min size
+			// bump, so a late growth can't leave the title bar off-screen.
+			if (!stage.isMaximized() && !stage.isFullScreen())
+				BSAppUI.fitToScreen(stage);
 		};
 
 		Runnable recalcLaterThrottled = () -> {

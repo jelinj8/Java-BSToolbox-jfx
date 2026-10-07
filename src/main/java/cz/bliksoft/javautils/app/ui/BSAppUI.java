@@ -178,6 +178,19 @@ public class BSAppUI extends ModuleBase {
 	 * @param window the window (stage or dialog window) to fit; {@code null} is
 	 *               ignored
 	 */
+	/**
+	 * Safety gap reserved at the top of a screen's visual bounds when clamping a
+	 * window's Y position. Some window managers draw the title bar outside the
+	 * bounds {@code Window.getY()}/{@code getHeight()} report to the app — e.g.
+	 * labwc's server-side decorations (this app's default desktop, under
+	 * Wayland/XWayland) don't appear to be reflected in those properties at all.
+	 * Clamping a window flush to {@code getMinY()} in that case still leaves the
+	 * (unreported) title bar off-screen, out of reach to drag the window back
+	 * down. Reserving this margin keeps it reachable even though we can't
+	 * measure the real decoration height from here.
+	 */
+	private static final double TOP_CHROME_MARGIN_PX = 32;
+
 	public static void fitToScreen(javafx.stage.Window window) {
 		if (window == null)
 			return;
@@ -205,7 +218,7 @@ public class BSAppUI extends ModuleBase {
 			unionMaxX = Math.max(unionMaxX, b.getMaxX());
 			unionMaxY = Math.max(unionMaxY, b.getMaxY());
 		}
-		if (x >= unionMinX && y >= unionMinY && x + w <= unionMaxX && y + h <= unionMaxY)
+		if (x >= unionMinX && y >= unionMinY + TOP_CHROME_MARGIN_PX && x + w <= unionMaxX && y + h <= unionMaxY)
 			return;
 
 		// Fit to the screen the window overlaps the most; primary when none.
@@ -241,7 +254,7 @@ public class BSAppUI extends ModuleBase {
 		double actualW = window.getWidth();
 		double actualH = window.getHeight();
 		double newX = Math.max(vb.getMinX(), Math.min(x, vb.getMaxX() - actualW));
-		double newY = Math.max(vb.getMinY(), Math.min(y, vb.getMaxY() - actualH));
+		double newY = Math.max(vb.getMinY() + TOP_CHROME_MARGIN_PX, Math.min(y, vb.getMaxY() - actualH));
 
 		if (newX != x)
 			window.setX(newX);
