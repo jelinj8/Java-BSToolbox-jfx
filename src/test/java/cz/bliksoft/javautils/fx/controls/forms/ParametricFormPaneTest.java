@@ -50,6 +50,41 @@ class ParametricFormPaneTest {
 				ParametricFormPane.effectiveDefault("DATE", "x", "today", null, "2026-01-02", List.of()));
 	}
 
+	/**
+	 * Rebuilds as a printer switch does them: what the user entered stays, however
+	 * many times - not just over the first rebuild.
+	 */
+	@Test
+	void enteredValueSurvivesRepeatedRebuilds() {
+		Map<String, String> entered = new HashMap<>();
+		// built with the defaults, the user types a text and picks a font
+		ParametricFormPane.rememberEntered(entered, Map.of("txt", "Krabice 12", "font", "Comic"),
+				Map.of("txt", "", "font", "Swiss"));
+		assertEquals(Map.of("txt", "Krabice 12", "font", "Comic"), entered);
+		// rebuilt with them, untouched, rebuilt again: still entered
+		ParametricFormPane.rememberEntered(entered, Map.of("txt", "Krabice 12", "font", "Comic"),
+				Map.of("txt", "Krabice 12", "font", "Comic"));
+		assertEquals(Map.of("txt", "Krabice 12", "font", "Comic"), entered);
+		// a new change replaces the remembered value - also back to the default
+		ParametricFormPane.rememberEntered(entered, Map.of("txt", "", "font", "Comic"),
+				Map.of("txt", "Krabice 12", "font", "Comic"));
+		assertEquals(Map.of("txt", "", "font", "Comic"), entered);
+	}
+
+	/** A font one printer lacks: its default meanwhile, the font again on one that has it. */
+	@Test
+	void fontMissingOnAPrinterComesBack() {
+		Map<String, String> entered = new HashMap<>(Map.of("font", "Comic"));
+		// printer B has no Comic: built with B's default
+		String onB = ParametricFormPane.effectiveDefault("FONT", "font", null, null, entered.get("font"),
+				List.of("Swiss", "Arial"));
+		assertEquals("Swiss", onB);
+		// left as built on B - Comic is still what was entered
+		ParametricFormPane.rememberEntered(entered, Map.of("font", onB), Map.of("font", onB));
+		assertEquals("Comic", ParametricFormPane.effectiveDefault("FONT", "font", null, null, entered.get("font"),
+				List.of("Swiss", "Comic")));
+	}
+
 	@Test
 	void modelBetweenEnteredAndDefault() {
 		Map<String, Object> model = new HashMap<>();

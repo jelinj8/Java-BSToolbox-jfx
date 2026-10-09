@@ -79,9 +79,11 @@ import javafx.util.StringConverter;
  * A field's {@link FormField#hint() hint} is shown as a tooltip of its title.
  * <p>
  * A field starts with ({@link TemplateFormSupport#initialValue}) the value the
- * user entered into a field of the same name before the last {@link #setFields}
- * (so e.g. switching a printer doesn't lose it; a value left as it was built is
- * not "entered"), else the value of the same name in the optional
+ * user entered into a field of the same name - remembered across any number of
+ * {@link #setFields} rebuilds until {@link #clearEnteredValues} (so e.g.
+ * switching a printer, even repeatedly, doesn't lose it; a value left as it was
+ * built is not "entered"; one that doesn't fit now - a font the printer lacks -
+ * comes back once it fits again) -, else the value of the same name in the optional
  * {@linkplain #setModel model} (an application's data; also the text of INFO
  * and the value of HIDDEN), else the field's default. A value that doesn't fit
  * the field (not one of the options, ...) is skipped.
@@ -99,6 +101,8 @@ public class ParametricFormPane extends GridPane {
 	private final Map<String, Node> controls = new LinkedHashMap<>();
 	/** The text each control was built with - a different one was entered. */
 	private final Map<String, String> initialTexts = new HashMap<>();
+	/** What the user entered, by field name - kept across rebuilds. */
+	private final Map<String, String> entered = new HashMap<>();
 	private final Map<String, String> hiddenValues = new HashMap<>();
 	private Function<FormField, List<String>> optionsResolver = FormField::options;
 	private Map<String, ?> model;
@@ -147,7 +151,8 @@ public class ParametricFormPane extends GridPane {
 	 * the class description).
 	 */
 	public void setFields(List<FormField> newFields) {
-		Map<String, String> previous = enteredValues();
+		rememberEntered(entered, currentTexts(), initialTexts);
+		Map<String, String> previous = entered;
 		getChildren().clear();
 		controls.clear();
 		initialTexts.clear();
@@ -311,20 +316,38 @@ public class ParametricFormPane extends GridPane {
 	}
 
 	/**
-	 * Values the user entered (changed from what the field was built with) as text,
-	 * for {@link #effectiveDefault} after a rebuild.
+	 * Forgets the values the user entered: the next {@link #setFields} starts every
+	 * field from the model / its default - e.g. for another template.
 	 */
-	private Map<String, String> enteredValues() {
-		Map<String, String> entered = new HashMap<>();
+	public void clearEnteredValues() {
+		entered.clear();
+		initialTexts.putAll(currentTexts());
+	}
+
+	/** The controls' current values as text. */
+	private Map<String, String> currentTexts() {
+		Map<String, String> texts = new HashMap<>();
 		for (FormField field : fields) {
 			Node control = controls.get(field.name());
-			if (control == null)
-				continue;
-			String text = controlText(field.normalizedType(), control);
-			if (text != null && !text.equals(initialTexts.get(field.name())))
-				entered.put(field.name(), text);
+			String text = control != null ? controlText(field.normalizedType(), control) : null;
+			if (text != null)
+				texts.put(field.name(), text);
 		}
-		return entered;
+		return texts;
+	}
+
+	/**
+	 * Adds to {@code entered} what the user changed since the form was built: each
+	 * {@code current} text that differs from the one its control was {@code built}
+	 * with. An unchanged control leaves its remembered value alone - the value a
+	 * rebuild restored stays entered through the next rebuild too.
+	 */
+	static void rememberEntered(Map<String, String> entered, Map<String, String> current,
+			Map<String, String> built) {
+		current.forEach((name, text) -> {
+			if (!text.equals(built.get(name)))
+				entered.put(name, text);
+		});
 	}
 
 	/** A control's value as text ({@code null} for a CSVFILE). */
