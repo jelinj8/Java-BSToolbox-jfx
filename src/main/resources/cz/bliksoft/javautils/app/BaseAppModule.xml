@@ -214,12 +214,6 @@
 			<attribute name="comment">JavaFX UI controls</attribute>
 			<attribute name="licence">BSD3</attribute>
 		</file>
-		<file name="zxing">
-			<attribute name="name">ZXing</attribute>
-			<attribute name="url">https://github.com/zxing/zxing</attribute>
-			<attribute name="comment">QR code and barcode processing</attribute>
-			<attribute name="licence">APACHE2</attribute>
-		</file>
 		<file name="apache commons io">
 			<attribute name="name">Apache Commons IO</attribute>
 			<attribute name="url">https://commons.apache.org/proper/commons-io/</attribute>

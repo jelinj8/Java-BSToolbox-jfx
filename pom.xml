@@ -38,7 +38,6 @@
 		<revision>0.8-SNAPSHOT</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>21</maven.compiler.release>
-		<javafx.version>21.0.12</javafx.version>
 	</properties>
 
 	<repositories>
@@ -115,7 +114,7 @@
 			<dependency>
 				<groupId>cz.bliksoft.java</groupId>
 				<artifactId>dependency-management</artifactId>
-				<version>1.21.2</version>
+				<version>1.21.3-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -161,32 +160,32 @@
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-controls</artifactId>
-			<version>${javafx.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-swing</artifactId>
-			<version>${javafx.version}</version>
 		</dependency>
 		<!-- Optional (~37 MB with javafx-media): only WebViewFileLoader (a WebView in a UI
 		     definition) needs it - an application using WebView declares javafx-web itself. -->
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-web</artifactId>
-			<version>${javafx.version}</version>
 			<optional>true</optional>
 		</dependency>
 
 		<dependency>
 			<groupId>org.openjfx</groupId>
 			<artifactId>javafx-fxml</artifactId>
-			<version>${javafx.version}</version>
 		</dependency>
 
+		<!-- Optional: only QRLabel / QRLabelFileLoader / QrCodeRenderer (and the *QR iconspec
+		     command) need it - an application using them declares zxing core itself. -->
 		<dependency>
 			<groupId>com.google.zxing</groupId>
 			<artifactId>core</artifactId>
+			<scope>provided</scope>
+			<optional>true</optional>
 		</dependency>
 
 		<dependency>
@@ -206,17 +205,13 @@
 			<artifactId>commons-io</artifactId>
 		</dependency>
 
+		<!-- Optional: webcam-capture + OpenCV (with the natives of the build machine) for the
+		     camera sources (cam/WebcamCameraSource, cam/OpenCv*) - an application using the
+		     camera declares dependency-management-webcam itself (versions from the BOM). -->
 		<dependency>
-			<groupId>com.github.sarxos</groupId>
-			<artifactId>webcam-capture</artifactId>
-			<version>0.3.12</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.bytedeco</groupId>
-			<artifactId>opencv-platform</artifactId>
-			<version>4.10.0-1.5.11</version>
+			<groupId>cz.bliksoft.java</groupId>
+			<artifactId>dependency-management-webcam</artifactId>
+			<type>pom</type>
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>

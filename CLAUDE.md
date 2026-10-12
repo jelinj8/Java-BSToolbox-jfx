@@ -156,7 +156,9 @@ which would drift from the skin's state.
   without printer fonts). Initial value: entered by the user before the rebuild (changed from what
   the field was built with) > model > default (`TemplateFormSupport.initialValue`, shared with
   StorageManager's web form). Used by StorageManager's print dialog and BSLabelDesigner.
-- **Images**: SVG-aware image loading (JSVG), QR code support (ZXing)
+- **Images**: SVG-aware image loading (JSVG), QR code support (ZXing - optional, `provided`: only
+  `QRLabel` / `QRLabelFileLoader` / `QrCodeRenderer` touch it; an app using them declares
+  `com.google.zxing:core` and credits it in its own `lib_credits`)
 - **Validation**: form validation support integrated with controls
 
 ## Key Dependencies
@@ -166,6 +168,6 @@ which would drift from the skin's state.
 | `common-java-utils` (BSToolbox) | Base utilities, xmlfilesystem, modules, events |
 | ControlsFX 11.2.3 | Extended JavaFX controls |
 | JSVG | SVG rendering for icons/status badges |
-| ZXing | QR code generation |
+| ZXing (optional, `provided`) | QR code generation |
 | Log4j2 | Logging |
 | JAXB | XML serialization |

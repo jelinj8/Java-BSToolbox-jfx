@@ -838,7 +838,8 @@ public class CameraCapturePane extends VBox {
 				tip.setGraphic(new ImageView(QrCodeRenderer.render(qrUrl, null, null, 200)));
 				tip.setContentDisplay(ContentDisplay.TOP);
 				statusLabel.setTooltip(tip);
-			} catch (Exception e) {
+			} catch (Exception | LinkageError e) {
+				// LinkageError: zxing (optional) not on the classpath - no QR tooltip
 				statusLabel.setTooltip(null);
 			}
 		} else {
