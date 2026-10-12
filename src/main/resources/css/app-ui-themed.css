@@ -159,6 +159,43 @@
 	-fx-padding: 0.35em 0.5em 0.35em 0.5em;
 }
 
+/* MenuButton in a toolbar - same look and height as .button next to it
+   (modena pads the inner label, not the control itself) */
+.tool-bar .menu-button {
+	-fx-background-color: -theme-surface-2;
+	-fx-background-radius: 4;
+	-fx-background-insets: 0;
+	-fx-border-radius: 4;
+	-fx-border-color: -theme-border;
+	-fx-border-width: 1;
+	-fx-padding: 0;
+}
+
+.tool-bar .menu-button>.label {
+	-fx-text-fill: -theme-text;
+	-fx-padding: 0.35em 0.4em 0.35em 0.9em;
+}
+
+.tool-bar .menu-button>.arrow-button {
+	-fx-padding: 0 0.9em 0 0;
+}
+
+.tool-bar .menu-button>.arrow-button>.arrow {
+	-fx-background-color: -theme-text;
+}
+
+.tool-bar .menu-button:hover {
+	-fx-background-color: derive(-theme-surface-2, +6%);
+}
+
+.tool-bar .menu-button:showing {
+	-fx-background-color: derive(-theme-surface-2, -6%);
+}
+
+.tool-bar .menu-button:focused {
+	-fx-border-color: -theme-accent;
+}
+
 .separator:horizontal .line, .separator:vertical .line {
 	-fx-border-color: -theme-border;
 }
